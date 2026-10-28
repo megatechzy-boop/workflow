@@ -53,11 +53,11 @@ class CalendarPolicy
         return $user->hasPermission(Permission::AssignTasks) && $calendar->status === CalendarStatus::ClientApproved;
     }
 
-    /** Customer review karta hai; purane "Submitted" calendars calendar-permission wale aage badha sakte hain */
+    /** Pehle Admin/Ops Manager ("calendar approve" permission), phir apne brand ka Customer */
     public function review(User $user, Calendar $calendar): bool
     {
         return match ($calendar->status) {
-            CalendarStatus::Submitted => $user->hasPermission(Permission::ManageCalendars),
+            CalendarStatus::Submitted => $user->hasPermission(Permission::ApproveCalendar),
             CalendarStatus::ApproverApproved => $user->role === Role::Client && $user->client_id === $calendar->client_id,
             default => false,
         };

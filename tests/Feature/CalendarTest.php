@@ -43,7 +43,14 @@ class CalendarTest extends TestCase
         return $calendar;
     }
 
-    public function test_full_flow_smm_to_customer(): void
+    private function submitAndOpsApprove(Calendar $calendar): void
+    {
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
+        $ops = User::factory()->create(['role' => Role::Manager]);
+        $this->actingAs($ops)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
+    }
+
+    public function test_full_flow_smm_to_ops_to_customer_with_auto_assign(): void
     {
         // Designer calendar nahi bana sakta
         $this->actingAs($this->approver)->get('/calendars/create')->assertForbidden();
@@ -53,26 +60,54 @@ class CalendarTest extends TestCase
         // Customer draft nahi dekh sakta
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
 
-        // SMM submit => seedha Customer ke paas
+        // SMM submit => Ops Manager ke paas; Customer abhi nahi dekh sakta, SMM khud approve nahi kar sakta
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
+        $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
+
+        $ops = User::factory()->create(['role' => Role::Manager]);
+        $this->actingAs($ops)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
         $this->assertSame(1, $this->clientUser->notifications()->count());
-
-        // Designer review nahi kar sakta
-        $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
 
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Reel');
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
 
+        // Customer approve karte hi task auto-assign (Designer ko)
+        $task = $calendar->items()->first()->task;
+        $this->assertNotNull($task);
+        $this->assertSame($this->approver->id, $task->assigned_to);
+
         // Approved ke baad edit band
         $this->actingAs($this->team)->get("/calendars/{$calendar->id}/items/create")->assertForbidden();
+    }
+
+    public function test_auto_assign_picks_least_busy_member_of_right_role(): void
+    {
+        $busy = $this->approver; // Graphic Designer
+        $free = User::factory()->create(['role' => Role::GraphicDesigner]);
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        // $busy ke paas pehle se ek pending task
+        $old = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-10-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+        $old->items()->create(['post_date' => '2026-10-20', 'post_types' => ['instagram_post']])
+            ->task()->create(['assigned_to' => $busy->id, 'assigned_by' => $this->team->id, 'deadline' => '2026-10-18']);
+
+        $calendar = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-11-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+        $post = $calendar->items()->create(['post_date' => '2026-11-05', 'post_types' => ['instagram_post']]);
+        $reel = $calendar->items()->create(['post_date' => '2026-11-06', 'post_types' => ['instagram_reel']]);
+
+        \App\Models\Task::autoAssign($calendar, $this->team->id);
+
+        $this->assertSame($free->id, $post->fresh()->task->assigned_to);
+        $this->assertSame($editor->id, $reel->fresh()->task->assigned_to);
     }
 
     public function test_revision_needs_comment_and_returns_to_draft(): void
     {
         $calendar = $this->draftWithItem();
-        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
+        $this->submitAndOpsApprove($calendar);
 
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'revision'])
             ->assertSessionHasErrors('comment');

@@ -6,7 +6,6 @@ use App\Enums\Permission;
 use App\Models\Calendar;
 use App\Models\Task;
 use App\Models\User;
-use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -92,9 +91,7 @@ class TaskController extends Controller
         });
 
         foreach ($newlyAssigned as $task) {
-            Notify::send([$task->assignee], 'Naya task mila',
-                $calendar->client->name.' · post date '.$task->item->post_date->format('d M').' · deadline '.$task->deadline->format('d M'),
-                route('tasks.show', $task));
+            $task->notifyAssignee();
         }
 
         return back()->with('status', 'Tasks assign ho gaye.');

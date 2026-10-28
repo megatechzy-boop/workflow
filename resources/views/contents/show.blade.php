@@ -79,6 +79,22 @@
                                     <button name="action" value="revision" class="px-3 py-2 rounded-md bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400">Revision</button>
                                     <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" onclick="return confirm('Reject karna hai? Ye final hai.')">Reject</button>
                                 </div>
+                                <p class="text-xs text-gray-500">Approve karne par content Customer ke paas final approval ke liye jayega.</p>
+                            </form>
+                        </div>
+                    @endcan
+
+                    @can('customerReview', $content)
+                        <div class="bg-white shadow-sm sm:rounded-lg p-4 border-2 border-purple-200">
+                            <h3 class="font-semibold text-gray-800 mb-2">Aapka approval</h3>
+                            <form method="POST" action="{{ route('contents.customerReview', $content) }}" class="space-y-3">
+                                @csrf
+                                <textarea name="body" rows="3" placeholder="Comment (Revision ke liye zaroori)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('body') }}</textarea>
+                                <x-input-error :messages="$errors->get('body')" />
+                                <div class="flex flex-wrap gap-2">
+                                    <button name="action" value="approved" class="px-3 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-500">Approve</button>
+                                    <button name="action" value="revision" class="px-3 py-2 rounded-md bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400">Revision</button>
+                                </div>
                             </form>
                         </div>
                     @endcan
@@ -116,7 +132,9 @@
                                 @csrf
                                 <input type="hidden" name="version" value="{{ $version->number }}">
                                 <textarea name="body" rows="2" required placeholder="V{{ $version->number }} par comment... (@naam se mention)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"></textarea>
-                                <p class="text-xs text-gray-400">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
+                                @if ($handles->isNotEmpty())
+                                    <p class="text-xs text-gray-400">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
+                                @endif
                                 <div class="flex flex-wrap items-center gap-2">
                                     @if ($images->count() > 1)
                                         <select name="slide" class="border-gray-300 rounded-md shadow-sm text-sm">
@@ -138,9 +156,11 @@
                         @endcan
 
                         <ul class="space-y-3 text-sm">
-                            @php($actionLabels = ['submitted' => 'Upload kiya', 'approved' => 'Approve kiya', 'revision' => 'Revision maangi', 'rejected' => 'Reject kiya', 'scheduled' => 'Scheduled mark kiya', 'published' => 'Published mark kiya'])
-                            @forelse ($content->comments->reverse() as $c)
-                                <li class="border-l-4 pl-3 {{ $c->action === 'revision' ? 'border-orange-400' : ($c->action === 'comment' ? 'border-gray-200' : 'border-indigo-200') }}">
+                            @php($actionLabels = ['submitted' => 'Upload kiya', 'approved' => 'SMM ne approve kiya', 'revision' => 'Revision maangi', 'rejected' => 'Reject kiya', 'customer_approved' => 'Customer ne approve kiya ✔', 'customer_revision' => 'Customer ne revision maangi', 'scheduled' => 'Scheduled mark kiya', 'published' => 'Published mark kiya'])
+                            {{-- Customer ko team ke internal comments nahi dikhte, sirf customers ke --}}
+                            @php($timeline = auth()->user()->role === App\Enums\Role::Client ? $content->comments->filter(fn ($c) => $c->user->role === App\Enums\Role::Client) : $content->comments)
+                            @forelse ($timeline->reverse() as $c)
+                                <li class="border-l-4 pl-3 {{ in_array($c->action, ['revision', 'customer_revision'], true) ? 'border-orange-400' : ($c->action === 'comment' ? 'border-gray-200' : 'border-indigo-200') }}">
                                     <div class="text-xs text-gray-500">
                                         <strong class="text-gray-800">{{ $c->user->name }}</strong>
                                         · V{{ $c->version->number }} · {{ $c->created_at->format('d M, h:i A') }}

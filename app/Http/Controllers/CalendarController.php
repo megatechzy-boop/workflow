@@ -6,6 +6,8 @@ use App\Enums\CalendarStatus;
 use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\Client;
+use App\Enums\Permission;
+use App\Models\Task;
 use App\Models\User;
 use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
@@ -102,15 +104,16 @@ class CalendarController extends Controller
     {
         Gate::authorize('submit', $calendar);
 
-        // Internal approval step nahi: SMM seedha Customer ko bhejta hai
+        // Pehle Admin/Ops Manager approve karega, phir Customer
         DB::transaction(function () use ($request, $calendar) {
-            $calendar->update(['status' => CalendarStatus::ApproverApproved]);
+            $calendar->update(['status' => CalendarStatus::Submitted]);
             $calendar->reviews()->create(['user_id' => $request->user()->id, 'action' => 'submitted']);
         });
 
-        $this->notifyCustomers($calendar);
+        Notify::send(User::withPermission(Permission::ApproveCalendar), 'Calendar approval ke liye',
+            $this->name($calendar).' ka calendar review karein.', route('calendars.show', $calendar));
 
-        return back()->with('status', 'Calendar Customer ko bhej diya.');
+        return back()->with('status', 'Calendar Ops Manager ko bhej diya.');
     }
 
     public function review(Request $request, Calendar $calendar): RedirectResponse
@@ -128,13 +131,16 @@ class CalendarController extends Controller
             default => CalendarStatus::ClientApproved,
         };
 
-        DB::transaction(function () use ($request, $calendar, $data, $next) {
+        $autoTasks = DB::transaction(function () use ($request, $calendar, $data, $next) {
             $calendar->update(['status' => $next]);
             $calendar->reviews()->create([
                 'user_id' => $request->user()->id,
                 'action' => $data['action'],
                 'comment' => $data['comment'] ?? null,
             ]);
+
+            // Customer ne approve kiya => tasks apne aap ban jaate hain
+            return $next === CalendarStatus::ClientApproved ? Task::autoAssign($calendar, $request->user()->id) : [];
         });
 
         $url = route('calendars.show', $calendar);
@@ -143,10 +149,13 @@ class CalendarController extends Controller
             CalendarStatus::Draft => Notify::send([$calendar->creator], 'Calendar par revision', "$name: ".$data['comment'], $url),
             CalendarStatus::ApproverApproved => $this->notifyCustomers($calendar),
             CalendarStatus::ClientApproved => Notify::send(
-                Notify::role(Role::SocialMediaManager, Role::Manager)->push($calendar->creator),
-                'Calendar approved ✔', "$name customer ne approve kar diya. Ab tasks assign karein.", $url),
+                User::withPermission(Permission::AssignTasks)->push($calendar->creator),
+                'Calendar approved ✔', "$name customer ne approve kar diya. ".count($autoTasks).' tasks auto-assign ho gaye, chahein toh badlein.', $url),
             default => null,
         };
+        foreach ($autoTasks as $task) {
+            $task->notifyAssignee();
+        }
 
         return back()->with('status', $data['action'] === 'revision' ? 'Revision ke liye wapas bhej diya.' : 'Calendar approve ho gaya.');
     }

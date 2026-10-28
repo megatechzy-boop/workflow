@@ -24,18 +24,22 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ContentController extends Controller
 {
-    /** Approvals list: approver ko apne, "sab dekhna" wale ko sab */
+    /** Approvals list: approver ko apne, "sab dekhna" wale ko sab, Customer ko apne brand ke */
     public function index(Request $request): View
     {
         $user = $request->user();
-        abort_unless($user->hasPermission(Permission::ApproveContent) || $user->hasPermission(Permission::ViewAllTasks), 403);
+        $isCustomer = $user->role === Role::Client;
+        abort_unless($isCustomer || $user->hasPermission(Permission::ApproveContent) || $user->hasPermission(Permission::ViewAllTasks), 403);
 
         $contents = Content::query()
             ->with(['task.item.calendar.client', 'task.assignee', 'approver'])
-            ->when(! $user->hasPermission(Permission::ViewAllTasks), fn ($q) => $q->where('approver_id', $user->id))
+            ->when($isCustomer, fn ($q) => $q
+                ->whereHas('task.item.calendar', fn ($c) => $c->where('client_id', $user->client_id))
+                ->whereIn('status', array_filter(ContentStatus::cases(), fn ($s) => $s->visibleToCustomer())))
+            ->when(! $isCustomer && ! $user->hasPermission(Permission::ViewAllTasks), fn ($q) => $q->where('approver_id', $user->id))
             ->when($request->status ?? 'pending', fn ($q, $s) => match ($s) {
                 'all' => $q,
-                'pending' => $q->whereIn('status', [ContentStatus::Submitted, ContentStatus::Resubmitted]),
+                'pending' => $q->whereIn('status', $isCustomer ? [ContentStatus::ClientReview] : [ContentStatus::Submitted, ContentStatus::Resubmitted]),
                 default => $q->where('status', $s),
             })
             ->latest('updated_at')
@@ -92,8 +96,9 @@ class ContentController extends Controller
         return view('contents.show', [
             'content' => $content,
             'version' => $version,
-            // @mention hints
-            'handles' => User::where('role', '!=', Role::Client)->where('is_active', true)->orderBy('name')->get()->map->handle(),
+            // @mention hints (Customer ko team ki list nahi)
+            'handles' => $request->user()->role === Role::Client ? collect()
+                : User::where('role', '!=', Role::Client)->where('is_active', true)->orderBy('name')->get()->map->handle(),
         ]);
     }
 
@@ -126,22 +131,53 @@ class ContentController extends Controller
 
         DB::transaction(function () use ($request, $content, $data) {
             $content->update(['status' => match ($data['action']) {
-                'approved' => ContentStatus::Approved,
+                'approved' => ContentStatus::ClientReview, // SMM ke baad Customer final approve karega
                 'revision' => ContentStatus::RevisionRequired,
                 'rejected' => ContentStatus::Rejected,
             }]);
             $this->log($request, $content, $data['action'], $data['body'] ?? null);
-            if ($data['action'] === 'approved') {
+        });
+
+        $url = route('contents.show', $content);
+        $label = ['approved' => 'SMM ne OK kiya, ab Customer ke paas', 'revision' => 'Revision chahiye', 'rejected' => 'Rejected'][$data['action']];
+        Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
+        Notify::send(Notify::mentioned($data['body'] ?? null), 'Aapko mention kiya', $request->user()->name.': '.$data['body'], $url);
+        if ($data['action'] === 'approved') {
+            Notify::send($this->customers($content), 'Content aapke approval ke liye', $this->title($content).' dekh kar approve karein.', $url);
+        }
+
+        return back()->with('status', 'Review save ho gaya.');
+    }
+
+    /** Customer ka final review: Approve ya Revision (comment zaroori) */
+    public function customerReview(Request $request, Content $content): RedirectResponse
+    {
+        Gate::authorize('customerReview', $content);
+
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['approved', 'revision'])],
+            'body' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
+        ], ['body.required_if' => 'Revision ke liye comment zaroori hai.']);
+
+        DB::transaction(function () use ($request, $content, $data) {
+            $approved = $data['action'] === 'approved';
+            $content->update(['status' => $approved ? ContentStatus::Approved : ContentStatus::RevisionRequired]);
+            $this->log($request, $content, $approved ? 'customer_approved' : 'customer_revision', $data['body'] ?? null);
+            if ($approved) {
                 PointEntry::forApprovedContent($content);
             }
         });
 
-        $url = route('contents.show', $content);
-        $label = ['approved' => 'Approved ✔', 'revision' => 'Revision chahiye', 'rejected' => 'Rejected'][$data['action']];
-        Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
-        Notify::send(Notify::mentioned($data['body'] ?? null), 'Aapko mention kiya', $request->user()->name.': '.$data['body'], $url);
+        $title = $data['action'] === 'approved' ? 'Customer ne approve kiya ✔' : 'Customer ne revision maangi';
+        Notify::send([$content->task->assignee, $content->approver], $title,
+            $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), route('contents.show', $content));
 
-        return back()->with('status', 'Review save ho gaya.');
+        return back()->with('status', 'Shukriya! Aapka review save ho gaya.');
+    }
+
+    private function customers(Content $content)
+    {
+        return User::where('role', Role::Client)->where('client_id', $content->task->item->calendar->client_id)->get();
     }
 
     /** Normal comment: carousel par slide number, reel par timestamp (m:ss) */
@@ -185,7 +221,7 @@ class ContentController extends Controller
     public function toggleFixed(Request $request, Content $content, ContentComment $comment): RedirectResponse
     {
         Gate::authorize('upload', [Content::class, $content->task]);
-        abort_unless($comment->content_id === $content->id && in_array($comment->action, ['comment', 'revision'], true), 404);
+        abort_unless($comment->content_id === $content->id && $comment->isChecklistItem(), 404);
 
         $comment->update($comment->fixed_at
             ? ['fixed_at' => null, 'fixed_by' => null]

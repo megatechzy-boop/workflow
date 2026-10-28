@@ -11,10 +11,15 @@ use App\Models\User;
 
 class ContentPolicy
 {
-    /** Agency team dekh sakti hai; Customer ko abhi content access nahi */
+    /** Agency team sab dekh sakti hai; Customer sirf apne brand ka, SMM ke OK ke baad */
     public function view(User $user, Content $content): bool
     {
-        return $user->role !== Role::Client;
+        if ($user->role === Role::Client) {
+            return $user->client_id === $content->task->item->calendar->client_id
+                && $content->status->visibleToCustomer();
+        }
+
+        return true;
     }
 
     /** Upload: assigned Designer/Editor, ya "kisi bhi task par upload" permission wale */
@@ -28,11 +33,19 @@ class ContentPolicy
         return $content->status === ContentStatus::RevisionRequired && $this->upload($user, $content->task);
     }
 
-    /** Sirf chuna hua SMM (ya Admin), aur tab jab review pending ho */
+    /** Pehla review: chuna hua SMM (ya Admin) */
     public function review(User $user, Content $content): bool
     {
         return $content->status->awaitingReview()
             && ($content->approver_id === $user->id || $user->isAdmin());
+    }
+
+    /** Final review: apne brand ka Customer */
+    public function customerReview(User $user, Content $content): bool
+    {
+        return $content->status === ContentStatus::ClientReview
+            && $user->role === Role::Client
+            && $user->client_id === $content->task->item->calendar->client_id;
     }
 
     public function comment(User $user, Content $content): bool

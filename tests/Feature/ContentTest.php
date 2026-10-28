@@ -109,7 +109,19 @@ class ContentTest extends TestCase
         $this->assertSame(2, $content->current_version);
         $this->assertSame(2, $content->versions()->count());
 
+        // SMM approve => Customer ke paas
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
+        $this->actingAs($customer)->get("/contents/{$content->id}")->assertForbidden(); // SMM se pehle nahi dikhta
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
+        $this->assertSame(ContentStatus::ClientReview, $content->fresh()->status);
+
+        // Doosre brand ka customer review nahi kar sakta; internal comment customer ko nahi dikhta
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => \App\Models\Client::create(['name' => 'Other'])->id]);
+        $this->actingAs($other)->post("/contents/{$content->id}/customer-review", ['action' => 'approved'])->assertForbidden();
+        $this->actingAs($customer)->get("/contents/{$content->id}")->assertOk()->assertDontSee('Slide 2 ka text chhota karo');
+
+        $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'revision'])->assertSessionHasErrors('body');
+        $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'approved']);
         $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
 
         // Approved ke baad resubmit nahi

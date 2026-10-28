@@ -28,7 +28,7 @@
                             {{ __('Leaderboard') }}
                         </x-nav-link>
                     @endunless
-                    @if (Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
+                    @if (Auth::user()->hasRole('client') || Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                         <x-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                             {{ __('Approvals') }}
                         </x-nav-link>
@@ -118,7 +118,7 @@
                     {{ __('Leaderboard') }}
                 </x-responsive-nav-link>
             @endunless
-            @if (Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
+            @if (Auth::user()->hasRole('client') || Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                 <x-responsive-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                     {{ __('Approvals') }}
                 </x-responsive-nav-link>

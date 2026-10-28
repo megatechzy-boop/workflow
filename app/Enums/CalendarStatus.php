@@ -5,7 +5,7 @@ namespace App\Enums;
 enum CalendarStatus: string
 {
     case Draft = 'draft';
-    case Submitted = 'submitted';               // purana internal step (ab use nahi hota)
+    case Submitted = 'submitted';               // Admin/Ops Manager ke paas
     case ApproverApproved = 'approver_approved'; // Customer ke paas
     case ClientApproved = 'client_approved';     // Final: ab tasks banenge
 
@@ -13,7 +13,7 @@ enum CalendarStatus: string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Submitted => 'Waiting for Review',
+            self::Submitted => 'Waiting for Ops Approval',
             self::ApproverApproved => 'Waiting for Customer',
             self::ClientApproved => 'Approved',
         };

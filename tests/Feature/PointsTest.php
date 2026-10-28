@@ -58,6 +58,10 @@ class PointsTest extends TestCase
         Carbon::setTestNow('2026-11-08 18:00'); // deadline wala din = on time
         $content = $this->upload($this->task('2026-11-08'));
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
+        $this->assertSame(10, (int) PointEntry::where('user_id', $this->member->id)->sum('points')); // bonus Customer ke baad
+
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $content->task->item->calendar->client_id]);
+        $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'approved']);
 
         $this->assertSame(10 + 5, (int) PointEntry::where('user_id', $this->member->id)->sum('points'));
     }
