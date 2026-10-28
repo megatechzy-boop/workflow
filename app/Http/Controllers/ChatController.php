@@ -12,8 +12,8 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Group chat: "team" (sab team), "client:{id}" (customer + team), "internal:{id}" (sirf team).
- * shortcut: live socket nahi (cPanel); page har 5 sec naye messages poll karta hai. Bahut users hon toh Pusher/Reverb lagana.
+ * Group chat: "team" (all team), "client:{id}" (customer + team), "internal:{id}" (team only).
+ * shortcut: no websockets on cPanel; the page polls every 5 s. Move to Pusher/Reverb if usage grows.
  */
 class ChatController extends Controller
 {
@@ -21,7 +21,7 @@ class ChatController extends Controller
     {
         $user = $request->user();
         $rooms = ChatMessage::roomsFor($user);
-        abort_if(! $rooms, 403, 'Aapke liye koi chat group nahi hai.');
+        abort_if(! $rooms, 403, 'There is no chat group for you.');
 
         $room = $request->query('room', array_key_first($rooms));
         $this->authorizeRoom($request, $room);
@@ -37,7 +37,7 @@ class ChatController extends Controller
         ]);
     }
 
-    /** Polling: ?after=ID ke baad ke messages */
+    /** Polling: messages after ?after=ID */
     public function poll(Request $request, string $room): JsonResponse
     {
         $this->authorizeRoom($request, $room);
@@ -61,8 +61,8 @@ class ChatController extends Controller
                 .'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,'
                 .'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
         ], [
-            'body.required_without' => 'Message ya file mein se kuch bhejein.',
-            'file.mimetypes' => 'Photo, video, PDF ya Word/Excel/PowerPoint file bhejein.',
+            'body.required_without' => 'Send a message or a file.',
+            'file.mimetypes' => 'Send a photo, video, PDF or Word/Excel/PowerPoint file.',
         ]);
 
         $file = $request->file('file');
@@ -76,11 +76,11 @@ class ChatController extends Controller
         ]);
         ChatMessage::markRead($request->user(), $room);
 
-        // @mention => sirf us room ke log
+        // @mention => only members of this room
         $members = ChatMessage::membersOf($room)->pluck('id');
         Notify::send(
             Notify::mentioned($message->body)->filter(fn ($u) => $members->contains($u->id)),
-            'Chat mein aapko mention kiya',
+            'You were mentioned in chat',
             $request->user()->name.' ('.(ChatMessage::roomsFor($request->user())[$room] ?? $room).'): '.$message->body,
             route('chat.index', ['room' => $room]));
 
@@ -101,13 +101,13 @@ class ChatController extends Controller
     private function authorizeRoom(Request $request, string $room): void
     {
         abort_unless(ChatMessage::canAccess($request->user(), $room), 403);
-        // client:{id} / internal:{id} ka brand hona chahiye
+        // client:{id} / internal:{id} must point to an existing brand
         if (preg_match('/:(\d+)$/', $room, $m)) {
             abort_unless(Client::whereKey($m[1])->exists(), 404);
         }
     }
 
-    /** JS ke liye safe data (text escape view mein JS karta hai) */
+    /** Data for JS (the view escapes text) */
     private function present(ChatMessage $m, int $me): array
     {
         return [

@@ -46,14 +46,14 @@
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                                     <a href="{{ route('clients.edit', $client) }}" class="text-indigo-600 hover:underline">Edit</a>
-                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Is client ko delete karna hai?')">
+                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Delete this client?')">
                                         @csrf @method('DELETE')
                                         <button class="text-red-600 hover:underline">Delete</button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Abhi koi client nahi hai.</td></tr>
+                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No clients yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

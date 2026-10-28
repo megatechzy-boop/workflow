@@ -15,7 +15,7 @@ class EnsurePermission
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         if (! $request->user()?->hasPermission(Permission::from($permission))) {
-            abort(403, 'Aapko is page ka access nahi hai.');
+            abort(403, 'You do not have access to this page.');
         }
 
         return $next($request);

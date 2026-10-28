@@ -23,7 +23,7 @@ enum Role: string
         };
     }
 
-    /** Content banane wale: inhe tasks milte hain */
+    /** Content creators: they receive tasks */
     public function isCreator(): bool
     {
         return in_array($this, [self::GraphicDesigner, self::VideoEditor], true);

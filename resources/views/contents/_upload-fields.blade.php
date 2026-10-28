@@ -14,7 +14,7 @@
     </div>
 @else
     <div>
-        <x-input-label :value="$type === App\Enums\PostType::Carousel ? 'Carousel images (2-10, jis order mein chunoge wahi slide order)' : 'Image (1)'" />
+        <x-input-label :value="$type === App\Enums\PostType::Carousel ? 'Carousel images (2-10, the order you pick is the slide order)' : 'Image (1)'" />
         <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" required @if ($type === App\Enums\PostType::Carousel) multiple @endif class="mt-1 block w-full text-sm">
         <x-input-error :messages="$errors->get('images')" class="mt-2" />
         <x-input-error :messages="$errors->get('images.*')" class="mt-2" />

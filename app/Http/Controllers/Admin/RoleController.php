@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
-/** Admin > Roles: har role ki permissions ka matrix */
+/** Admin > Roles: permission matrix per role */
 class RoleController extends Controller
 {
     public function index(): View
@@ -43,10 +43,10 @@ class RoleController extends Controller
             DB::table('role_permissions')->insert($rows);
         });
 
-        return back()->with('status', 'Role permissions save ho gayi.');
+        return back()->with('status', 'Role permissions saved.');
     }
 
-    /** Admin ke paas hamesha sab; Customer ko internal permissions nahi milti */
+    /** Admin always has all; Customers never get internal permissions */
     private function editableRoles(): array
     {
         return [Role::Manager, Role::SocialMediaManager, Role::GraphicDesigner, Role::VideoEditor];

@@ -13,18 +13,18 @@ class ChatMessage extends Model
     protected $fillable = ['room', 'user_id', 'body', 'attachment_path', 'attachment_name', 'attachment_mime'];
 
     /**
-     * User ke rooms: ['team' => '👥 Sab team', 'client:3' => '🏷 Acme · Client group', 'internal:3' => '🔒 Acme · Internal']
-     * Customer ko sirf apne brand ka client group.
+     * Rooms of a user: ['team' => '👥 All team', 'client:3' => '🏷 Acme · Client group', 'internal:3' => '🔒 Acme · Internal']
+     * Customers only get their own brand's client group.
      */
     public static function roomsFor(User $user): array
     {
         if ($user->role === Role::Client) {
             $client = $user->client;
 
-            return $client ? ['client:'.$client->id => '🏷 '.$client->name.' · Team ke saath'] : [];
+            return $client ? ['client:'.$client->id => '🏷 '.$client->name.' · Chat with team'] : [];
         }
 
-        $rooms = ['team' => '👥 Sab team (internal)'];
+        $rooms = ['team' => '👥 All team (internal)'];
         foreach (Client::where('is_active', true)->orderBy('name')->get(['id', 'name']) as $c) {
             $rooms['client:'.$c->id] = '🏷 '.$c->name.' · Client group';
             $rooms['internal:'.$c->id] = '🔒 '.$c->name.' · Internal';
@@ -42,7 +42,7 @@ class ChatMessage extends Model
         return $room === 'team' || preg_match('/^(client|internal):\d+$/', $room) === 1;
     }
 
-    /** Room ke log (mention / notification ke liye) */
+    /** Members of a room (for mentions / notifications) */
     public static function membersOf(string $room): Collection
     {
         $staff = User::where('is_active', true)->where('role', '!=', Role::Client);
@@ -55,7 +55,7 @@ class ChatMessage extends Model
         return $staff->get();
     }
 
-    /** Har room ke unread messages (apne bheje hue nahi) */
+    /** Unread messages per room (excluding own messages) */
     public static function unreadCounts(User $user): array
     {
         $rooms = array_keys(static::roomsFor($user));

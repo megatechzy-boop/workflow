@@ -21,7 +21,7 @@
                     </div>
 
                     <fieldset>
-                        <legend class="block font-medium text-sm text-gray-700">Post type (ek ya zyada chuno)</legend>
+                        <legend class="block font-medium text-sm text-gray-700">Post type (choose one or more)</legend>
                         @php($selected = old('post_types', $item->post_types ?? []))
                         <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                             @foreach (App\Models\CalendarItem::typeOptions() as $value => $label)

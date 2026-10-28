@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ContentController extends Controller
 {
-    /** Approvals list: approver ko apne, "sab dekhna" wale ko sab, Customer ko apne brand ke */
+    /** Approvals list: approvers see theirs, view-all users see everything, Customers their brand */
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -50,14 +50,14 @@ class ContentController extends Controller
         return view('contents.index', ['contents' => $contents, 'statuses' => ContentStatus::cases()]);
     }
 
-    /** Task par ek post type ka pehla upload (V1) */
+    /** First upload (V1) of one format on a task */
     public function store(Request $request, Task $task): RedirectResponse
     {
         Gate::authorize('upload', [Content::class, $task]);
 
         $postType = $request->validate([
             'post_type' => ['required', Rule::in($task->item->post_types), Rule::unique('contents')->where('task_id', $task->id)],
-        ], ['post_type.unique' => 'Is post type ka content pehle se upload hai.'])['post_type'];
+        ], ['post_type.unique' => 'Content for this format is already uploaded.'])['post_type'];
 
         $data = $request->validate([
             'approver_id' => ['required', Rule::in(User::withPermission(Permission::ApproveContent)->pluck('id'))],
@@ -72,7 +72,7 @@ class ContentController extends Controller
             ]);
             $this->storeVersion($request, $content, 1, $data);
 
-            // Task tab "submitted" jab item ke saare post types upload ho jayein
+            // The task becomes "submitted" once every format of the item is uploaded
             if ($task->contents()->count() === count($task->item->post_types)) {
                 $task->update(['status' => 'submitted', 'submitted_at' => $task->submitted_at ?? now()]);
                 PointEntry::forSubmittedTask($task);
@@ -81,9 +81,9 @@ class ContentController extends Controller
             return $content;
         });
 
-        Notify::send([$content->approver], 'Content approval ke liye', $this->title($content).' review karein.', route('contents.show', $content));
+        Notify::send([$content->approver], 'Content needs approval', $this->title($content).' is waiting for your review.', route('contents.show', $content));
 
-        return redirect()->route('contents.show', $content)->with('status', 'Content upload ho gaya, Approver ko bhej diya.');
+        return redirect()->route('contents.show', $content)->with('status', 'Content uploaded and sent to the Approver.');
     }
 
     public function show(Request $request, Content $content): View
@@ -97,13 +97,13 @@ class ContentController extends Controller
         return view('contents.show', [
             'content' => $content,
             'version' => $version,
-            // @mention hints (Customer ko team ki list nahi)
+            // @mention hints (Customers do not get the team list)
             'handles' => $request->user()->role === Role::Client ? collect()
                 : User::where('role', '!=', Role::Client)->where('is_active', true)->orderBy('name')->get()->map->handle(),
         ]);
     }
 
-    /** Revision ke baad naya version (V2, V3...) */
+    /** New version after a revision (V2, V3...) */
     public function resubmit(Request $request, Content $content): RedirectResponse
     {
         Gate::authorize('resubmit', $content);
@@ -116,9 +116,9 @@ class ContentController extends Controller
             $content->update(['current_version' => $number, 'status' => ContentStatus::Resubmitted]);
         });
 
-        Notify::send([$content->approver], 'V'.$content->current_version.' resubmit hua', $this->title($content).' ka naya version review karein.', route('contents.show', $content));
+        Notify::send([$content->approver], 'V'.$content->current_version.' resubmitted', $this->title($content).': new version is waiting for your review.', route('contents.show', $content));
 
-        return redirect()->route('contents.show', $content)->with('status', 'Naya version bhej diya.');
+        return redirect()->route('contents.show', $content)->with('status', 'New version submitted.');
     }
 
     public function review(Request $request, Content $content): RedirectResponse
@@ -128,11 +128,11 @@ class ContentController extends Controller
         $data = $request->validate([
             'action' => ['required', Rule::in(['approved', 'revision', 'rejected'])],
             'body' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
-        ], ['body.required_if' => 'Revision ke liye comment zaroori hai.']);
+        ], ['body.required_if' => 'A comment is required for a revision.']);
 
         DB::transaction(function () use ($request, $content, $data) {
             $content->update(['status' => match ($data['action']) {
-                'approved' => ContentStatus::ClientReview, // SMM ke baad Customer final approve karega
+                'approved' => ContentStatus::ClientReview, // after the SMM, the Customer gives final approval
                 'revision' => ContentStatus::RevisionRequired,
                 'rejected' => ContentStatus::Rejected,
             }]);
@@ -140,17 +140,17 @@ class ContentController extends Controller
         });
 
         $url = route('contents.show', $content);
-        $label = ['approved' => 'SMM ne OK kiya, ab Customer ke paas', 'revision' => 'Revision chahiye', 'rejected' => 'Rejected'][$data['action']];
+        $label = ['approved' => 'Approved by SMM, now with the Customer', 'revision' => 'Revision required', 'rejected' => 'Rejected'][$data['action']];
         Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
-        Notify::send(Notify::mentioned($data['body'] ?? null), 'Aapko mention kiya', $request->user()->name.': '.$data['body'], $url);
+        Notify::send(Notify::mentioned($data['body'] ?? null), 'You were mentioned', $request->user()->name.': '.$data['body'], $url);
         if ($data['action'] === 'approved') {
-            Notify::send($this->customers($content), 'Content aapke approval ke liye', $this->title($content).' dekh kar approve karein.', $url);
+            Notify::send($this->customers($content), 'Content ready for your approval', $this->title($content).' is ready for your approval.', $url);
         }
 
-        return back()->with('status', 'Review save ho gaya.');
+        return back()->with('status', 'Review saved.');
     }
 
-    /** Customer ka final review: Approve ya Revision (comment zaroori) */
+    /** Customer final review: Approve or Revision (comment required) */
     public function customerReview(Request $request, Content $content): RedirectResponse
     {
         Gate::authorize('customerReview', $content);
@@ -158,7 +158,7 @@ class ContentController extends Controller
         $data = $request->validate([
             'action' => ['required', Rule::in(['approved', 'revision'])],
             'body' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
-        ], ['body.required_if' => 'Revision ke liye comment zaroori hai.']);
+        ], ['body.required_if' => 'A comment is required for a revision.']);
 
         DB::transaction(function () use ($request, $content, $data) {
             $approved = $data['action'] === 'approved';
@@ -169,11 +169,11 @@ class ContentController extends Controller
             }
         });
 
-        $title = $data['action'] === 'approved' ? 'Customer ne approve kiya ✔' : 'Customer ne revision maangi';
+        $title = $data['action'] === 'approved' ? 'Customer approved ✔' : 'Customer requested changes';
         Notify::send([$content->task->assignee, $content->approver], $title,
             $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), route('contents.show', $content));
 
-        return back()->with('status', 'Shukriya! Aapka review save ho gaya.');
+        return back()->with('status', 'Thank you! Your review has been saved.');
     }
 
     private function customers(Content $content)
@@ -181,7 +181,7 @@ class ContentController extends Controller
         return User::where('role', Role::Client)->where('client_id', $content->task->item->calendar->client_id)->get();
     }
 
-    /** Normal comment: carousel par slide number, reel par timestamp (m:ss) */
+    /** Plain comment: slide number on carousels, timestamp (m:ss) on reels */
     public function comment(Request $request, Content $content): RedirectResponse
     {
         Gate::authorize('comment', $content);
@@ -191,7 +191,7 @@ class ContentController extends Controller
             'version' => ['required', 'integer', Rule::exists('content_versions', 'number')->where('content_id', $content->id)],
             'slide' => ['nullable', 'integer', 'min:1', 'max:10'],
             'at' => ['nullable', 'regex:/^\d{1,3}:[0-5]\d$/'],
-        ], ['at.regex' => 'Timestamp m:ss format mein likho, jaise 0:15']);
+        ], ['at.regex' => 'Use the m:ss format for timestamps, e.g. 0:15']);
 
         $at = null;
         if (! empty($data['at'])) {
@@ -209,16 +209,16 @@ class ContentController extends Controller
 
         $url = route('contents.show', [$content, 'v' => $data['version']]);
         $mentioned = Notify::mentioned($data['body']);
-        Notify::send($mentioned, 'Aapko mention kiya', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
-        // Member + Approver ko bhi pata chale (jo mention mein already hain unhe dobara nahi)
+        Notify::send($mentioned, 'You were mentioned', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
+        // Also tell the member + approver (skip anyone already mentioned)
         Notify::send(
             collect([$content->task->assignee, $content->approver])->reject(fn ($u) => $mentioned->contains('id', $u->id)),
-            'Naya comment', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
+            'New comment', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
 
-        return redirect()->route('contents.show', [$content, 'v' => $data['version']])->with('status', 'Comment add ho gaya.');
+        return redirect()->route('contents.show', [$content, 'v' => $data['version']])->with('status', 'Comment added.');
     }
 
-    /** "Fixed ✔" checklist: member revision/comment ko fixed mark (ya unmark) karta hai */
+    /** "Fixed ✔" checklist: the member marks (or unmarks) a revision/comment as fixed */
     public function toggleFixed(Request $request, Content $content, ContentComment $comment): RedirectResponse
     {
         Gate::authorize('upload', [Content::class, $content->task]);
@@ -243,7 +243,7 @@ class ContentController extends Controller
         return back()->with('status', 'Status: '.$next->label());
     }
 
-    /** Private file ko login + permission check ke baad dikhana (video seek bhi chalta hai) */
+    /** Serve a private file after login + permission check (video seeking works) */
     public function media(ContentMedia $media): BinaryFileResponse
     {
         Gate::authorize('view', $media->version->content);
@@ -251,7 +251,7 @@ class ContentController extends Controller
         return response()->file(Storage::disk('local')->path($media->path));
     }
 
-    /** Download saaf naam ke saath: "acme-2026-11-05-instagram-carousel-slide-2.jpg" */
+    /** Download with a clean name: "acme-2026-11-05-instagram-carousel-slide-2.jpg" */
     public function download(ContentMedia $media): BinaryFileResponse
     {
         $content = $media->version->content;
@@ -321,7 +321,7 @@ class ContentController extends Controller
             }
             $this->log($request, $content, 'submitted', null, $version->id);
         } catch (\Throwable $e) {
-            Storage::disk('local')->delete($stored); // DB rollback ke saath files bhi hatao
+            Storage::disk('local')->delete($stored); // remove files together with the DB rollback
             throw $e;
         }
     }

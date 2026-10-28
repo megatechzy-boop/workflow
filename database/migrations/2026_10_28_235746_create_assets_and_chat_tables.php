@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Brand library: customer/team ke photos-videos; optional kisi calendar row se jude
+        // Brand library: customer/team photos and videos; optionally linked to a calendar row
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained()->cascadeOnDelete();
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->index(['room', 'id']);
         });
 
-        // Unread count ke liye: har user ne har room mein kahan tak padha
+        // For unread counts: how far each user has read in each room
         Schema::create('chat_reads', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();

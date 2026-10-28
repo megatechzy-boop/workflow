@@ -12,7 +12,7 @@
                     <div>
                         <x-input-label for="client_id" value="Client" />
                         <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                            <option value="">— Client chuno —</option>
+                            <option value="">— Choose client —</option>
                             @foreach ($clients as $c)
                                 <option value="{{ $c->id }}" @selected(old('client_id') == $c->id)>{{ $c->name }}</option>
                             @endforeach

@@ -44,7 +44,7 @@ class UserController extends Controller
         $user = User::create($data);
         $this->syncExtraPermissions($request, $user);
 
-        return redirect()->route('admin.users.index')->with('status', 'User create ho gaya.');
+        return redirect()->route('admin.users.index')->with('status', 'User created.');
     }
 
     public function edit(Request $request, User $user): View
@@ -63,7 +63,7 @@ class UserController extends Controller
             unset($data['password']);
         }
 
-        // Koi khud ka role/active status na badal sake (lock-out se bachne ke liye)
+        // Nobody can change their own role/active status (prevents lock-out)
         if ($user->is($request->user())) {
             unset($data['role'], $data['is_active']);
         }
@@ -71,7 +71,7 @@ class UserController extends Controller
         $user->update($data);
         $this->syncExtraPermissions($request, $user);
 
-        return redirect()->route('admin.users.index')->with('status', 'User update ho gaya.');
+        return redirect()->route('admin.users.index')->with('status', 'User updated.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse
@@ -79,18 +79,18 @@ class UserController extends Controller
         $this->guardAdminAccount($request, $user);
 
         if ($user->is($request->user())) {
-            return back()->with('error', 'Aap khud ko delete nahi kar sakte.');
+            return back()->with('error', 'You cannot delete yourself.');
         }
 
         $user->delete();
 
-        return redirect()->route('admin.users.index')->with('status', 'User delete ho gaya.');
+        return redirect()->route('admin.users.index')->with('status', 'User deleted.');
     }
 
-    /** "Users manage" permission wala non-admin, Admin accounts ko chhoo nahi sakta */
+    /** A non-admin with the manage-users permission cannot touch Admin accounts */
     private function guardAdminAccount(Request $request, User $user): void
     {
-        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Admin account sirf Admin badal sakta hai.');
+        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only an Admin can change an Admin account.');
     }
 
     private function form(Request $request, User $user): View
@@ -99,7 +99,7 @@ class UserController extends Controller
 
         return view('admin.users.form', [
             'user' => $user,
-            // Non-admin kisi ko Admin nahi bana sakta
+            // Non-admins cannot make anyone an Admin
             'roles' => array_values(array_filter(Role::cases(), fn ($r) => $actorIsAdmin || $r !== Role::Admin)),
             'clients' => Client::orderBy('name')->get(),
             'permissions' => $actorIsAdmin ? Permission::cases() : [],
@@ -108,7 +108,7 @@ class UserController extends Controller
         ]);
     }
 
-    /** Extra permissions sirf Admin de sakta hai; Admin/Customer ke liye kuch save nahi hota */
+    /** Only Admins grant extra permissions; nothing is stored for Admin/Customer */
     private function syncExtraPermissions(Request $request, User $user): void
     {
         if (! $request->user()->isAdmin()) {
@@ -134,12 +134,12 @@ class UserController extends Controller
             'extra_permissions' => ['array'],
             'extra_permissions.*' => [Rule::enum(Permission::class)],
         ], [
-            'client_id.required_if' => 'Customer role ke liye brand chunna zaroori hai.',
-            'role.not_in' => 'Admin role sirf Admin de sakta hai.',
+            'client_id.required_if' => 'Please choose a brand for the Customer role.',
+            'role.not_in' => 'Only an Admin can give the Admin role.',
         ]);
         unset($data['extra_permissions']);
         $data['is_active'] = $request->boolean('is_active');
-        // client_id sirf Customer role par matlab rakhta hai
+        // client_id only matters for the Customer role
         if ($data['role'] !== Role::Client->value) {
             $data['client_id'] = null;
         }

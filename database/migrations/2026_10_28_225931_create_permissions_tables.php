@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unique(['role', 'permission']);
         });
 
-        // Member ko role ke upar extra permission
+        // Extra permissions for a member on top of the role
         Schema::create('user_permissions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();

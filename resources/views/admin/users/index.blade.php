@@ -16,9 +16,9 @@
             @endif
 
             <form method="GET" class="flex flex-wrap gap-2">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Name ya email..." class="border-gray-300 rounded-md shadow-sm text-sm">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Name or email..." class="border-gray-300 rounded-md shadow-sm text-sm">
                 <select name="role" class="border-gray-300 rounded-md shadow-sm text-sm">
-                    <option value="">Sab roles</option>
+                    <option value="">All roles</option>
                     @foreach ($roles as $role)
                         <option value="{{ $role->value }}" @selected(request('role') === $role->value)>{{ $role->label() }}</option>
                     @endforeach
@@ -55,7 +55,7 @@
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                                     <a href="{{ route('admin.users.edit', $user) }}" class="text-indigo-600 hover:underline">Edit</a>
                                     @unless ($user->is(auth()->user()))
-                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" onsubmit="return confirm('Is user ko delete karna hai?')">
+                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" onsubmit="return confirm('Delete this user?')">
                                             @csrf @method('DELETE')
                                             <button class="text-red-600 hover:underline">Delete</button>
                                         </form>
@@ -63,7 +63,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Koi user nahi mila.</td></tr>
+                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No users found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

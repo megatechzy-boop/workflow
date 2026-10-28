@@ -25,14 +25,14 @@
                     <div id="chat-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" aria-live="polite"></div>
 
                     <form id="chat-form" class="border-t p-3 flex flex-wrap items-end gap-2">
-                        <textarea name="body" id="chat-body" rows="2" placeholder="Message likhein… (@naam se mention, Enter = bhejo, Shift+Enter = nayi line)"
+                        <textarea name="body" id="chat-body" rows="2" placeholder="Type a message… (@name to mention, Enter = send, Shift+Enter = new line)"
                             class="flex-1 min-w-[200px] border-gray-300 rounded-md shadow-sm text-sm"></textarea>
                         <label class="cursor-pointer px-3 py-2 rounded-md border border-gray-300 text-sm text-gray-700 hover:bg-gray-50" title="Photo / file attach">
                             📎 <span id="chat-file-name">File</span>
                             <input type="file" name="file" id="chat-file" class="sr-only"
                                 accept="image/*,video/mp4,video/quicktime,application/pdf,.docx,.xlsx,.pptx">
                         </label>
-                        <x-primary-button id="chat-send">Bhejo</x-primary-button>
+                        <x-primary-button id="chat-send">Send</x-primary-button>
                         <p id="chat-error" class="w-full text-sm text-red-600 hidden"></p>
                     </form>
                 </section>
@@ -52,7 +52,7 @@
             const err = document.getElementById('chat-error');
             let lastId = 0;
 
-            // User ka text hamesha textContent se (HTML kabhi nahi)
+            // User text always goes through textContent (never HTML)
             const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
             function render(m) {
@@ -87,7 +87,7 @@
                     const stick = atBottom();
                     const res = await fetch(pollUrl + '?after=' + lastId, { headers: { Accept: 'application/json' } });
                     if (res.ok) { (await res.json()).forEach(render); if (stick) toBottom(); }
-                } catch (e) { /* network hiccup: agli baar */ }
+                } catch (e) { /* network hiccup: retry next tick */ }
             }
             setInterval(poll, 5000);
 
@@ -112,7 +112,7 @@
                     });
                     const data = await res.json();
                     if (!res.ok) {
-                        err.textContent = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Message nahi gaya.';
+                        err.textContent = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Message not sent.';
                         err.classList.remove('hidden');
                         return;
                     }
@@ -121,7 +121,7 @@
                     form.reset();
                     document.getElementById('chat-file-name').textContent = 'File';
                 } catch (e2) {
-                    err.textContent = 'Network problem, dobara bhejein.';
+                    err.textContent = 'Network problem, please try again.';
                     err.classList.remove('hidden');
                 } finally {
                     btn.disabled = false;

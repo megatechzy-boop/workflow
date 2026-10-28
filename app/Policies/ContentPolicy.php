@@ -11,7 +11,7 @@ use App\Models\User;
 
 class ContentPolicy
 {
-    /** Agency team sab dekh sakti hai; Customer sirf apne brand ka, SMM ke OK ke baad */
+    /** The agency team sees everything; Customers only their brand, after SMM approval */
     public function view(User $user, Content $content): bool
     {
         if ($user->role === Role::Client) {
@@ -22,7 +22,7 @@ class ContentPolicy
         return true;
     }
 
-    /** Upload: assigned Designer/Editor, ya "kisi bhi task par upload" permission wale */
+    /** Upload: the assigned Designer/Editor, or users with the upload-any permission */
     public function upload(User $user, Task $task): bool
     {
         return $task->assigned_to === $user->id || $user->hasPermission(Permission::UploadAnyContent);
@@ -33,14 +33,14 @@ class ContentPolicy
         return $content->status === ContentStatus::RevisionRequired && $this->upload($user, $content->task);
     }
 
-    /** Pehla review: chuna hua SMM (ya Admin) */
+    /** First review: the chosen SMM (or Admin) */
     public function review(User $user, Content $content): bool
     {
         return $content->status->awaitingReview()
             && ($content->approver_id === $user->id || $user->isAdmin());
     }
 
-    /** Final review: apne brand ka Customer */
+    /** Final review: the brand's Customer */
     public function customerReview(User $user, Content $content): bool
     {
         return $content->status === ContentStatus::ClientReview
@@ -53,7 +53,7 @@ class ContentPolicy
         return $this->view($user, $content);
     }
 
-    /** Approved => Scheduled => Published ("publish" permission wale) */
+    /** Approved => Scheduled => Published (publish permission) */
     public function markStatus(User $user, Content $content): bool
     {
         return $user->hasPermission(Permission::PublishContent)

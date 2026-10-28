@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /** Purane roles naye team roles mein: Approver => SMM, Team Member => Graphic Designer */
+    /** Old roles to new team roles: Approver => SMM, Team Member => Graphic Designer */
     public function up(): void
     {
         DB::table('users')->where('role', 'approver')->update(['role' => 'social_media_manager']);

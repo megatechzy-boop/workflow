@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /** Naya step: Ops Manager calendar approve karta hai (Customer se pehle) */
+    /** New step: the Ops Manager approves calendars (before the Customer) */
     public function up(): void
     {
         DB::table('role_permissions')->insertOrIgnore(['role' => 'manager', 'permission' => 'approve_calendar']);

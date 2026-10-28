@@ -14,7 +14,7 @@ class ContentComment extends Model
         return ['fixed_at' => 'datetime'];
     }
 
-    /** Fixed checklist mein aane wale: normal comments + revision */
+    /** Items in the Fixed checklist: plain comments + revisions */
     public function isChecklistItem(): bool
     {
         return in_array($this->action, ['comment', 'revision', 'customer_revision'], true) && filled($this->body);

@@ -56,7 +56,7 @@
                         </div>
                     @endif
 
-                    {{-- Download: har file + sab ek saath (browser alag-alag files save karega) --}}
+                    {{-- Download: each file + all at once (the browser saves separate files) --}}
                     @php($files = $version->media->sortBy(fn ($m) => [$m->kind === 'cover' ? 1 : 0, $m->sort_order])->values())
                     <div class="flex flex-wrap items-center gap-2 border-t pt-4">
                         @foreach ($files as $m)
@@ -66,21 +66,21 @@
                         @endforeach
                         @if ($files->count() > 1)
                             <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-gray-800 text-white text-xs font-semibold hover:bg-gray-700"
-                                onclick="document.querySelectorAll('.dl-link').forEach((a, i) => setTimeout(() => a.click(), i * 700))">⬇ Sab download karo ({{ $files->count() }})</button>
+                                onclick="document.querySelectorAll('.dl-link').forEach((a, i) => setTimeout(() => a.click(), i * 700))">⬇ Download all ({{ $files->count() }})</button>
                         @endif
                         @if ($type === App\Enums\PostType::Carousel)
-                            {{-- LinkedIn carousel = PDF document: har slide ek page --}}
+                            {{-- LinkedIn carousel = PDF document: one page per slide --}}
                             @php($pdfName = Str::slug($item->calendar->client->name.' '.$item->post_date->format('Y-m-d').' '.$content->typeLabel()).'-v'.$version->number.'.pdf')
                             <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-blue-700 text-white text-xs font-semibold hover:bg-blue-600"
-                                onclick="this.disabled = true; this.textContent = 'PDF ban rahi hai…'; window.downloadCarouselPdf({{ Js::from($images->map(fn ($m) => route('media.show', $m))->values()) }}, {{ Js::from($pdfName) }}).then(() => { this.textContent = '✔ PDF download ho gayi'; }).catch(() => { this.textContent = 'PDF fail, dobara try karein'; this.disabled = false; })">📄 PDF download (LinkedIn)</button>
+                                onclick="this.disabled = true; this.textContent = 'Building PDF…'; window.downloadCarouselPdf({{ Js::from($images->map(fn ($m) => route('media.show', $m))->values()) }}, {{ Js::from($pdfName) }}).then(() => { this.textContent = '✔ PDF downloaded'; }).catch(() => { this.textContent = 'PDF failed, please retry'; this.disabled = false; })">📄 PDF download (LinkedIn)</button>
                         @endif
                         @if ($version->caption || $version->hashtags)
                             <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-indigo-300 text-indigo-700 text-xs font-semibold hover:bg-indigo-50"
-                                onclick="navigator.clipboard.writeText({{ Js::from(trim($version->caption."\n\n".$version->hashtags)) }}).then(() => { this.textContent = '✔ Copy ho gaya'; })">📋 Caption copy karo</button>
+                                onclick="navigator.clipboard.writeText({{ Js::from(trim($version->caption."\n\n".$version->hashtags)) }}).then(() => { this.textContent = '✔ Copied'; })">📋 Copy caption</button>
                         @endif
                     </div>
                     @if ($files->count() > 1)
-                        <p class="text-xs text-gray-400">"Sab download karo" par browser ek baar "multiple downloads allow" puch sakta hai — Allow karein.</p>
+                        <p class="text-xs text-gray-400">On "Download all" the browser may ask once to allow multiple downloads — please allow it.</p>
                     @endif
 
                     @if ($version->caption || $version->hashtags)
@@ -99,24 +99,24 @@
                             <h3 class="font-semibold text-gray-800 mb-2">Review (V{{ $content->current_version }})</h3>
                             <form method="POST" action="{{ route('contents.review', $content) }}" class="space-y-3">
                                 @csrf
-                                <textarea name="body" rows="3" placeholder="Comment (Revision ke liye zaroori)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('body') }}</textarea>
+                                <textarea name="body" rows="3" placeholder="Comment (required for Revision)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('body') }}</textarea>
                                 <x-input-error :messages="$errors->get('body')" />
                                 <div class="flex flex-wrap gap-2">
                                     <button name="action" value="approved" class="px-3 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-500">Approve</button>
                                     <button name="action" value="revision" class="px-3 py-2 rounded-md bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400">Revision</button>
-                                    <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" onclick="return confirm('Reject karna hai? Ye final hai.')">Reject</button>
+                                    <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" onclick="return confirm('Reject this content? This is final.')">Reject</button>
                                 </div>
-                                <p class="text-xs text-gray-500">Approve karne par content Customer ke paas final approval ke liye jayega.</p>
+                                <p class="text-xs text-gray-500">After approval the content goes to the Customer for final approval.</p>
                             </form>
                         </div>
                     @endcan
 
                     @can('customerReview', $content)
                         <div class="bg-white shadow-sm sm:rounded-lg p-4 border-2 border-purple-200">
-                            <h3 class="font-semibold text-gray-800 mb-2">Aapka approval</h3>
+                            <h3 class="font-semibold text-gray-800 mb-2">Your approval</h3>
                             <form method="POST" action="{{ route('contents.customerReview', $content) }}" class="space-y-3">
                                 @csrf
-                                <textarea name="body" rows="3" placeholder="Comment (Revision ke liye zaroori)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('body') }}</textarea>
+                                <textarea name="body" rows="3" placeholder="Comment (required for Revision)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('body') }}</textarea>
                                 <x-input-error :messages="$errors->get('body')" />
                                 <div class="flex flex-wrap gap-2">
                                     <button name="action" value="approved" class="px-3 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-500">Approve</button>
@@ -135,12 +135,12 @@
 
                     @can('resubmit', $content)
                         <div class="bg-white shadow-sm sm:rounded-lg p-4 border-2 border-orange-200">
-                            <h3 class="font-semibold text-gray-800 mb-2">Naya version bhejo (V{{ $content->current_version + 1 }})</h3>
+                            <h3 class="font-semibold text-gray-800 mb-2">Submit a new version (V{{ $content->current_version + 1 }})</h3>
                             @php($checklist = $content->comments->filter->isChecklistItem())
                             @if ($checklist->isNotEmpty())
                                 <p class="text-sm mb-3 {{ $checklist->whereNull('fixed_at')->isEmpty() ? 'text-green-700' : 'text-orange-700' }}">
                                     Fixed checklist: {{ $checklist->whereNotNull('fixed_at')->count() }} / {{ $checklist->count() }} ✔
-                                    — neeche har comment par "Fixed" tick karo.
+                                    — tick "Fixed" on each comment below.
                                 </p>
                             @endif
                             <form method="POST" action="{{ route('contents.resubmit', $content) }}" enctype="multipart/form-data" class="space-y-3">
@@ -158,14 +158,14 @@
                             <form method="POST" action="{{ route('contents.comment', $content) }}" class="space-y-2 mb-4">
                                 @csrf
                                 <input type="hidden" name="version" value="{{ $version->number }}">
-                                <textarea name="body" rows="2" required placeholder="V{{ $version->number }} par comment... (@naam se mention)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"></textarea>
+                                <textarea name="body" rows="2" required placeholder="V{{ $version->number }} — add a comment... (@name to mention)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"></textarea>
                                 @if ($handles->isNotEmpty())
                                     <p class="text-xs text-gray-400">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
                                 @endif
                                 <div class="flex flex-wrap items-center gap-2">
                                     @if ($images->count() > 1)
                                         <select name="slide" class="border-gray-300 rounded-md shadow-sm text-sm">
-                                            <option value="">Poora carousel</option>
+                                            <option value="">Whole carousel</option>
                                             @foreach ($images as $img)
                                                 <option value="{{ $loop->iteration }}">Slide {{ $loop->iteration }}</option>
                                             @endforeach
@@ -174,7 +174,7 @@
                                     @if ($isReel)
                                         <input name="at" id="at" placeholder="0:15" class="w-20 border-gray-300 rounded-md shadow-sm text-sm">
                                         <button type="button" class="text-xs text-indigo-600 hover:underline"
-                                            onclick="const t=Math.floor(document.getElementById('reel').currentTime);document.getElementById('at').value=Math.floor(t/60)+':'+String(t%60).padStart(2,'0')">Video ka abhi ka time lo</button>
+                                            onclick="const t=Math.floor(document.getElementById('reel').currentTime);document.getElementById('at').value=Math.floor(t/60)+':'+String(t%60).padStart(2,'0')">Use current video time</button>
                                     @endif
                                     <x-secondary-button type="submit">Comment</x-secondary-button>
                                 </div>
@@ -183,8 +183,8 @@
                         @endcan
 
                         <ul class="space-y-3 text-sm">
-                            @php($actionLabels = ['submitted' => 'Upload kiya', 'approved' => 'SMM ne approve kiya', 'revision' => 'Revision maangi', 'rejected' => 'Reject kiya', 'customer_approved' => 'Customer ne approve kiya ✔', 'customer_revision' => 'Customer ne revision maangi', 'scheduled' => 'Scheduled mark kiya', 'published' => 'Published mark kiya'])
-                            {{-- Customer ko team ke internal comments nahi dikhte, sirf customers ke --}}
+                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved ✔', 'customer_revision' => 'Customer requested changes', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
+                            {{-- Customers only see customer comments, never internal team notes --}}
                             @php($timeline = auth()->user()->role === App\Enums\Role::Client ? $content->comments->filter(fn ($c) => $c->user->role === App\Enums\Role::Client) : $content->comments)
                             @forelse ($timeline->reverse() as $c)
                                 <li class="border-l-4 pl-3 {{ in_array($c->action, ['revision', 'customer_revision'], true) ? 'border-orange-400' : ($c->action === 'comment' ? 'border-gray-200' : 'border-indigo-200') }}">
@@ -200,7 +200,7 @@
                                         <button type="button" class="inline-block mt-1 px-2 py-0.5 rounded bg-gray-100 text-xs text-indigo-700"
                                             onclick="const v=document.getElementById('reel');if(v){v.currentTime={{ $c->at_seconds }};v.play();}">▶ {{ $c->timestamp() }}</button>
                                     @endif
-                                    {{-- body pehle escape, phir sirf @mention highlight --}}
+                                    {{-- escape the body first, then only highlight @mentions --}}
                                     @if ($c->body)<div class="mt-1 whitespace-pre-line text-gray-800">{!! preg_replace('/@([\pL\pN_.]+)/u', '<span class="text-indigo-700 font-semibold">@$1</span>', e($c->body)) !!}</div>@endif
                                     @if ($c->isChecklistItem())
                                         <div class="mt-1 flex items-center gap-2 text-xs">
@@ -217,7 +217,7 @@
                                     @endif
                                 </li>
                             @empty
-                                <li class="text-gray-500">Abhi kuch nahi.</li>
+                                <li class="text-gray-500">Nothing yet.</li>
                             @endforelse
                         </ul>
                     </div>

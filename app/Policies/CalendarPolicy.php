@@ -18,7 +18,7 @@ class CalendarPolicy
     public function view(User $user, Calendar $calendar): bool
     {
         if ($user->role === Role::Client) {
-            // Customer ko sirf apna calendar, aur woh bhi submit hone ke baad
+            // Customers only see their own calendar, and only after submission
             return $user->client_id === $calendar->client_id
                 && in_array($calendar->status, [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved], true);
         }
@@ -26,7 +26,7 @@ class CalendarPolicy
         return true;
     }
 
-    /** "Calendar banana" permission wale (default: SMM, Ops Manager) */
+    /** Users with the calendar permission (default: SMM, Ops Manager) */
     public function create(User $user): bool
     {
         return $user->hasPermission(Permission::ManageCalendars);
@@ -47,19 +47,19 @@ class CalendarPolicy
         return $this->update($user, $calendar) && $calendar->items()->exists();
     }
 
-    /** Customer-approved calendar ke posts par Designer/Editor assign karna */
+    /** Assign Designers/Editors to the posts of a Customer-approved calendar */
     public function assign(User $user, Calendar $calendar): bool
     {
         return $user->hasPermission(Permission::AssignTasks) && $calendar->status === CalendarStatus::ClientApproved;
     }
 
-    /** Ops step: poora calendar ("calendar approve" permission) */
+    /** Ops step: the whole calendar (approve calendar permission) */
     public function review(User $user, Calendar $calendar): bool
     {
         return $calendar->status === CalendarStatus::Submitted && $user->hasPermission(Permission::ApproveCalendar);
     }
 
-    /** Customer step: apne brand ka Customer har row alag check karta hai */
+    /** Customer step: the brand's Customer checks every row separately */
     public function reviewItems(User $user, Calendar $calendar): bool
     {
         return $calendar->status === CalendarStatus::ApproverApproved

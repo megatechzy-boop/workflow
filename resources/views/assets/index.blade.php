@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">📁 Assets · {{ $client->name }}</h2>
             @if ($brands->count() > 1)
                 <form method="GET">
-                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm text-sm" aria-label="Brand chuno">
+                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm text-sm" aria-label="Choose brand">
                         @foreach ($brands as $b)
                             <option value="{{ $b->id }}" @selected($b->id === $client->id)>{{ $b->name }}</option>
                         @endforeach
@@ -24,17 +24,17 @@
                 @csrf
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
                 <div>
-                    <x-input-label value="Photos / videos upload karein (ek saath kai, har file max 100 MB)" />
+                    <x-input-label value="Upload photos / videos (several at once, max 100 MB each)" />
                     <input type="file" name="files[]" multiple required accept="image/*,video/mp4,video/quicktime" class="mt-1 block text-sm">
                     <x-input-error :messages="$errors->get('files')" class="mt-1" />
                     <x-input-error :messages="$errors->get('files.*')" class="mt-1" />
                 </div>
                 <x-primary-button>Upload</x-primary-button>
-                <p class="text-xs text-gray-500 w-full">Kisi khaas post ke liye ho toh Calendar ki us row ke "Files" column se upload karein.</p>
+                <p class="text-xs text-gray-500 w-full">For a specific post, upload from the "Files" column of that calendar row.</p>
             </form>
 
             @if (request('item'))
-                <p class="text-sm">Sirf ek calendar row ki files dikh rahi hain · <a href="{{ route('assets.index', ['client' => $client->id]) }}" class="text-indigo-600 hover:underline">Sab dikhao</a></p>
+                <p class="text-sm">Showing files of one calendar row · <a href="{{ route('assets.index', ['client' => $client->id]) }}" class="text-indigo-600 hover:underline">Show all</a></p>
             @endif
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -57,15 +57,15 @@
                         <div class="px-2 pb-2 flex items-center gap-3 text-xs">
                             <a href="{{ route('assets.download', $asset) }}" class="text-indigo-600 hover:underline">⬇ Download</a>
                             @if ($asset->uploaded_by === auth()->id() || auth()->user()->isAdmin())
-                                <form method="POST" action="{{ route('assets.destroy', $asset) }}" onsubmit="return confirm('Ye file hatani hai?')">
+                                <form method="POST" action="{{ route('assets.destroy', $asset) }}" onsubmit="return confirm('Delete this file?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-red-600 hover:underline">Hatao</button>
+                                    <button class="text-red-600 hover:underline">Delete</button>
                                 </form>
                             @endif
                         </div>
                     </div>
                 @empty
-                    <p class="col-span-full text-center text-gray-500 py-8">Abhi koi file nahi.</p>
+                    <p class="col-span-full text-center text-gray-500 py-8">No files yet.</p>
                 @endforelse
             </div>
 

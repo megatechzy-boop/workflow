@@ -54,21 +54,21 @@ class NotificationTest extends TestCase
     {
         $content = $this->assignAndUpload();
 
-        $this->assertSame('Naya task mila', $this->member->notifications()->first()->data['title']);
-        $this->assertSame('Content approval ke liye', $this->approver->notifications()->first()->data['title']);
+        $this->assertSame('New task assigned', $this->member->notifications()->first()->data['title']);
+        $this->assertSame('Content needs approval', $this->approver->notifications()->first()->data['title']);
 
-        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Logo chhota karo']);
-        $this->assertContains('Content: Revision chahiye', $this->member->fresh()->notifications->pluck('data.title'));
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Make the logo smaller']);
+        $this->assertContains('Content: Revision required', $this->member->fresh()->notifications->pluck('data.title'));
     }
 
     public function test_mention_notifies_by_name_without_spaces(): void
     {
         $content = $this->assignAndUpload();
 
-        $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'Dekho @RaviManager', 'version' => 1]);
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'Look @RaviManager', 'version' => 1]);
 
-        $this->assertSame('Aapko mention kiya', $this->manager->notifications()->first()->data['title']);
-        // Approver khud ko notify nahi karta
+        $this->assertSame('You were mentioned', $this->manager->notifications()->first()->data['title']);
+        // the approver does not notify themselves
         $this->assertSame(1, $this->approver->notifications()->count());
     }
 
@@ -76,18 +76,18 @@ class NotificationTest extends TestCase
     {
         Config::set('mail.default', 'smtp');
         Config::set('mail.mailers.smtp.host', '127.0.0.1');
-        Config::set('mail.mailers.smtp.port', 1); // koi server nahi
+        Config::set('mail.mailers.smtp.port', 1); // no server
 
         $this->assignAndUpload();
 
         $this->assertSame(1, Content::count());
-        $this->assertSame(1, $this->approver->notifications()->count()); // in-app phir bhi save
+        $this->assertSame(1, $this->approver->notifications()->count()); // in-app is still stored
     }
 
     public function test_member_marks_revision_comment_fixed_and_bell_page_works(): void
     {
         $content = $this->assignAndUpload();
-        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Text bada karo']);
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Make the text bigger']);
         $comment = $content->comments()->where('action', 'revision')->firstOrFail();
 
         $this->actingAs($this->approver)->post("/contents/{$content->id}/comments/{$comment->id}/fixed")->assertForbidden();
@@ -98,6 +98,6 @@ class NotificationTest extends TestCase
         $id = $this->member->notifications()->first()->id;
         $this->actingAs($this->member)->get("/notifications/{$id}")->assertRedirect();
         $this->assertNotNull($this->member->notifications()->find($id)->read_at);
-        $this->actingAs($this->approver)->get("/notifications/{$id}")->assertNotFound(); // doosre ki notification nahi
+        $this->actingAs($this->approver)->get("/notifications/{$id}")->assertNotFound(); // cannot open someone else's notification
     }
 }

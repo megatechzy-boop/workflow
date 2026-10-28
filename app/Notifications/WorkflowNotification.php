@@ -6,7 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/** Ek hi notification har event ke liye: title + message + link (in-app + email) */
+/** One notification for every event: title + message + link (in-app + email) */
 class WorkflowNotification extends Notification
 {
     use Queueable;

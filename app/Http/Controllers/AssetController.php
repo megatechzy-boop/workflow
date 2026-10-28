@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** Brand library: customer/team ke photos-videos (calendar row se bhi jud sakte hain) */
+/** Brand library: customer/team photos and videos (can be linked to a calendar row) */
 class AssetController extends Controller
 {
     public function index(Request $request): View
@@ -22,7 +22,7 @@ class AssetController extends Controller
         $isCustomer = $user->role === Role::Client;
         $brands = $isCustomer ? Client::whereKey($user->client_id)->get() : Client::orderBy('name')->get();
         $client = $isCustomer ? $brands->first() : ($brands->firstWhere('id', (int) $request->client) ?? $brands->first());
-        abort_unless($client, 404, 'Koi brand nahi mila.');
+        abort_unless($client, 404, 'No brand found.');
 
         $assets = Asset::with(['uploader', 'item'])
             ->where('client_id', $client->id)
@@ -41,14 +41,14 @@ class AssetController extends Controller
             'client_id' => ['required', 'exists:clients,id'],
             'calendar_item_id' => ['nullable', 'exists:calendar_items,id'],
             'files' => ['required', 'array', 'max:20'],
-            // Photos + videos, har file max 100 MB
+            // Photos + videos, max 100 MB per file
             'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime', 'max:102400'],
-        ], ['files.*.mimetypes' => 'Sirf photo (jpg/png/webp/gif) ya video (mp4/mov) upload karein.']);
+        ], ['files.*.mimetypes' => 'Only photos (jpg/png/webp/gif) or videos (mp4/mov) are allowed.']);
 
         $clientId = (int) $data['client_id'];
         abort_unless(Asset::canAccessBrand($user, $clientId), 403);
         if (! empty($data['calendar_item_id'])) {
-            // Row usi brand ki honi chahiye
+            // The row must belong to the same brand
             abort_unless(CalendarItem::find($data['calendar_item_id'])->calendar->client_id === $clientId, 422);
         }
 
@@ -69,11 +69,11 @@ class AssetController extends Controller
                 }
             });
         } catch (\Throwable $e) {
-            Storage::disk('local')->delete($stored); // DB fail toh files bhi hatao
+            Storage::disk('local')->delete($stored); // remove the files if the DB write fails
             throw $e;
         }
 
-        return back()->with('status', count($stored).' file(s) upload ho gayi.');
+        return back()->with('status', count($stored).' file(s) uploaded.');
     }
 
     /** Preview (image/video inline) */
@@ -91,13 +91,13 @@ class AssetController extends Controller
         return response()->download(Storage::disk('local')->path($asset->path), $asset->original_name);
     }
 
-    /** Upload karne wala ya Admin hata sakta hai */
+    /** The uploader or an Admin can delete */
     public function destroy(Request $request, Asset $asset): RedirectResponse
     {
         abort_unless($asset->uploaded_by === $request->user()->id || $request->user()->isAdmin(), 403);
 
         $asset->delete();
 
-        return back()->with('status', 'File hata di.');
+        return back()->with('status', 'File deleted.');
     }
 }

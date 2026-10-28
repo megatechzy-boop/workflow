@@ -11,7 +11,7 @@
                     @foreach ($statuses as $s)
                         <option value="{{ $s->value }}" @selected(request('status') === $s->value)>{{ $s->label() }}</option>
                     @endforeach
-                    <option value="all" @selected(request('status') === 'all')>Sab</option>
+                    <option value="all" @selected(request('status') === 'all')>All</option>
                 </select>
                 <x-secondary-button type="submit">Filter</x-secondary-button>
             </form>
@@ -41,7 +41,7 @@
                                 <td class="px-4 py-3 text-right"><a href="{{ route('contents.show', $content) }}" class="text-indigo-600 hover:underline">Open</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Kuch pending nahi.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Nothing pending.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

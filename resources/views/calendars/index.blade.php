@@ -17,14 +17,14 @@
             <form method="GET" class="flex flex-wrap gap-2">
                 @if ($clients->isNotEmpty())
                     <select name="client_id" class="border-gray-300 rounded-md shadow-sm text-sm">
-                        <option value="">Sab clients</option>
+                        <option value="">All clients</option>
                         @foreach ($clients as $c)
                             <option value="{{ $c->id }}" @selected(request('client_id') == $c->id)>{{ $c->name }}</option>
                         @endforeach
                     </select>
                 @endif
                 <select name="status" class="border-gray-300 rounded-md shadow-sm text-sm">
-                    <option value="">Sab status</option>
+                    <option value="">All statuses</option>
                     @foreach ($statuses as $s)
                         <option value="{{ $s->value }}" @selected(request('status') === $s->value)>{{ $s->label() }}</option>
                     @endforeach
@@ -53,7 +53,7 @@
                                 <td class="px-4 py-3 text-right"><a href="{{ route('calendars.show', $calendar) }}" class="text-indigo-600 hover:underline">Open</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Abhi koi calendar nahi hai.</td></tr>
+                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No calendars yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
 
 /**
- * Carousel slides => ek PDF (LinkedIn document post). Har slide ek page, apne size mein.
- * Browser mein banta hai, server par kuch nahi lagta.
+ * Carousel slides => one PDF (LinkedIn document post). One page per slide, at its own size.
+ * Built in the browser; nothing runs on the server.
  */
 export default async function carouselPdf(urls, filename, { save = true } = {}) {
     let doc = null;
@@ -12,7 +12,7 @@ export default async function carouselPdf(urls, filename, { save = true } = {}) 
         const bitmap = await createImageBitmap(blob);
         const { width, height } = bitmap;
 
-        // webp/png sab ko JPEG mein: PDF chhoti aur har jagah chalti hai
+        // convert everything to JPEG: smaller PDF that works everywhere
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;

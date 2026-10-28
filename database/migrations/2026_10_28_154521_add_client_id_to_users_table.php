@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Sirf Client role wale users ke liye: woh kis client ke hain
+            // Only for Customer users: which brand they belong to
             $table->foreignId('client_id')->nullable()->after('role')->constrained()->nullOnDelete();
         });
     }

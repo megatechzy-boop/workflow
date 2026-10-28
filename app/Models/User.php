@@ -63,23 +63,23 @@ class User extends Authenticatable
         ];
     }
 
-    /** Tasks assign karne layak: active Designers/Editors (ya sirf diye gaye roles) */
+    /** Members who can get tasks: active Designers/Editors (or only the given roles) */
     public static function creators(?array $roles = null)
     {
         return static::whereIn('role', $roles ?? [Role::GraphicDesigner, Role::VideoEditor])
             ->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role']);
     }
 
-    /** Is request mein permissions ek baar load (role + extra) */
+    /** Permissions loaded once per request (role + extra) */
     private ?array $permissionCache = null;
 
     public function hasPermission(Permission $permission): bool
     {
         if ($this->isAdmin()) {
-            return true; // Admin ke paas hamesha sab, taaki koi lock na ho
+            return true; // Admin always has everything, so nobody gets locked out
         }
         if ($this->role === Role::Client) {
-            return false; // Customer ko internal permissions nahi
+            return false; // Customers never get internal permissions
         }
 
         $this->permissionCache ??= DB::table('role_permissions')->where('role', $this->role->value)->pluck('permission')
@@ -94,7 +94,7 @@ class User extends Authenticatable
         return DB::table('user_permissions')->where('user_id', $this->id)->pluck('permission')->all();
     }
 
-    /** Jin users ke paas permission hai (role se ya extra), active, Customer ke alawa */
+    /** Active non-customer users that have the permission (via role or extra) */
     public static function withPermission(Permission $permission)
     {
         $roles = DB::table('role_permissions')->where('permission', $permission->value)->pluck('role')->push(Role::Admin->value);

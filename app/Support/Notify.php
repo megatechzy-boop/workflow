@@ -10,8 +10,8 @@ use Illuminate\Support\Collection;
 class Notify
 {
     /**
-     * Users ko notification bhejo (khud ko aur inactive ko chhod kar).
-     * Email fail ho (SMTP set nahi) toh bhi request na toote: in-app pehle save hota hai, mail error sirf log hota hai.
+     * Notify users (skipping the actor and inactive users).
+     * If email fails (SMTP not set) the request must not break: in-app is stored first, mail errors are only logged.
      */
     public static function send(iterable $users, string $title, string $message, string $url): void
     {
@@ -33,7 +33,7 @@ class Notify
         return User::whereIn('role', $roles)->where('is_active', true)->get();
     }
 
-    /** "@TeamMember" => us user ko (naam bina space ke, case ignore) */
+    /** "@TeamMember" => that user (name without spaces, case-insensitive) */
     public static function mentioned(?string $text): Collection
     {
         preg_match_all('/@([\pL\pN_.]+)/u', (string) $text, $m);
@@ -42,7 +42,7 @@ class Notify
         }
         $handles = array_map('mb_strtolower', $m[1]);
 
-        // shortcut: saare staff users PHP mein match karte hain; team bahut badi ho (1000+) tab DB column banana
+        // shortcut: matches all staff users in PHP; add a DB column if the team grows past ~1000
         return User::where('role', '!=', Role::Client)->where('is_active', true)->get()
             ->filter(fn (User $u) => in_array($u->handle(), $handles, true));
     }

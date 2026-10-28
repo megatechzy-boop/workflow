@@ -34,7 +34,7 @@
                 @endif
             </div>
 
-            {{-- Har post type ka content --}}
+            {{-- Content per format --}}
             @foreach ($item->post_types as $postType)
                 @php($content = $task->contents->firstWhere('post_type', $postType))
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">
@@ -47,7 +47,7 @@
 
                     @if ($content)
                         <p class="text-sm text-gray-600">Approver: {{ $content->approver->name }}</p>
-                        <a href="{{ route('contents.show', $content) }}" class="inline-block mt-3 text-indigo-600 hover:underline">Content kholo →</a>
+                        <a href="{{ route('contents.show', $content) }}" class="inline-block mt-3 text-indigo-600 hover:underline">Open content →</a>
                     @elseif (auth()->user()->can('upload', [App\Models\Content::class, $task]))
                         <form method="POST" action="{{ route('tasks.contents.store', $task) }}" enctype="multipart/form-data" class="space-y-4">
                             @csrf
@@ -56,7 +56,7 @@
                             <div>
                                 <x-input-label value="Approver" />
                                 <select name="approver_id" required class="mt-1 block w-full sm:w-1/2 border-gray-300 rounded-md shadow-sm">
-                                    <option value="">— Approver chuno —</option>
+                                    <option value="">— Choose approver —</option>
                                     @foreach ($approvers as $a)
                                         <option value="{{ $a->id }}" @selected(old('approver_id') == $a->id)>{{ $a->name }}</option>
                                     @endforeach
@@ -67,7 +67,7 @@
                             <x-primary-button>Upload &amp; Submit</x-primary-button>
                         </form>
                     @else
-                        <p class="text-sm text-gray-500">Abhi upload nahi hua.</p>
+                        <p class="text-sm text-gray-500">Not uploaded yet.</p>
                     @endif
                 </div>
             @endforeach

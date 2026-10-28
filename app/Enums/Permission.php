@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-/** Admin > Roles se role-wise, aur Users > Edit se member-wise di jaati hain. Admin ke paas hamesha sab. */
+/** Granted per role (Admin > Roles) and per member (Users > Edit). Admin always has all. */
 enum Permission: string
 {
     case ManageUsers = 'manage_users';
@@ -18,19 +18,19 @@ enum Permission: string
     public function label(): string
     {
         return match ($this) {
-            self::ManageUsers => 'Users manage karna',
-            self::ManageClients => 'Clients (brands) manage karna',
-            self::ManageCalendars => 'Content calendar banana / edit / submit',
-            self::ApproveCalendar => 'Calendar approve karna (Customer se pehle)',
-            self::AssignTasks => 'Tasks assign karna',
-            self::ApproveContent => 'Content approve karna (Approver list mein aana)',
-            self::PublishContent => 'Scheduled / Published mark karna',
-            self::ViewAllTasks => 'Sabke tasks, approvals aur points dekhna',
-            self::UploadAnyContent => 'Kisi bhi task par content upload karna',
+            self::ManageUsers => 'Manage users',
+            self::ManageClients => 'Manage clients (brands)',
+            self::ManageCalendars => 'Create / edit / submit content calendars',
+            self::ApproveCalendar => 'Approve calendars (before the Customer)',
+            self::AssignTasks => 'Assign tasks',
+            self::ApproveContent => 'Approve content (appear in the Approver list)',
+            self::PublishContent => 'Mark content Scheduled / Published',
+            self::ViewAllTasks => 'View all tasks, approvals and points',
+            self::UploadAnyContent => 'Upload content on any task',
         };
     }
 
-    /** Pehli baar ke defaults (wahi jo pehle code mein fixed tha) */
+    /** Initial defaults (same as the previously hard-coded behaviour) */
     public static function defaults(): array
     {
         return [

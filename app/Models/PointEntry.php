@@ -8,14 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PointEntry extends Model
 {
     public const LABELS = [
-        'on_time' => 'Time par submit',
+        'on_time' => 'Submitted on time',
         'late' => 'Late submit',
-        'first_approve' => 'Pehli baar mein approve',
+        'first_approve' => 'Approved first time',
     ];
 
     protected $fillable = ['user_id', 'task_id', 'content_id', 'reason', 'points'];
 
-    /** Task submit hone par: deadline tak = on_time, warna late */
+    /** On task submit: by the deadline = on_time, otherwise late */
     public static function forSubmittedTask(Task $task): void
     {
         $reason = $task->submitted_at->toDateString() <= $task->deadline->toDateString() ? 'on_time' : 'late';
@@ -26,7 +26,7 @@ class PointEntry extends Model
         );
     }
 
-    /** Content V1 mein approve hua toh bonus */
+    /** Bonus when content is approved in V1 */
     public static function forApprovedContent(Content $content): void
     {
         if ($content->current_version !== 1) {

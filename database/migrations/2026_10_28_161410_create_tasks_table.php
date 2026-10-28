@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('assigned_to')->constrained('users')->restrictOnDelete();
             $table->foreignId('assigned_by')->constrained('users')->restrictOnDelete();
             $table->date('deadline');
-            $table->string('status', 20)->default('pending')->index(); // pending, submitted, done (Step 5)
+            $table->string('status', 20)->default('pending')->index(); // pending, submitted, done
             $table->timestamp('submitted_at')->nullable();
             $table->timestamps();
             $table->index(['assigned_to', 'deadline']);

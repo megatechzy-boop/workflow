@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Admin ne user inactive kiya toh uska chalu session (aur "remember me") turant band */
+/** When an Admin deactivates a user, end their running session (and remember-me) at once */
 class LogoutInactiveUser
 {
     public function handle(Request $request, Closure $next): Response
@@ -17,7 +17,7 @@ class LogoutInactiveUser
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => 'Aapka account inactive hai. Admin se contact karein.']);
+            return redirect()->route('login')->withErrors(['email' => 'Your account is inactive. Please contact an Admin.']);
         }
 
         return $next($request);

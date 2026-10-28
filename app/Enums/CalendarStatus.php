@@ -5,9 +5,9 @@ namespace App\Enums;
 enum CalendarStatus: string
 {
     case Draft = 'draft';
-    case Submitted = 'submitted';               // Admin/Ops Manager ke paas
-    case ApproverApproved = 'approver_approved'; // Customer ke paas
-    case ClientApproved = 'client_approved';     // Final: ab tasks banenge
+    case Submitted = 'submitted';               // with the Admin/Ops Manager
+    case ApproverApproved = 'approver_approved'; // with the Customer
+    case ClientApproved = 'client_approved';     // Final: tasks get created
 
     public function label(): string
     {

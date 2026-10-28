@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // "Fixed ✔" checklist: member revision comment ko fixed mark karta hai
+        // "Fixed ✔" checklist: the member marks a revision comment as fixed
         Schema::table('content_comments', function (Blueprint $table) {
             $table->timestamp('fixed_at')->nullable();
             $table->foreignId('fixed_by')->nullable()->constrained('users')->nullOnDelete();

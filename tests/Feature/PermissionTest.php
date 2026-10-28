@@ -24,7 +24,7 @@ class PermissionTest extends TestCase
     {
         $admin = User::factory()->create(['role' => Role::Admin]);
 
-        // Designer ko "Clients manage" do, SMM se calendar le lo
+        // give Designers manage-clients, take calendars away from the SMM
         $this->actingAs($admin)->put('/admin/roles', ['grant' => [
             'graphic_designer' => ['manage_clients'],
             'social_media_manager' => ['assign_tasks'],
@@ -56,7 +56,7 @@ class PermissionTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $this->actingAs($designer->fresh())->get('/calendars/create')->assertOk();
-        // Doosre designer ko nahi mila
+        // another designer did not get it
         $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->get('/calendars/create')->assertForbidden();
     }
 
@@ -77,7 +77,7 @@ class PermissionTest extends TestCase
         $this->actingAs($hr)->get("/admin/users/{$admin->id}/edit")->assertForbidden();
         $this->actingAs($hr)->delete("/admin/users/{$admin->id}")->assertForbidden();
 
-        // Non-admin extra permissions nahi de sakta
+        // non-admins cannot grant extra permissions
         $designer = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->actingAs($hr)->put("/admin/users/{$designer->id}", [
             'name' => $designer->name, 'email' => $designer->email, 'role' => 'graphic_designer', 'is_active' => '1',

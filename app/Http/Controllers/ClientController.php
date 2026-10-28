@@ -30,7 +30,7 @@ class ClientController extends Controller
     {
         Client::create($this->validated($request));
 
-        return redirect()->route('clients.index')->with('status', 'Client add ho gaya.');
+        return redirect()->route('clients.index')->with('status', 'Client added.');
     }
 
     public function edit(Client $client): View
@@ -42,14 +42,14 @@ class ClientController extends Controller
     {
         $client->update($this->validated($request));
 
-        return redirect()->route('clients.index')->with('status', 'Client update ho gaya.');
+        return redirect()->route('clients.index')->with('status', 'Client updated.');
     }
 
     public function destroy(Client $client): RedirectResponse
     {
         $client->delete();
 
-        return redirect()->route('clients.index')->with('status', 'Client delete ho gaya.');
+        return redirect()->route('clients.index')->with('status', 'Client deleted.');
     }
 
     private function validated(Request $request): array

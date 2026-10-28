@@ -19,7 +19,7 @@ class CalendarItem extends Model
         return ['post_date' => 'date', 'post_types' => 'array'];
     }
 
-    /** Sab options: ['linkedin_post' => 'LinkedIn Post', ...] (YouTube Carousel nahi hota) */
+    /** All options: ['linkedin_post' => 'LinkedIn Post', ...] (there is no YouTube Carousel) */
     public static function typeOptions(): array
     {
         $options = [];
@@ -44,8 +44,8 @@ class CalendarItem extends Model
     }
 
     /**
-     * Kaun is post ka task le sakta hai: Reel => Video Editor, Post/Carousel => Graphic Designer.
-     * shortcut: ek item ka ek task hai, toh "Post + Reel" mix par dono roles dikhte hain; alag-alag log chahiye toh task per type banana hoga.
+     * Who can take this post: Reel => Video Editor, Post/Carousel => Graphic Designer.
+     * shortcut: one task per item, so a "Post + Reel" mix shows both roles; split tasks per format if different people are needed.
      */
     public function assigneeRoles(): array
     {
@@ -57,7 +57,7 @@ class CalendarItem extends Model
         ]));
     }
 
-    /** Customer/team ki is post ke liye di gayi photos-videos */
+    /** Photos/videos the Customer or team attached to this post */
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class)->latest();

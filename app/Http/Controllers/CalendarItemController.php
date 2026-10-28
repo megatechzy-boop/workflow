@@ -25,7 +25,7 @@ class CalendarItemController extends Controller
 
         $calendar->items()->create($this->validated($request, $calendar));
 
-        return redirect()->route('calendars.show', $calendar)->with('status', 'Post add ho gaya.');
+        return redirect()->route('calendars.show', $calendar)->with('status', 'Post added.');
     }
 
     public function edit(Calendar $calendar, CalendarItem $item): View
@@ -39,10 +39,10 @@ class CalendarItemController extends Controller
     {
         Gate::authorize('update', $calendar);
 
-        // Row badli => Customer ko ye row dobara check karni hogi (pichla comment reference ke liye rehta hai)
+        // Row changed => the Customer has to check it again (the previous comment stays for reference)
         $item->update([...$this->validated($request, $calendar), 'client_status' => null]);
 
-        return redirect()->route('calendars.show', $calendar)->with('status', 'Post update ho gaya.');
+        return redirect()->route('calendars.show', $calendar)->with('status', 'Post updated.');
     }
 
     public function destroy(Calendar $calendar, CalendarItem $item): RedirectResponse
@@ -51,7 +51,7 @@ class CalendarItemController extends Controller
 
         $item->delete();
 
-        return redirect()->route('calendars.show', $calendar)->with('status', 'Post hata diya.');
+        return redirect()->route('calendars.show', $calendar)->with('status', 'Post deleted.');
     }
 
     private function validated(Request $request, Calendar $calendar): array
@@ -59,7 +59,7 @@ class CalendarItemController extends Controller
         $month = $calendar->month;
 
         return $request->validate([
-            // Post date usi calendar ke mahine mein honi chahiye
+            // The post date must fall inside the calendar month
             'post_date' => ['required', 'date', 'after_or_equal:'.$month->toDateString(), 'before_or_equal:'.$month->copy()->endOfMonth()->toDateString()],
             'post_types' => ['required', 'array', 'min:1'],
             'post_types.*' => ['distinct', Rule::in(array_keys(CalendarItem::typeOptions()))],
@@ -69,8 +69,8 @@ class CalendarItemController extends Controller
             'reference_link' => ['nullable', 'url', 'max:500'],
             'remarks' => ['nullable', 'string', 'max:5000'],
         ], [
-            'post_date.after_or_equal' => 'Date '.$month->format('F Y').' ke andar honi chahiye.',
-            'post_date.before_or_equal' => 'Date '.$month->format('F Y').' ke andar honi chahiye.',
+            'post_date.after_or_equal' => 'The date must be in '.$month->format('F Y').'.',
+            'post_date.before_or_equal' => 'The date must be in '.$month->format('F Y').'.',
         ]);
     }
 }

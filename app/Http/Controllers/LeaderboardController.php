@@ -27,14 +27,14 @@ class LeaderboardController extends Controller
             ->groupBy('user_id')
             ->get()->keyBy('user_id');
 
-        // Sab active members dikhein, jinke 0 points hain woh bhi
+        // Show every active member, including those with 0 points
         $board = User::creators()
             ->merge(User::whereIn('id', $totals->keys())->get(['id', 'name', 'role']))
             ->unique('id')
             ->map(fn ($u) => (object) ['user' => $u, 'total' => (int) ($totals[$u->id]->total ?? 0)])
             ->sortByDesc('total')->values();
 
-        // History: member ko apni, "sab dekhna" permission wale ko kisi ki bhi (?user=)
+        // History: members see their own; view-all users can pick anyone (?user=)
         $historyUser = $user->hasPermission(Permission::ViewAllTasks) && $request->user
             ? User::findOrFail($request->user)
             : $user;

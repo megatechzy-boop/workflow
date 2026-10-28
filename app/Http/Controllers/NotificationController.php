@@ -13,7 +13,7 @@ class NotificationController extends Controller
         return view('notifications.index', ['notifications' => $request->user()->notifications()->paginate(30)]);
     }
 
-    /** Click: read mark karo aur link par bhejo */
+    /** Click: mark as read and go to the link */
     public function open(Request $request, string $id): RedirectResponse
     {
         $notification = $request->user()->notifications()->findOrFail($id);

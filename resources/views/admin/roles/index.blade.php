@@ -10,8 +10,8 @@
             @endif
 
             <p class="text-sm text-gray-600">
-                Har role ke sab members ko ye permissions milti hain. Kisi ek member ko extra dena ho toh <strong>Users &gt; Edit</strong> mein do.
-                Admin ke paas hamesha sab permissions hain; Customer ko internal permissions nahi milti.
+                Every member of a role gets these permissions. To give one member something extra, use <strong>Users &gt; Edit</strong>.
+                Admins always have every permission; Customers never get internal permissions.
             </p>
 
             <form method="POST" action="{{ route('admin.roles.update') }}" class="space-y-4">
@@ -48,8 +48,8 @@
             </form>
 
             <p class="text-xs text-gray-500">
-                Ye workflow niyam permission se nahi badalte: task wala Designer/Editor hi apna content upload karta hai,
-                content upload par chuna gaya Approver hi review karta hai, aur Customer sirf apne brand ka calendar approve karta hai.
+                These workflow rules do not change with permissions: the assigned Designer/Editor uploads their own content,
+                the Approver chosen at upload reviews it, and Customers only approve their own brand's calendar.
             </p>
         </div>
     </div>

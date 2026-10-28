@@ -19,15 +19,15 @@ class Task extends Model
         return ['deadline' => 'date', 'submitted_at' => 'datetime'];
     }
 
-    /** Auto deadline: posting date se 2 din pehle, par aaj se pehle kabhi nahi */
+    /** Auto deadline: 2 days before the posting date, never before today */
     public static function deadlineFor(Carbon $postDate): Carbon
     {
         return $postDate->copy()->subDays(2)->max(today());
     }
 
     /**
-     * Customer approve karte hi: jin posts ka task nahi bana, unhe sahi role (Reel => Editor, baaki => Designer)
-     * ke us member ko do jiske paas sabse kam pending tasks hain. SMM baad mein badal sakta hai.
+     * On Customer approval: give every post without a task to the member of the right role
+     * (Reel => Editor, others => Designer) with the fewest pending tasks. The SMM can change it later.
      */
     public static function autoAssign(Calendar $calendar, int $assignedBy): array
     {
@@ -40,7 +40,7 @@ class Task extends Model
             $member = $creators->filter(fn ($u) => in_array($u->role, $item->assigneeRoles(), true))
                 ->sortBy(fn ($u) => [$load[$u->id] ?? 0, $u->name])->first();
             if (! $member) {
-                continue; // us role ka koi active member nahi: SMM haath se assign karega
+                continue; // no active member with that role: the SMM assigns it manually
             }
 
             $load[$member->id] = ($load[$member->id] ?? 0) + 1;
@@ -56,7 +56,7 @@ class Task extends Model
 
     public function notifyAssignee(): void
     {
-        Notify::send([$this->assignee], 'Naya task mila',
+        Notify::send([$this->assignee], 'New task assigned',
             $this->item->calendar->client->name.' · post date '.$this->item->post_date->format('d M').' · deadline '.$this->deadline->format('d M'),
             route('tasks.show', $this));
     }

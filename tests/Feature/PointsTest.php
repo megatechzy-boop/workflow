@@ -55,10 +55,10 @@ class PointsTest extends TestCase
 
     public function test_on_time_submit_plus_first_approve(): void
     {
-        Carbon::setTestNow('2026-11-08 18:00'); // deadline wala din = on time
+        Carbon::setTestNow('2026-11-08 18:00'); // deadline day = on time
         $content = $this->upload($this->task('2026-11-08'));
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
-        $this->assertSame(10, (int) PointEntry::where('user_id', $this->member->id)->sum('points')); // bonus Customer ke baad
+        $this->assertSame(10, (int) PointEntry::where('user_id', $this->member->id)->sum('points')); // bonus only after the Customer
 
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $content->task->item->calendar->client_id]);
         $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'approved']);
@@ -68,7 +68,7 @@ class PointsTest extends TestCase
 
     public function test_late_submit_and_no_bonus_after_revision(): void
     {
-        Carbon::setTestNow('2026-11-09 09:00'); // deadline ke ek din baad
+        Carbon::setTestNow('2026-11-09 09:00'); // one day after the deadline
         $content = $this->upload($this->task('2026-11-08'));
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Fix']);
         $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => [UploadedFile::fake()->image('b.jpg')]]);
@@ -82,7 +82,7 @@ class PointsTest extends TestCase
         Carbon::setTestNow('2026-11-08 10:00');
         $this->upload($this->task('2026-11-08'));
 
-        $this->actingAs($this->member)->get('/leaderboard?month=2026-11')->assertOk()->assertSee($this->member->name)->assertSee('Time par submit');
+        $this->actingAs($this->member)->get('/leaderboard?month=2026-11')->assertOk()->assertSee($this->member->name)->assertSee('Submitted on time');
         $this->actingAs(User::factory()->create(['role' => Role::Client]))->get('/leaderboard')->assertForbidden();
     }
 }

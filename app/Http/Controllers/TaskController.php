@@ -16,7 +16,7 @@ use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    /** Designer/Editor: apne tasks. "Sab dekhna" permission: sabke, member filter ke saath. */
+    /** Designer/Editor: own tasks. View-all permission: everyone, with a member filter. */
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -38,7 +38,7 @@ class TaskController extends Controller
         ]);
     }
 
-    /** Task page: brief + har post type ka upload/status */
+    /** Task page: brief + upload/status per format */
     public function show(Request $request, Task $task): View
     {
         $user = $request->user();
@@ -49,7 +49,7 @@ class TaskController extends Controller
         return view('tasks.show', ['task' => $task, 'approvers' => User::withPermission(Permission::ApproveContent)]);
     }
 
-    /** Approved calendar ke har post par member chuno; deadline apne aap */
+    /** Pick a member for each post of an approved calendar; the deadline is automatic */
     public function assign(Request $request, Calendar $calendar): RedirectResponse
     {
         Gate::authorize('assign', $calendar);
@@ -62,21 +62,21 @@ class TaskController extends Controller
 
         $newlyAssigned = DB::transaction(function () use ($data, $calendar, $request, $creators) {
             $changed = [];
-            // Sirf isi calendar ke items par chalte hain, toh doosre calendar ka item ID kaam nahi karega
+            // Only this calendar's items are looped, so foreign item IDs are ignored
             foreach ($calendar->items()->with('task')->get() as $item) {
                 $memberId = (int) ($data['assign'][$item->id] ?? 0);
                 if (! $memberId || $item->task?->assigned_to === $memberId) {
-                    continue; // khaali ya same member = kuch nahi badla
+                    continue; // empty or same member = nothing changed
                 }
                 // Reel => Video Editor, Post/Carousel => Graphic Designer
                 if (! in_array($creators[$memberId]->role, $item->assigneeRoles(), true)) {
                     throw ValidationException::withMessages([
-                        "assign.{$item->id}" => $creators[$memberId]->name.' ('.$creators[$memberId]->role->label().') ko '.$item->typeLabel().' assign nahi ho sakta.',
+                        "assign.{$item->id}" => $creators[$memberId]->name.' ('.$creators[$memberId]->role->label().') cannot be assigned '.$item->typeLabel().'.',
                     ]);
                 }
 
                 if ($item->task) {
-                    $item->task->update(['assigned_to' => $memberId]); // reassign; deadline wahi
+                    $item->task->update(['assigned_to' => $memberId]); // reassign; deadline stays
                     $changed[] = $item->task;
                 } else {
                     $changed[] = $item->task()->create([
@@ -94,6 +94,6 @@ class TaskController extends Controller
             $task->notifyAssignee();
         }
 
-        return back()->with('status', 'Tasks assign ho gaye.');
+        return back()->with('status', 'Tasks assigned.');
     }
 }

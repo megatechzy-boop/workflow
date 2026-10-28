@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('calendar_items', function (Blueprint $table) {
-            // nullable: pehle bane items ka platform khaali rahega
+            // nullable: older items have no platform
             $table->string('platform', 20)->nullable()->after('post_date');
         });
     }

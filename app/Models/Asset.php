@@ -11,7 +11,7 @@ class Asset extends Model
 {
     protected $fillable = ['client_id', 'calendar_item_id', 'uploaded_by', 'path', 'original_name', 'mime', 'size'];
 
-    /** Customer sirf apne brand ka; team sab */
+    /** Customers: own brand only; team: all brands */
     public static function canAccessBrand(User $user, int $clientId): bool
     {
         return $user->role !== Role::Client || $user->client_id === $clientId;
@@ -34,7 +34,7 @@ class Asset extends Model
 
     protected static function booted(): void
     {
-        // Record hate toh file bhi hate
+        // Delete the file together with the record
         static::deleted(fn (Asset $a) => Storage::disk('local')->delete($a->path));
     }
 

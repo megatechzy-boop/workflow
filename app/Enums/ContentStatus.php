@@ -7,8 +7,8 @@ enum ContentStatus: string
     case Submitted = 'submitted';
     case RevisionRequired = 'revision_required';
     case Resubmitted = 'resubmitted';
-    case ClientReview = 'client_review'; // SMM ne OK kiya, ab Customer ke paas
-    case Approved = 'approved';          // Customer ne final OK kiya
+    case ClientReview = 'client_review'; // SMM approved, now with the Customer
+    case Approved = 'approved';          // Customer gave final approval
     case Scheduled = 'scheduled';
     case Published = 'published';
     case Rejected = 'rejected';
@@ -40,13 +40,13 @@ enum ContentStatus: string
         };
     }
 
-    /** Customer ko dikhne wale (SMM ke OK ke baad) */
+    /** Visible to the Customer (after SMM approval) */
     public function visibleToCustomer(): bool
     {
         return in_array($this, [self::ClientReview, self::Approved, self::Scheduled, self::Published], true);
     }
 
-    /** Approver ke review ka intezaar */
+    /** Waiting for the Approver's review */
     public function awaitingReview(): bool
     {
         return in_array($this, [self::Submitted, self::Resubmitted], true);

@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Notifications</h2>
             <form method="POST" action="{{ route('notifications.readAll') }}">
                 @csrf
-                <button class="text-sm text-indigo-600 hover:underline">Sab read mark karo</button>
+                <button class="text-sm text-indigo-600 hover:underline">Mark all as read</button>
             </form>
         </div>
     </x-slot>
@@ -21,7 +21,7 @@
                         <div class="text-sm text-gray-600 mt-0.5">{{ Str::limit($n->data['message'] ?? '', 160) }}</div>
                     </a>
                 @empty
-                    <div class="px-4 py-6 text-center text-gray-500">Koi notification nahi.</div>
+                    <div class="px-4 py-6 text-center text-gray-500">No notifications.</div>
                 @endforelse
             </div>
 

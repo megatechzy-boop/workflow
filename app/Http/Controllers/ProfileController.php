@@ -36,5 +36,5 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    // Account delete sirf Admin > Users se (khud delete karne par akela Admin lock ho sakta tha)
+    // Accounts are deleted only via Admin > Users (self-delete could lock out the only Admin)
 }

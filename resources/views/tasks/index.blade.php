@@ -8,14 +8,14 @@
             <form method="GET" class="flex flex-wrap gap-2">
                 @if ($members->isNotEmpty())
                     <select name="member" class="border-gray-300 rounded-md shadow-sm text-sm">
-                        <option value="">Sab members</option>
+                        <option value="">All members</option>
                         @foreach ($members as $m)
                             <option value="{{ $m->id }}" @selected(request('member') == $m->id)>{{ $m->name }}</option>
                         @endforeach
                     </select>
                 @endif
                 <select name="status" class="border-gray-300 rounded-md shadow-sm text-sm">
-                    @foreach (['pending' => 'Pending', 'submitted' => 'Submitted', 'all' => 'Sab'] as $value => $label)
+                    @foreach (['pending' => 'Pending', 'submitted' => 'Submitted', 'all' => 'All'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status', 'pending') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
@@ -42,7 +42,7 @@
                             <tr class="{{ $task->isOverdue() ? 'bg-red-50' : '' }}">
                                 <td class="px-4 py-3 whitespace-nowrap font-medium {{ $task->isOverdue() ? 'text-red-600' : '' }}">
                                     {{ $task->deadline->format('d M, D') }}
-                                    @if ($task->isOverdue())<span class="block text-xs">Late</span>@elseif ($task->deadline->isToday())<span class="block text-xs text-orange-600">Aaj</span>@endif
+                                    @if ($task->isOverdue())<span class="block text-xs">Late</span>@elseif ($task->deadline->isToday())<span class="block text-xs text-orange-600">Today</span>@endif
                                 </td>
                                 <td class="px-4 py-3">{{ $item->calendar->client->name }}</td>
                                 <td class="px-4 py-3 whitespace-nowrap">{{ $item->post_date->format('d M') }}</td>
@@ -53,7 +53,7 @@
                                 <td class="px-4 py-3 text-right"><a href="{{ route('tasks.show', $task) }}" class="text-indigo-600 hover:underline">Open</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Koi task nahi.</td></tr>
+                            <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">No tasks.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

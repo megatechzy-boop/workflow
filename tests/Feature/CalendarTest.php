@@ -26,7 +26,7 @@ class CalendarTest extends TestCase
     {
         parent::setUp();
         $this->client = Client::create(['name' => 'Acme']);
-        // Calendar ab SMM banata hai; Designer sirf dekh sakta hai
+        // The SMM creates calendars; the Designer can only view
         $this->team = User::factory()->create(['role' => Role::SocialMediaManager]);
         $this->approver = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->clientUser = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
@@ -52,15 +52,15 @@ class CalendarTest extends TestCase
 
     public function test_full_flow_smm_to_ops_to_customer_with_auto_assign(): void
     {
-        // Designer calendar nahi bana sakta
+        // Designer cannot create calendars
         $this->actingAs($this->approver)->get('/calendars/create')->assertForbidden();
 
         $calendar = $this->draftWithItem();
 
-        // Customer draft nahi dekh sakta
+        // Customer cannot see drafts
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
 
-        // SMM submit => Ops Manager ke paas; Customer abhi nahi dekh sakta, SMM khud approve nahi kar sakta
+        // SMM submit => with the Ops Manager; Customer cannot see it yet, SMM cannot self-approve
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
         $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
@@ -72,18 +72,18 @@ class CalendarTest extends TestCase
         $this->assertSame(1, $this->clientUser->notifications()->count());
 
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Reel');
-        // Customer poora calendar ek saath approve nahi kar sakta, har row alag
+        // Customer cannot approve the whole calendar at once, only row by row
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
         $item = $calendar->items()->first();
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items/{$item->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
 
-        // Customer approve karte hi task auto-assign (Designer ko)
+        // On Customer approval the task is auto-assigned (to the Designer)
         $task = $calendar->items()->first()->task;
         $this->assertNotNull($task);
         $this->assertSame($this->approver->id, $task->assigned_to);
 
-        // Approved ke baad edit band
+        // no editing after approval
         $this->actingAs($this->team)->get("/calendars/{$calendar->id}/items/create")->assertForbidden();
     }
 
@@ -92,7 +92,7 @@ class CalendarTest extends TestCase
         $busy = $this->approver; // Graphic Designer
         $free = User::factory()->create(['role' => Role::GraphicDesigner]);
         $editor = User::factory()->create(['role' => Role::VideoEditor]);
-        // $busy ke paas pehle se ek pending task
+        // $busy already has one pending task
         $old = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-10-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
         $old->items()->create(['post_date' => '2026-10-20', 'post_types' => ['instagram_post']])
             ->task()->create(['assigned_to' => $busy->id, 'assigned_by' => $this->team->id, 'deadline' => '2026-10-18']);
@@ -115,19 +115,19 @@ class CalendarTest extends TestCase
         $this->submitAndOpsApprove($calendar);
         $url = fn ($row) => "/calendars/{$calendar->id}/items/{$row->id}/review";
 
-        // Revision par comment zaroori
+        // revision needs a comment
         $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'revision'])->assertSessionHasErrors('comment');
 
-        // Row 1 revision, Row 2 abhi baaki => calendar Customer ke paas hi
-        $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'revision', 'comment' => 'Date badlo']);
+        // Row 1 revision, Row 2 still open => calendar stays with the Customer
+        $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'revision', 'comment' => 'Change the date']);
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
 
-        // Row 2 approve => saari rows check => revision thi toh SMM ke paas wapas
+        // Row 2 approved => all rows checked => there was a revision, back to the SMM
         $this->actingAs($this->clientUser)->post($url($row2), ['action' => 'approved']);
         $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
-        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Date badlo');
+        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Change the date');
 
-        // SMM row 1 badalta hai => sirf wahi dobara check; row 2 approved hi rehti hai
+        // SMM edits row 1 => only it needs a re-check; row 2 stays approved
         $this->actingAs($this->team)->put("/calendars/{$calendar->id}/items/{$row1->id}", ['post_date' => '2026-11-12', 'post_types' => $row1->post_types]);
         $this->assertNull($row1->fresh()->client_status);
         $this->assertSame('approved', $row2->fresh()->client_status);

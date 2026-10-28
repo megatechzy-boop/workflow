@@ -12,14 +12,14 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     * Har role ka ek demo user. Password: .env ka SEED_PASSWORD (local mein default "password").
+     * One demo user per role. Password: SEED_PASSWORD from .env (local default "password").
      */
     public function run(): void
     {
         $password = env('SEED_PASSWORD', app()->isProduction() ? null : 'password');
 
         if (! $password) {
-            $this->command->error('Production mein .env mein SEED_PASSWORD set karein, phir seed chalayein.');
+            $this->command->error('Set SEED_PASSWORD in .env for production, then run the seeder.');
 
             return;
         }

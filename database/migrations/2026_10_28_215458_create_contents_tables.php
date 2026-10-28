@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Ek task ke har post type (jaise linkedin_post, instagram_reel) ka alag content
+        // One content per format of a task (e.g. linkedin_post, instagram_reel)
         Schema::create('contents', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')->constrained()->cascadeOnDelete();
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unique(['task_id', 'post_type']);
         });
 
-        // Har upload/resubmit = ek version (V1, V2...)
+        // Each upload/resubmit = one version (V1, V2...)
         Schema::create('content_versions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('content_id')->constrained()->cascadeOnDelete();
@@ -42,7 +42,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Comments + actions (approved/revision/rejected...) ek hi timeline mein
+        // Comments + actions (approved/revision/rejected...) in one timeline
         Schema::create('content_comments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('content_id')->constrained()->cascadeOnDelete();

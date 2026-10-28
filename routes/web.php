@@ -24,7 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    // Content Calendar (permissions CalendarPolicy mein)
+    // Content calendar (permissions in CalendarPolicy)
     Route::resource('calendars', CalendarController::class)->except(['edit', 'update']);
     Route::post('calendars/{calendar}/submit', [CalendarController::class, 'submit'])->name('calendars.submit');
     Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
@@ -33,7 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
 
-    // Content upload + approval (permissions ContentPolicy mein)
+    // Content upload + approval (permissions in ContentPolicy)
     Route::post('tasks/{task}/contents', [ContentController::class, 'store'])->name('tasks.contents.store');
     Route::get('contents', [ContentController::class, 'index'])->name('contents.index');
     Route::get('contents/{content}', [ContentController::class, 'show'])->name('contents.show');
@@ -74,7 +74,7 @@ Route::middleware(['auth', 'permission:manage_users'])->prefix('admin')->name('a
     Route::resource('users', UserController::class)->except('show');
 });
 
-// Roles ki permissions sirf Admin badal sakta hai
+// Only Admins can change role permissions
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
     Route::put('roles', [RoleController::class, 'update'])->name('roles.update');

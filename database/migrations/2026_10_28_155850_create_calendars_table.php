@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('calendars', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained()->restrictOnDelete();
-            $table->date('month'); // hamesha mahine ki 1 tareekh
+            $table->date('month'); // always the 1st of the month
             $table->string('status', 30)->default('draft')->index();
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->timestamps();

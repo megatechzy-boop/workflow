@@ -54,7 +54,7 @@ class LoginRequest extends FormRequest
             Auth::guard('web')->logout();
 
             throw ValidationException::withMessages([
-                'email' => 'Aapka account inactive hai. Admin se contact karein.',
+                'email' => 'Your account is inactive. Please contact an Admin.',
             ]);
         }
 

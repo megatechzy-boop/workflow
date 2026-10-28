@@ -94,13 +94,13 @@ class ContentTest extends TestCase
         $this->uploadCarousel();
         $content = Content::firstOrFail();
 
-        // Sirf chuna hua approver review kar sakta hai
+        // only the chosen approver can review
         $this->actingAs(User::factory()->create(['role' => Role::SocialMediaManager]))
             ->post("/contents/{$content->id}/review", ['action' => 'approved'])->assertForbidden();
 
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision'])
             ->assertSessionHasErrors('body');
-        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Slide 2 ka text chhota karo']);
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Make slide 2 text smaller']);
         $this->assertSame(ContentStatus::RevisionRequired, $content->fresh()->status);
 
         $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => $this->images(3)])->assertSessionHasNoErrors();
@@ -109,22 +109,22 @@ class ContentTest extends TestCase
         $this->assertSame(2, $content->current_version);
         $this->assertSame(2, $content->versions()->count());
 
-        // SMM approve => Customer ke paas
+        // SMM approve => with the Customer
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
-        $this->actingAs($customer)->get("/contents/{$content->id}")->assertForbidden(); // SMM se pehle nahi dikhta
+        $this->actingAs($customer)->get("/contents/{$content->id}")->assertForbidden(); // hidden before SMM approval
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
         $this->assertSame(ContentStatus::ClientReview, $content->fresh()->status);
 
-        // Doosre brand ka customer review nahi kar sakta; internal comment customer ko nahi dikhta
+        // another brand's customer cannot review; internal comments are hidden from the customer
         $other = User::factory()->create(['role' => Role::Client, 'client_id' => \App\Models\Client::create(['name' => 'Other'])->id]);
         $this->actingAs($other)->post("/contents/{$content->id}/customer-review", ['action' => 'approved'])->assertForbidden();
-        $this->actingAs($customer)->get("/contents/{$content->id}")->assertOk()->assertDontSee('Slide 2 ka text chhota karo');
+        $this->actingAs($customer)->get("/contents/{$content->id}")->assertOk()->assertDontSee('Make slide 2 text smaller');
 
         $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'revision'])->assertSessionHasErrors('body');
         $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'approved']);
         $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
 
-        // Approved ke baad resubmit nahi
+        // no resubmit after approval
         $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => $this->images(2)])->assertForbidden();
     }
 
@@ -133,7 +133,7 @@ class ContentTest extends TestCase
         $this->uploadCarousel();
         $content = Content::firstOrFail();
 
-        $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'Logo bada', 'version' => 1, 'slide' => 2]);
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'Bigger logo', 'version' => 1, 'slide' => 2]);
         $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'Cut yahan', 'version' => 1, 'at' => '1:15']);
         $this->actingAs($this->approver)->post("/contents/{$content->id}/comments", ['body' => 'x', 'version' => 1, 'at' => '1:75'])
             ->assertSessionHasErrors('at');
@@ -169,9 +169,9 @@ class ContentTest extends TestCase
             ->assertOk()
             ->assertDownload('acme-2026-11-10-instagram-carousel-slide-2.jpg');
 
-        // Customer ko SMM ke OK se pehle download nahi
+        // Customer cannot download before SMM approval
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
         $this->actingAs($customer)->get("/media/{$media[0]->id}/download")->assertForbidden();
-        $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Sab download karo (2)')->assertSee('PDF download (LinkedIn)');
+        $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Download all (2)')->assertSee('PDF download (LinkedIn)');
     }
 }

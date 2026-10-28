@@ -84,12 +84,12 @@ class TaskTest extends TestCase
         $other = User::factory()->create(['role' => Role::GraphicDesigner]);
         $a = $this->item('2026-11-10');
         $b = $this->item('2026-11-12');
-        $a->update(['creative_copy' => 'Mera task']);
-        $b->update(['creative_copy' => 'Doosre ka task']);
+        $a->update(['creative_copy' => 'My task']);
+        $b->update(['creative_copy' => 'Other task']);
         $this->actingAs($this->manager)->post("/calendars/{$this->calendar->id}/assign", ['assign' => [$a->id => $this->member->id, $b->id => $other->id]]);
 
-        $this->actingAs($this->member)->get('/tasks')->assertOk()->assertSee('Mera task')->assertDontSee('Doosre ka task');
-        $this->actingAs($this->manager)->get('/tasks')->assertSee('Mera task')->assertSee('Doosre ka task');
+        $this->actingAs($this->member)->get('/tasks')->assertOk()->assertSee('My task')->assertDontSee('Other task');
+        $this->actingAs($this->manager)->get('/tasks')->assertSee('My task')->assertSee('Other task');
         $this->actingAs(User::factory()->create(['role' => Role::Client]))->get('/tasks')->assertForbidden();
     }
 

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /** Customer har row alag check karta hai: approved / revision (+ comment) */
+    /** The Customer checks each row: approved / revision (+ comment) */
     public function up(): void
     {
         Schema::table('calendar_items', function (Blueprint $table) {

@@ -16,7 +16,7 @@ class EnsureRole
         $user = $request->user();
 
         if (! $user || ! $user->hasRole(...$roles)) {
-            abort(403, 'Aapko is page ka access nahi hai.');
+            abort(403, 'You do not have access to this page.');
         }
 
         return $next($request);
