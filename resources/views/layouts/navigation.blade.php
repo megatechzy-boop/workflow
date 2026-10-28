@@ -15,6 +15,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @if (Auth::user()->hasRole('admin', 'manager'))
+                        <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
+                            {{ __('Clients') }}
+                        </x-nav-link>
+                    @endif
                     @if (Auth::user()->isAdmin())
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                             {{ __('Users') }}
@@ -75,6 +80,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->hasRole('admin', 'manager'))
+                <x-responsive-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
+                    {{ __('Clients') }}
+                </x-responsive-nav-link>
+            @endif
             @if (Auth::user()->isAdmin())
                 <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                     {{ __('Users') }}

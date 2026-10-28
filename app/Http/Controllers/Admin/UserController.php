@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
+            ->with('client')
             ->when($request->role, fn ($q, $role) => $q->where('role', $role))
             ->when($request->search, fn ($q, $s) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$s}%")
@@ -29,7 +31,7 @@ class UserController extends Controller
 
     public function create(): View
     {
-        return view('admin.users.form', ['user' => new User(['is_active' => true]), 'roles' => Role::cases()]);
+        return view('admin.users.form', ['user' => new User(['is_active' => true]), 'roles' => Role::cases(), 'clients' => Client::orderBy('name')->get()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -44,7 +46,7 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        return view('admin.users.form', ['user' => $user, 'roles' => Role::cases()]);
+        return view('admin.users.form', ['user' => $user, 'roles' => Role::cases(), 'clients' => Client::orderBy('name')->get()]);
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -82,9 +84,14 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
             'role' => ['required', Rule::enum(Role::class)],
+            'client_id' => ['nullable', 'required_if:role,client', 'exists:clients,id'],
             'password' => [$user ? 'nullable' : 'required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        ], ['client_id.required_if' => 'Client role ke liye client chunna zaroori hai.']);
         $data['is_active'] = $request->boolean('is_active');
+        // client_id sirf Client role par matlab rakhta hai
+        if ($data['role'] !== Role::Client->value) {
+            $data['client_id'] = null;
+        }
 
         return $data;
     }

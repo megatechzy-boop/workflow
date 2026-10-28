@@ -42,7 +42,9 @@
                             <tr>
                                 <td class="px-4 py-3 font-medium">{{ $user->name }}</td>
                                 <td class="px-4 py-3">{{ $user->email }}</td>
-                                <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs">{{ $user->role->label() }}</span></td>
+                                <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs">{{ $user->role->label() }}</span>
+                                    @if ($user->client)<span class="text-xs text-gray-500"> · {{ $user->client->name }}</span>@endif
+                                </td>
                                 <td class="px-4 py-3">
                                     @if ($user->is_active)
                                         <span class="text-green-700">Active</span>

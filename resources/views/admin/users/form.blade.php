@@ -41,6 +41,17 @@
                     </div>
 
                     <div>
+                        <x-input-label for="client_id" value="Client (sirf Client role ke liye)" />
+                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="">— None —</option>
+                            @foreach ($clients as $c)
+                                <option value="{{ $c->id }}" @selected((string) old('client_id', $user->client_id) === (string) $c->id)>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('client_id')" class="mt-2" />
+                    </div>
+
+                    <div>
                         <x-input-label for="password" :value="$user->exists ? 'New Password (khaali chhodein agar nahi badalna)' : 'Password'" />
                         <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
                         <x-input-error :messages="$errors->get('password')" class="mt-2" />

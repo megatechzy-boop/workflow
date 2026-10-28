@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Models\Client;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -40,5 +41,8 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]);
         }
+
+        $client = Client::firstOrCreate(['name' => 'Demo Brand'], ['contact_email' => 'brand@workflow.test']);
+        User::where('email', 'client@workflow.test')->update(['client_id' => $client->id]);
     }
 }
