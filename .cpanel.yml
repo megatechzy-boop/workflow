@@ -1,11 +1,11 @@
 ---
-# cPanel > Git Version Control > "Deploy HEAD Commit" par chalta hai.
-# Repo jis folder mein clone hai, wahi app folder hai (document root = <repo>/public).
-# .env server par ek baar khud banana hai; git use touch nahi karta.
+# cPanel > Git Version Control > Update from Remote > Deploy HEAD Commit
+# Repo (~/repositories/workflow) se app files live folder (~/workflow) mein copy karta hai.
+# shortcut: vendor/ copy nahi hota (server par composer nahi hai); composer.lock badle toh nayi vendor ZIP upload karni hogi.
 deployment:
   tasks:
-    - export REPOPATH=$(pwd)
-    - cd $REPOPATH && /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader --no-interaction
-    - cd $REPOPATH && /usr/local/bin/php artisan migrate --force
-    - cd $REPOPATH && /usr/local/bin/php artisan optimize:clear
-    - cd $REPOPATH && /usr/local/bin/php artisan optimize
+    - export DEPLOYPATH=/home2/megatechzy/workflow
+    - export PHP=/opt/alt/php85/usr/bin/php
+    - /bin/cp -R app bootstrap config database public resources routes artisan composer.json composer.lock $DEPLOYPATH/
+    - cd $DEPLOYPATH && $PHP artisan migrate --force
+    - cd $DEPLOYPATH && $PHP artisan optimize:clear
