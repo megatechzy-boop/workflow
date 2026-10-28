@@ -1,0 +1,130 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\CalendarStatus;
+use App\Enums\Role;
+use App\Models\Calendar;
+use App\Models\Client;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class CalendarController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+
+        $calendars = Calendar::query()
+            ->with('client')
+            ->withCount('items')
+            // Client ko sirf apne, Approver-OK ke baad wale calendars
+            ->when($user->role === Role::Client, fn ($q) => $q
+                ->where('client_id', $user->client_id)
+                ->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved]))
+            ->when($request->client_id, fn ($q, $id) => $q->where('client_id', $id))
+            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+            ->orderByDesc('month')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('calendars.index', [
+            'calendars' => $calendars,
+            'clients' => $user->role === Role::Client ? collect() : Client::orderBy('name')->get(),
+            'statuses' => CalendarStatus::cases(),
+        ]);
+    }
+
+    public function create(): View
+    {
+        Gate::authorize('create', Calendar::class);
+
+        return view('calendars.create', ['clients' => Client::where('is_active', true)->orderBy('name')->get()]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        Gate::authorize('create', Calendar::class);
+
+        $data = $request->validate([
+            'client_id' => ['required', 'exists:clients,id'],
+            'month' => ['required', 'date_format:Y-m'],
+        ]);
+        $month = Carbon::createFromFormat('Y-m-d', $data['month'].'-01')->startOfDay();
+
+        $exists = Calendar::where('client_id', $data['client_id'])->whereDate('month', $month)->first();
+        if ($exists) {
+            return redirect()->route('calendars.show', $exists)->with('status', 'Is client ka is mahine ka calendar pehle se hai.');
+        }
+
+        $calendar = Calendar::create([
+            'client_id' => $data['client_id'],
+            'month' => $month,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return redirect()->route('calendars.show', $calendar)->with('status', 'Calendar ban gaya. Ab posts add karo.');
+    }
+
+    public function show(Calendar $calendar): View
+    {
+        Gate::authorize('view', $calendar);
+
+        $calendar->load(['client', 'creator', 'items', 'reviews.user']);
+
+        return view('calendars.show', compact('calendar'));
+    }
+
+    public function destroy(Calendar $calendar): RedirectResponse
+    {
+        Gate::authorize('delete', $calendar);
+
+        $calendar->delete();
+
+        return redirect()->route('calendars.index')->with('status', 'Calendar delete ho gaya.');
+    }
+
+    public function submit(Request $request, Calendar $calendar): RedirectResponse
+    {
+        Gate::authorize('submit', $calendar);
+
+        DB::transaction(function () use ($request, $calendar) {
+            $calendar->update(['status' => CalendarStatus::Submitted]);
+            $calendar->reviews()->create(['user_id' => $request->user()->id, 'action' => 'submitted']);
+        });
+
+        return back()->with('status', 'Calendar Approver ko bhej diya.');
+    }
+
+    public function review(Request $request, Calendar $calendar): RedirectResponse
+    {
+        Gate::authorize('review', $calendar);
+
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['approved', 'revision'])],
+            'comment' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
+        ], ['comment.required_if' => 'Revision ke liye comment zaroori hai.']);
+
+        $next = match (true) {
+            $data['action'] === 'revision' => CalendarStatus::Draft,
+            $calendar->status === CalendarStatus::Submitted => CalendarStatus::ApproverApproved,
+            default => CalendarStatus::ClientApproved,
+        };
+
+        DB::transaction(function () use ($request, $calendar, $data, $next) {
+            $calendar->update(['status' => $next]);
+            $calendar->reviews()->create([
+                'user_id' => $request->user()->id,
+                'action' => $data['action'],
+                'comment' => $data['comment'] ?? null,
+            ]);
+        });
+
+        return back()->with('status', $data['action'] === 'revision' ? 'Revision ke liye wapas bhej diya.' : 'Calendar approve ho gaya.');
+    }
+}

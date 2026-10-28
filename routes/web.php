@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +17,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Content Calendar (permissions CalendarPolicy mein)
+    Route::resource('calendars', CalendarController::class)->except(['edit', 'update']);
+    Route::post('calendars/{calendar}/submit', [CalendarController::class, 'submit'])->name('calendars.submit');
+    Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
+    Route::resource('calendars.items', CalendarItemController::class)->except(['index', 'show'])->scoped();
 });
 
 Route::middleware(['auth', 'role:admin,manager'])->group(function () {
