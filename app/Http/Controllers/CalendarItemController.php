@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Platform;
-use App\Enums\PostType;
 use App\Models\Calendar;
 use App\Models\CalendarItem;
 use Illuminate\Http\RedirectResponse;
@@ -62,8 +60,8 @@ class CalendarItemController extends Controller
         return $request->validate([
             // Post date usi calendar ke mahine mein honi chahiye
             'post_date' => ['required', 'date', 'after_or_equal:'.$month->toDateString(), 'before_or_equal:'.$month->copy()->endOfMonth()->toDateString()],
-            'platform' => ['required', Rule::enum(Platform::class)],
-            'post_type' => ['required', Rule::enum(PostType::class)],
+            'post_types' => ['required', 'array', 'min:1'],
+            'post_types.*' => ['distinct', Rule::in(array_keys(CalendarItem::typeOptions()))],
             'creative_copy' => ['nullable', 'string', 'max:5000'],
             'visual_brief' => ['nullable', 'string', 'max:5000'],
             'brief' => ['nullable', 'string', 'max:5000'],

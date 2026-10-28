@@ -12,33 +12,28 @@
                     @csrf
                     @if ($item->exists) @method('PUT') @endif
 
-                    <div class="grid sm:grid-cols-3 gap-4">
-                        <div>
-                            <x-input-label for="post_date" value="Date to post" />
-                            <x-text-input id="post_date" name="post_date" type="date" class="mt-1 block w-full"
-                                :min="$calendar->month->toDateString()" :max="$calendar->month->copy()->endOfMonth()->toDateString()"
-                                :value="old('post_date', $item->post_date?->toDateString())" required />
-                            <x-input-error :messages="$errors->get('post_date')" class="mt-2" />
-                        </div>
-                        <div>
-                            <x-input-label for="platform" value="Platform" />
-                            <select id="platform" name="platform" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                @foreach (App\Enums\Platform::cases() as $p)
-                                    <option value="{{ $p->value }}" @selected(old('platform', $item->platform?->value) === $p->value)>{{ $p->label() }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('platform')" class="mt-2" />
-                        </div>
-                        <div>
-                            <x-input-label for="post_type" value="Post type" />
-                            <select id="post_type" name="post_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                @foreach (App\Enums\PostType::cases() as $type)
-                                    <option value="{{ $type->value }}" @selected(old('post_type', $item->post_type?->value) === $type->value)>{{ $type->label() }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('post_type')" class="mt-2" />
-                        </div>
+                    <div class="max-w-xs">
+                        <x-input-label for="post_date" value="Date to post" />
+                        <x-text-input id="post_date" name="post_date" type="date" class="mt-1 block w-full"
+                            :min="$calendar->month->toDateString()" :max="$calendar->month->copy()->endOfMonth()->toDateString()"
+                            :value="old('post_date', $item->post_date?->toDateString())" required />
+                        <x-input-error :messages="$errors->get('post_date')" class="mt-2" />
                     </div>
+
+                    <fieldset>
+                        <legend class="block font-medium text-sm text-gray-700">Post type (ek ya zyada chuno)</legend>
+                        @php($selected = old('post_types', $item->post_types ?? []))
+                        <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            @foreach (App\Models\CalendarItem::typeOptions() as $value => $label)
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+                                    <input type="checkbox" name="post_types[]" value="{{ $value }}" class="rounded border-gray-300" @checked(in_array($value, $selected, true))>
+                                    {{ $label }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <x-input-error :messages="$errors->get('post_types')" class="mt-2" />
+                        <x-input-error :messages="$errors->get('post_types.*')" class="mt-2" />
+                    </fieldset>
 
                     @foreach ([
                         'creative_copy' => 'Creative copy for post',

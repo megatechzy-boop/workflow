@@ -9,17 +9,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CalendarItem extends Model
 {
-    protected $fillable = ['post_date', 'platform', 'post_type', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks'];
+    protected $fillable = ['post_date', 'post_types', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks'];
 
     protected function casts(): array
     {
-        return ['post_date' => 'date', 'platform' => Platform::class, 'post_type' => PostType::class];
+        return ['post_date' => 'date', 'post_types' => 'array'];
     }
 
-    /** Sheet jaisa: "LinkedIn Post" */
+    /** Sab options: ['linkedin_post' => 'LinkedIn Post', ...] (YouTube Carousel nahi hota) */
+    public static function typeOptions(): array
+    {
+        $options = [];
+        foreach (Platform::cases() as $platform) {
+            foreach (PostType::cases() as $type) {
+                if ($platform === Platform::YouTube && $type === PostType::Carousel) {
+                    continue;
+                }
+                $options[$platform->value.'_'.$type->value] = $platform->label().' '.$type->label();
+            }
+        }
+
+        return $options;
+    }
+
+    /** Sheet jaisa: "LinkedIn Post, Instagram Reel" */
     public function typeLabel(): string
     {
-        return trim(($this->platform?->label() ?? '').' '.$this->post_type->label());
+        $options = self::typeOptions();
+
+        return collect($this->post_types ?? [])->map(fn ($key) => $options[$key] ?? $key)->implode(', ');
     }
 
     public function calendar(): BelongsTo
