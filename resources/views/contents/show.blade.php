@@ -93,6 +93,13 @@
                     @can('resubmit', $content)
                         <div class="bg-white shadow-sm sm:rounded-lg p-4 border-2 border-orange-200">
                             <h3 class="font-semibold text-gray-800 mb-2">Naya version bhejo (V{{ $content->current_version + 1 }})</h3>
+                            @php($checklist = $content->comments->filter->isChecklistItem())
+                            @if ($checklist->isNotEmpty())
+                                <p class="text-sm mb-3 {{ $checklist->whereNull('fixed_at')->isEmpty() ? 'text-green-700' : 'text-orange-700' }}">
+                                    Fixed checklist: {{ $checklist->whereNotNull('fixed_at')->count() }} / {{ $checklist->count() }} ✔
+                                    — neeche har comment par "Fixed" tick karo.
+                                </p>
+                            @endif
                             <form method="POST" action="{{ route('contents.resubmit', $content) }}" enctype="multipart/form-data" class="space-y-3">
                                 @csrf
                                 @include('contents._upload-fields', ['type' => $type, 'caption' => $version->caption, 'hashtags' => $version->hashtags])
@@ -108,7 +115,8 @@
                             <form method="POST" action="{{ route('contents.comment', $content) }}" class="space-y-2 mb-4">
                                 @csrf
                                 <input type="hidden" name="version" value="{{ $version->number }}">
-                                <textarea name="body" rows="2" required placeholder="V{{ $version->number }} par comment..." class="block w-full border-gray-300 rounded-md shadow-sm text-sm"></textarea>
+                                <textarea name="body" rows="2" required placeholder="V{{ $version->number }} par comment... (@naam se mention)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm"></textarea>
+                                <p class="text-xs text-gray-400">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
                                 <div class="flex flex-wrap items-center gap-2">
                                     @if ($images->count() > 1)
                                         <select name="slide" class="border-gray-300 rounded-md shadow-sm text-sm">
@@ -145,7 +153,21 @@
                                         <button type="button" class="inline-block mt-1 px-2 py-0.5 rounded bg-gray-100 text-xs text-indigo-700"
                                             onclick="const v=document.getElementById('reel');if(v){v.currentTime={{ $c->at_seconds }};v.play();}">▶ {{ $c->timestamp() }}</button>
                                     @endif
-                                    @if ($c->body)<div class="mt-1 whitespace-pre-line text-gray-800">{{ $c->body }}</div>@endif
+                                    {{-- body pehle escape, phir sirf @mention highlight --}}
+                                    @if ($c->body)<div class="mt-1 whitespace-pre-line text-gray-800">{!! preg_replace('/@([\pL\pN_.]+)/u', '<span class="text-indigo-700 font-semibold">@$1</span>', e($c->body)) !!}</div>@endif
+                                    @if ($c->isChecklistItem())
+                                        <div class="mt-1 flex items-center gap-2 text-xs">
+                                            @if ($c->fixed_at)
+                                                <span class="px-2 py-0.5 rounded bg-green-100 text-green-800">Fixed ✔ · {{ $c->fixer?->name }}</span>
+                                            @endif
+                                            @can('upload', [App\Models\Content::class, $content->task])
+                                                <form method="POST" action="{{ route('contents.comments.fixed', [$content, $c]) }}">
+                                                    @csrf
+                                                    <button class="text-indigo-600 hover:underline">{{ $c->fixed_at ? 'Undo' : 'Mark Fixed ✔' }}</button>
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    @endif
                                 </li>
                             @empty
                                 <li class="text-gray-500">Abhi kuch nahi.</li>

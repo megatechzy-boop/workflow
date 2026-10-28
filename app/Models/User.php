@@ -67,6 +67,12 @@ class User extends Authenticatable
         return static::where('role', Role::TeamMember)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
+    /** @mention handle: "Team Member" => "teammember" */
+    public function handle(): string
+    {
+        return mb_strtolower(preg_replace('/\s+/u', '', $this->name));
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);

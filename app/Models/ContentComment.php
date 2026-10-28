@@ -7,7 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentComment extends Model
 {
-    protected $fillable = ['content_version_id', 'user_id', 'action', 'body', 'slide', 'at_seconds'];
+    protected $fillable = ['content_version_id', 'user_id', 'action', 'body', 'slide', 'at_seconds', 'fixed_at', 'fixed_by'];
+
+    protected function casts(): array
+    {
+        return ['fixed_at' => 'datetime'];
+    }
+
+    /** Fixed checklist mein aane wale: normal comments + revision */
+    public function isChecklistItem(): bool
+    {
+        return in_array($this->action, ['comment', 'revision'], true) && filled($this->body);
+    }
+
+    public function fixer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'fixed_by');
+    }
 
     public function user(): BelongsTo
     {

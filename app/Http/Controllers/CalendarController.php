@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -107,6 +108,8 @@ class CalendarController extends Controller
             $calendar->reviews()->create(['user_id' => $request->user()->id, 'action' => 'submitted']);
         });
 
+        Notify::send(Notify::role(Role::Approver), 'Calendar approval ke liye', $this->name($calendar).' ka calendar review ke liye aaya hai.', route('calendars.show', $calendar));
+
         return back()->with('status', 'Calendar Approver ko bhej diya.');
     }
 
@@ -134,6 +137,24 @@ class CalendarController extends Controller
             ]);
         });
 
+        $url = route('calendars.show', $calendar);
+        $name = $this->name($calendar);
+        match ($next) {
+            CalendarStatus::Draft => Notify::send([$calendar->creator], 'Calendar par revision', "$name: ".$data['comment'], $url),
+            CalendarStatus::ApproverApproved => Notify::send(
+                User::where('role', Role::Client)->where('client_id', $calendar->client_id)->get(),
+                'Calendar aapke approval ke liye', "$name ka content calendar review karein.", $url),
+            CalendarStatus::ClientApproved => Notify::send(
+                Notify::role(Role::Admin, Role::Manager)->push($calendar->creator),
+                'Calendar approved ✔', "$name client ne approve kar diya. Ab tasks assign karein.", $url),
+            default => null,
+        };
+
         return back()->with('status', $data['action'] === 'revision' ? 'Revision ke liye wapas bhej diya.' : 'Calendar approve ho gaya.');
+    }
+
+    private function name(Calendar $calendar): string
+    {
+        return $calendar->client->name.' · '.$calendar->month->format('F Y');
     }
 }

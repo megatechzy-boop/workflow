@@ -6,9 +6,11 @@ use App\Enums\ContentStatus;
 use App\Enums\PostType;
 use App\Enums\Role;
 use App\Models\Content;
+use App\Models\ContentComment;
 use App\Models\ContentMedia;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +73,8 @@ class ContentController extends Controller
             return $content;
         });
 
+        Notify::send([$content->approver], 'Content approval ke liye', $this->title($content).' review karein.', route('contents.show', $content));
+
         return redirect()->route('contents.show', $content)->with('status', 'Content upload ho gaya, Approver ko bhej diya.');
     }
 
@@ -78,11 +82,16 @@ class ContentController extends Controller
     {
         Gate::authorize('view', $content);
 
-        $content->load(['task.item.calendar.client', 'task.assignee', 'approver', 'versions.media', 'versions.submitter', 'comments.user', 'comments.version']);
+        $content->load(['task.item.calendar.client', 'task.assignee', 'approver', 'versions.media', 'versions.submitter', 'comments.user', 'comments.version', 'comments.fixer']);
         $version = $content->versions->firstWhere('number', (int) $request->query('v', $content->current_version))
             ?? $content->versions->last();
 
-        return view('contents.show', compact('content', 'version'));
+        return view('contents.show', [
+            'content' => $content,
+            'version' => $version,
+            // @mention hints
+            'handles' => User::where('role', '!=', Role::Client)->where('is_active', true)->orderBy('name')->get()->map->handle(),
+        ]);
     }
 
     /** Revision ke baad naya version (V2, V3...) */
@@ -97,6 +106,8 @@ class ContentController extends Controller
             $this->storeVersion($request, $content, $number, $data);
             $content->update(['current_version' => $number, 'status' => ContentStatus::Resubmitted]);
         });
+
+        Notify::send([$content->approver], 'V'.$content->current_version.' resubmit hua', $this->title($content).' ka naya version review karein.', route('contents.show', $content));
 
         return redirect()->route('contents.show', $content)->with('status', 'Naya version bhej diya.');
     }
@@ -118,6 +129,11 @@ class ContentController extends Controller
             }]);
             $this->log($request, $content, $data['action'], $data['body'] ?? null);
         });
+
+        $url = route('contents.show', $content);
+        $label = ['approved' => 'Approved ✔', 'revision' => 'Revision chahiye', 'rejected' => 'Rejected'][$data['action']];
+        Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
+        Notify::send(Notify::mentioned($data['body'] ?? null), 'Aapko mention kiya', $request->user()->name.': '.$data['body'], $url);
 
         return back()->with('status', 'Review save ho gaya.');
     }
@@ -148,7 +164,28 @@ class ContentController extends Controller
             'at_seconds' => $at,
         ]);
 
+        $url = route('contents.show', [$content, 'v' => $data['version']]);
+        $mentioned = Notify::mentioned($data['body']);
+        Notify::send($mentioned, 'Aapko mention kiya', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
+        // Member + Approver ko bhi pata chale (jo mention mein already hain unhe dobara nahi)
+        Notify::send(
+            collect([$content->task->assignee, $content->approver])->reject(fn ($u) => $mentioned->contains('id', $u->id)),
+            'Naya comment', $request->user()->name.' ('.$this->title($content).'): '.$data['body'], $url);
+
         return redirect()->route('contents.show', [$content, 'v' => $data['version']])->with('status', 'Comment add ho gaya.');
+    }
+
+    /** "Fixed ✔" checklist: member revision/comment ko fixed mark (ya unmark) karta hai */
+    public function toggleFixed(Request $request, Content $content, ContentComment $comment): RedirectResponse
+    {
+        Gate::authorize('upload', [Content::class, $content->task]);
+        abort_unless($comment->content_id === $content->id && in_array($comment->action, ['comment', 'revision'], true), 404);
+
+        $comment->update($comment->fixed_at
+            ? ['fixed_at' => null, 'fixed_by' => null]
+            : ['fixed_at' => now(), 'fixed_by' => $request->user()->id]);
+
+        return back();
     }
 
     /** Approved => Scheduled => Published (manual buttons) */
@@ -169,6 +206,14 @@ class ContentController extends Controller
         Gate::authorize('view', $media->version->content);
 
         return response()->file(Storage::disk('local')->path($media->path));
+    }
+
+    /** "Instagram Reel · Acme · 05 Nov" */
+    private function title(Content $content): string
+    {
+        $item = $content->task->item;
+
+        return $content->typeLabel().' · '.$item->calendar->client->name.' · '.$item->post_date->format('d M');
     }
 
     private function versionRules(PostType $type): array

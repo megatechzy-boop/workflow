@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,25 +62,35 @@ class TaskController extends Controller
             'assign.*' => ['nullable', Rule::in(User::teamMembers()->pluck('id')->all())],
         ]);
 
-        DB::transaction(function () use ($data, $calendar, $request) {
+        $newlyAssigned = DB::transaction(function () use ($data, $calendar, $request) {
+            $changed = [];
             // Sirf isi calendar ke items par chalte hain, toh doosre calendar ka item ID kaam nahi karega
             foreach ($calendar->items()->with('task')->get() as $item) {
-                $memberId = $data['assign'][$item->id] ?? null;
-                if (! $memberId) {
-                    continue; // khaali chhoda = abhi assign nahi
+                $memberId = (int) ($data['assign'][$item->id] ?? 0);
+                if (! $memberId || $item->task?->assigned_to === $memberId) {
+                    continue; // khaali ya same member = kuch nahi badla
                 }
 
                 if ($item->task) {
                     $item->task->update(['assigned_to' => $memberId]); // reassign; deadline wahi
+                    $changed[] = $item->task;
                 } else {
-                    $item->task()->create([
+                    $changed[] = $item->task()->create([
                         'assigned_to' => $memberId,
                         'assigned_by' => $request->user()->id,
                         'deadline' => Task::deadlineFor($item->post_date),
                     ]);
                 }
             }
+
+            return $changed;
         });
+
+        foreach ($newlyAssigned as $task) {
+            Notify::send([$task->assignee], 'Naya task mila',
+                $calendar->client->name.' · post date '.$task->item->post_date->format('d M').' · deadline '.$task->deadline->format('d M'),
+                route('tasks.show', $task));
+        }
 
         return back()->with('status', 'Tasks assign ho gaye.');
     }
