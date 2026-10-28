@@ -158,4 +158,20 @@ class ContentTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Role::Client]))->get("/media/{$mediaId}")->assertForbidden();
         $this->actingAs($this->member)->get("/media/{$mediaId}")->assertOk();
     }
+
+    public function test_download_has_clean_name_and_respects_access(): void
+    {
+        $this->uploadCarousel(2);
+        $content = Content::firstOrFail();
+        $media = $content->versions()->first()->media()->orderBy('sort_order')->get();
+
+        $this->actingAs($this->approver)->get("/media/{$media[1]->id}/download")
+            ->assertOk()
+            ->assertDownload('acme-2026-11-10-instagram-carousel-slide-2.jpg');
+
+        // Customer ko SMM ke OK se pehle download nahi
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
+        $this->actingAs($customer)->get("/media/{$media[0]->id}/download")->assertForbidden();
+        $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Sab download karo (2)');
+    }
 }

@@ -56,6 +56,27 @@
                         </div>
                     @endif
 
+                    {{-- Download: har file + sab ek saath (browser alag-alag files save karega) --}}
+                    @php($files = $version->media->sortBy(fn ($m) => [$m->kind === 'cover' ? 1 : 0, $m->sort_order])->values())
+                    <div class="flex flex-wrap items-center gap-2 border-t pt-4">
+                        @foreach ($files as $m)
+                            <a href="{{ route('media.download', $m) }}" class="dl-link inline-flex items-center px-3 py-1.5 rounded border border-gray-300 text-xs text-gray-700 hover:bg-gray-50">
+                                ⬇ {{ $m->kind === 'image' ? ($files->where('kind', 'image')->count() > 1 ? 'Slide '.$m->sort_order : 'Image') : ucfirst($m->kind) }}
+                            </a>
+                        @endforeach
+                        @if ($files->count() > 1)
+                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-gray-800 text-white text-xs font-semibold hover:bg-gray-700"
+                                onclick="document.querySelectorAll('.dl-link').forEach((a, i) => setTimeout(() => a.click(), i * 700))">⬇ Sab download karo ({{ $files->count() }})</button>
+                        @endif
+                        @if ($version->caption || $version->hashtags)
+                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-indigo-300 text-indigo-700 text-xs font-semibold hover:bg-indigo-50"
+                                onclick="navigator.clipboard.writeText({{ Js::from(trim($version->caption."\n\n".$version->hashtags)) }}).then(() => { this.textContent = '✔ Copy ho gaya'; })">📋 Caption copy karo</button>
+                        @endif
+                    </div>
+                    @if ($files->count() > 1)
+                        <p class="text-xs text-gray-400">"Sab download karo" par browser ek baar "multiple downloads allow" puch sakta hai — Allow karein.</p>
+                    @endif
+
                     @if ($version->caption || $version->hashtags)
                         <div class="border-t pt-4 text-sm">
                             <div class="whitespace-pre-line text-gray-800">{{ $version->caption }}</div>

@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -248,6 +249,23 @@ class ContentController extends Controller
         Gate::authorize('view', $media->version->content);
 
         return response()->file(Storage::disk('local')->path($media->path));
+    }
+
+    /** Download saaf naam ke saath: "acme-2026-11-05-instagram-carousel-slide-2.jpg" */
+    public function download(ContentMedia $media): BinaryFileResponse
+    {
+        $content = $media->version->content;
+        Gate::authorize('view', $content);
+
+        $item = $content->task->item;
+        $part = match ($media->kind) {
+            'image' => $content->type() === PostType::Carousel ? 'slide-'.$media->sort_order : 'image',
+            default => $media->kind, // video / cover
+        };
+        $name = Str::slug($item->calendar->client->name).'-'.$item->post_date->format('Y-m-d').'-'
+            .Str::slug($content->typeLabel()).'-'.$part.'.'.pathinfo($media->path, PATHINFO_EXTENSION);
+
+        return response()->download(Storage::disk('local')->path($media->path), $name);
     }
 
     /** "Instagram Reel · Acme · 05 Nov" */
