@@ -5,6 +5,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
@@ -39,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
+    Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');

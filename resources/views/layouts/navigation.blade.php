@@ -11,7 +11,7 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                <div class="hidden space-x-6 lg:-my-px lg:ms-10 lg:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
@@ -23,6 +23,11 @@
                             {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
                         </x-nav-link>
                     @endif
+                    @unless (Auth::user()->hasRole('client'))
+                        <x-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')">
+                            {{ __('Leaderboard') }}
+                        </x-nav-link>
+                    @endunless
                     @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
                         <x-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                             {{ __('Approvals') }}
@@ -42,7 +47,7 @@
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden lg:flex lg:items-center lg:ms-6">
                 @include('layouts._bell')
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
@@ -77,7 +82,7 @@
             </div>
 
             <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <div class="-me-2 flex items-center lg:hidden">
                 @include('layouts._bell')
                 <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -90,7 +95,7 @@
     </div>
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden lg:hidden">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
@@ -103,6 +108,11 @@
                     {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
                 </x-responsive-nav-link>
             @endif
+            @unless (Auth::user()->hasRole('client'))
+                <x-responsive-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')">
+                    {{ __('Leaderboard') }}
+                </x-responsive-nav-link>
+            @endunless
             @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
                 <x-responsive-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                     {{ __('Approvals') }}

@@ -8,6 +8,7 @@ use App\Enums\Role;
 use App\Models\Content;
 use App\Models\ContentComment;
 use App\Models\ContentMedia;
+use App\Models\PointEntry;
 use App\Models\Task;
 use App\Models\User;
 use App\Support\Notify;
@@ -68,6 +69,7 @@ class ContentController extends Controller
             // Task tab "submitted" jab item ke saare post types upload ho jayein
             if ($task->contents()->count() === count($task->item->post_types)) {
                 $task->update(['status' => 'submitted', 'submitted_at' => $task->submitted_at ?? now()]);
+                PointEntry::forSubmittedTask($task);
             }
 
             return $content;
@@ -128,6 +130,9 @@ class ContentController extends Controller
                 'rejected' => ContentStatus::Rejected,
             }]);
             $this->log($request, $content, $data['action'], $data['body'] ?? null);
+            if ($data['action'] === 'approved') {
+                PointEntry::forApprovedContent($content);
+            }
         });
 
         $url = route('contents.show', $content);
