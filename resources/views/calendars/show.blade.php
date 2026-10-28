@@ -56,6 +56,10 @@
                             <th class="px-3 py-3 min-w-[160px]">Brief about the post</th>
                             <th class="px-3 py-3 min-w-[120px]">Reference link, if any</th>
                             <th class="px-3 py-3 min-w-[140px]">Remarks</th>
+                            @if ($showTasks)
+                                <th class="px-3 py-3 min-w-[170px] bg-[#fff4d6]">Assigned to</th>
+                                <th class="px-3 py-3 min-w-[110px] bg-[#fff4d6]">Deadline</th>
+                            @endif
                             @can('update', $calendar)<th class="px-3 py-3"></th>@endcan
                         </tr>
                     </thead>
@@ -74,6 +78,23 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->remarks }}</td>
+                                @if ($showTasks)
+                                    <td class="px-3 py-4 bg-[#fffaeb]">
+                                        @can('assign', $calendar)
+                                            <select name="assign[{{ $item->id }}]" form="assign-form" class="border-gray-300 rounded-md shadow-sm text-sm w-full">
+                                                <option value="">— Member —</option>
+                                                @foreach ($members as $m)
+                                                    <option value="{{ $m->id }}" @selected($item->task?->assigned_to === $m->id)>{{ $m->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @else
+                                            {{ $item->task?->assignee->name ?? '—' }}
+                                        @endcan
+                                    </td>
+                                    <td class="px-3 py-4 bg-[#fffaeb] whitespace-nowrap {{ $item->task?->isOverdue() ? 'text-red-600 font-semibold' : '' }}">
+                                        {{ $item->task?->deadline->format('d M') ?? '—' }}
+                                    </td>
+                                @endif
                                 @can('update', $calendar)
                                     <td class="px-3 py-4 whitespace-nowrap space-x-2">
                                         <a href="{{ route('calendars.items.edit', [$calendar, $item]) }}" class="text-indigo-600 hover:underline">Edit</a>
@@ -90,6 +111,14 @@
                     </tbody>
                 </table>
             </div>
+
+            @can('assign', $calendar)
+                <form id="assign-form" method="POST" action="{{ route('calendars.assign', $calendar) }}" class="flex items-center gap-3">
+                    @csrf
+                    <x-primary-button>Save Assignments</x-primary-button>
+                    <span class="text-sm text-gray-500">Deadline apne aap: posting date se 2 din pehle.</span>
+                </form>
+            @endcan
 
             {{-- Review box: Approver (Submitted) ya Client (Approver OK) --}}
             @can('review', $calendar)

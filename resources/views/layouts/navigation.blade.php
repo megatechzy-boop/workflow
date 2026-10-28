@@ -18,6 +18,11 @@
                     <x-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                         {{ __('Calendars') }}
                     </x-nav-link>
+                    @if (Auth::user()->hasRole('admin', 'manager', 'team_member'))
+                        <x-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
+                            {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
+                        </x-nav-link>
+                    @endif
                     @if (Auth::user()->hasRole('admin', 'manager'))
                         <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                             {{ __('Clients') }}
@@ -86,6 +91,11 @@
             <x-responsive-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                 {{ __('Calendars') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->hasRole('admin', 'manager', 'team_member'))
+                <x-responsive-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
+                    {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
+                </x-responsive-nav-link>
+            @endif
             @if (Auth::user()->hasRole('admin', 'manager'))
                 <x-responsive-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                     {{ __('Clients') }}

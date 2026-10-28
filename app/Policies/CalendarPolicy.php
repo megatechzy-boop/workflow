@@ -51,6 +51,12 @@ class CalendarPolicy
         return $this->update($user, $calendar) && $calendar->items()->exists();
     }
 
+    /** Client-approved calendar ke posts par team member assign karna */
+    public function assign(User $user, Calendar $calendar): bool
+    {
+        return $user->hasRole('admin', 'manager') && $calendar->status === CalendarStatus::ClientApproved;
+    }
+
     /** Approver ya Client ka review: jiska turn hai wahi approve/revision kar sakta hai */
     public function review(User $user, Calendar $calendar): bool
     {

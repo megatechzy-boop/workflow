@@ -5,6 +5,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -22,6 +23,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('calendars', CalendarController::class)->except(['edit', 'update']);
     Route::post('calendars/{calendar}/submit', [CalendarController::class, 'submit'])->name('calendars.submit');
     Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
+    Route::post('calendars/{calendar}/assign', [TaskController::class, 'assign'])->name('calendars.assign');
+    Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::resource('calendars.items', CalendarItemController::class)->except(['index', 'show'])->scoped();
 });
 

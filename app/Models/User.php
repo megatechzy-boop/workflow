@@ -61,6 +61,12 @@ class User extends Authenticatable
         ];
     }
 
+    /** Tasks assign karne layak: active Team Members */
+    public static function teamMembers()
+    {
+        return static::where('role', Role::TeamMember)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);

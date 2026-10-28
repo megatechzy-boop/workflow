@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CalendarItem extends Model
 {
@@ -38,6 +39,11 @@ class CalendarItem extends Model
         $options = self::typeOptions();
 
         return collect($this->post_types ?? [])->map(fn ($key) => $options[$key] ?? $key)->implode(', ');
+    }
+
+    public function task(): HasOne
+    {
+        return $this->hasOne(Task::class);
     }
 
     public function calendar(): BelongsTo

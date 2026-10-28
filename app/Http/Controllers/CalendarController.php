@@ -6,6 +6,7 @@ use App\Enums\CalendarStatus;
 use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\Client;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -75,9 +76,17 @@ class CalendarController extends Controller
     {
         Gate::authorize('view', $calendar);
 
-        $calendar->load(['client', 'creator', 'items', 'reviews.user']);
+        $calendar->load(['client', 'creator', 'items.task.assignee', 'reviews.user']);
+        $user = request()->user();
 
-        return view('calendars.show', compact('calendar'));
+        return view('calendars.show', [
+            'calendar' => $calendar,
+            // Tasks columns: approved calendar par, client ko chhod kar sabko
+            'showTasks' => $calendar->status === CalendarStatus::ClientApproved && $user->role !== Role::Client,
+            'members' => $user->can('assign', $calendar)
+                ? User::teamMembers()
+                : collect(),
+        ]);
     }
 
     public function destroy(Calendar $calendar): RedirectResponse
