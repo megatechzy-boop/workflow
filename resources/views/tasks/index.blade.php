@@ -50,7 +50,7 @@
                                 <td class="px-4 py-3 max-w-xs">{{ Str::limit($item->creative_copy, 80) }}</td>
                                 @if ($members->isNotEmpty())<td class="px-4 py-3">{{ $task->assignee->name }}</td>@endif
                                 <td class="px-4 py-3">{{ ucfirst($task->status) }}</td>
-                                <td class="px-4 py-3 text-right"><a href="{{ route('calendars.show', $item->calendar) }}" class="text-indigo-600 hover:underline">Brief dekho</a></td>
+                                <td class="px-4 py-3 text-right"><a href="{{ route('tasks.show', $task) }}" class="text-indigo-600 hover:underline">Open</a></td>
                             </tr>
                         @empty
                             <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Koi task nahi.</td></tr>

@@ -37,6 +37,20 @@ class TaskController extends Controller
         ]);
     }
 
+    /** Task page: brief + har post type ka upload/status */
+    public function show(Request $request, Task $task): View
+    {
+        $user = $request->user();
+        abort_unless($task->assigned_to === $user->id || $user->hasRole('admin', 'manager', 'approver'), 403);
+
+        $task->load(['item.calendar.client', 'assignee', 'contents.approver']);
+
+        return view('tasks.show', [
+            'task' => $task,
+            'approvers' => User::where('role', Role::Approver)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
     /** Approved calendar ke har post par member chuno; deadline apne aap */
     public function assign(Request $request, Calendar $calendar): RedirectResponse
     {

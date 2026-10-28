@@ -1,0 +1,31 @@
+{{-- Upload fields: $type (PostType), $caption/$hashtags defaults --}}
+@if ($type === App\Enums\PostType::Reel)
+    <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+            <x-input-label value="Reel video (mp4/mov, max 100 MB)" />
+            <input type="file" name="video" accept="video/mp4,video/quicktime" required class="mt-1 block w-full text-sm">
+            <x-input-error :messages="$errors->get('video')" class="mt-2" />
+        </div>
+        <div>
+            <x-input-label value="Cover image" />
+            <input type="file" name="cover" accept="image/jpeg,image/png,image/webp" required class="mt-1 block w-full text-sm">
+            <x-input-error :messages="$errors->get('cover')" class="mt-2" />
+        </div>
+    </div>
+@else
+    <div>
+        <x-input-label :value="$type === App\Enums\PostType::Carousel ? 'Carousel images (2-10, jis order mein chunoge wahi slide order)' : 'Image (1)'" />
+        <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" required @if ($type === App\Enums\PostType::Carousel) multiple @endif class="mt-1 block w-full text-sm">
+        <x-input-error :messages="$errors->get('images')" class="mt-2" />
+        <x-input-error :messages="$errors->get('images.*')" class="mt-2" />
+    </div>
+@endif
+
+<div>
+    <x-input-label value="Caption" />
+    <textarea name="caption" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('caption', $caption ?? '') }}</textarea>
+</div>
+<div>
+    <x-input-label value="Hashtags" />
+    <x-text-input name="hashtags" class="mt-1 block w-full" placeholder="#brand #offer" :value="old('hashtags', $hashtags ?? '')" />
+</div>

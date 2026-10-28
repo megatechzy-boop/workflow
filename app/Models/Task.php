@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 class Task extends Model
@@ -31,6 +32,11 @@ class Task extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(CalendarItem::class, 'calendar_item_id');
+    }
+
+    public function contents(): HasMany
+    {
+        return $this->hasMany(Content::class);
     }
 
     public function assignee(): BelongsTo

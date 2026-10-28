@@ -23,6 +23,11 @@
                             {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
                         </x-nav-link>
                     @endif
+                    @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
+                        <x-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
+                            {{ __('Approvals') }}
+                        </x-nav-link>
+                    @endif
                     @if (Auth::user()->hasRole('admin', 'manager'))
                         <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                             {{ __('Clients') }}
@@ -94,6 +99,11 @@
             @if (Auth::user()->hasRole('admin', 'manager', 'team_member'))
                 <x-responsive-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
                     {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
+                </x-responsive-nav-link>
+            @endif
+            @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
+                <x-responsive-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
+                    {{ __('Approvals') }}
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->hasRole('admin', 'manager'))

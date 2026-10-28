@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,17 @@ Route::middleware('auth')->group(function () {
     Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
     Route::post('calendars/{calendar}/assign', [TaskController::class, 'assign'])->name('calendars.assign');
     Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+
+    // Content upload + approval (permissions ContentPolicy mein)
+    Route::post('tasks/{task}/contents', [ContentController::class, 'store'])->name('tasks.contents.store');
+    Route::get('contents', [ContentController::class, 'index'])->name('contents.index');
+    Route::get('contents/{content}', [ContentController::class, 'show'])->name('contents.show');
+    Route::post('contents/{content}/resubmit', [ContentController::class, 'resubmit'])->name('contents.resubmit');
+    Route::post('contents/{content}/review', [ContentController::class, 'review'])->name('contents.review');
+    Route::post('contents/{content}/comments', [ContentController::class, 'comment'])->name('contents.comment');
+    Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
+    Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::resource('calendars.items', CalendarItemController::class)->except(['index', 'show'])->scoped();
 });
 
