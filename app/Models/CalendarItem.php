@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CalendarItem extends Model
 {
-    protected $fillable = ['post_date', 'post_types', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks'];
+    protected $fillable = ['post_date', 'post_types', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks', 'client_status', 'client_comment'];
 
     protected function casts(): array
     {

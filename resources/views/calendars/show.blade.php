@@ -42,6 +42,15 @@
                 @endcan
             </div>
 
+            @can('reviewItems', $calendar)
+                @php($pending = $calendar->items->whereNull('client_status')->count())
+                <div class="p-4 rounded bg-purple-50 border border-purple-200 text-sm">
+                    <strong>Har row check karein:</strong> daayi taraf "Customer check" mein Approve ✔ ya Revision (comment ke saath).
+                    Saari rows check hone par calendar apne aap aage badhega.
+                    <span class="block mt-1 font-semibold">{{ $calendar->items->count() - $pending }} / {{ $calendar->items->count() }} rows check ho gayi</span>
+                </div>
+            @endcan
+
             {{-- Items table --}}
             {{-- Sheet jaisa look: grid borders, light blue cells, centered text --}}
             <div class="shadow-sm overflow-x-auto border border-gray-800">
@@ -56,6 +65,7 @@
                             <th class="px-3 py-3 min-w-[160px]">Brief about the post</th>
                             <th class="px-3 py-3 min-w-[120px]">Reference link, if any</th>
                             <th class="px-3 py-3 min-w-[140px]">Remarks</th>
+                            <th class="px-3 py-3 min-w-[220px] bg-[#f3e8ff]">Customer check</th>
                             @if ($showTasks)
                                 <th class="px-3 py-3 min-w-[170px] bg-[#fff4d6]">Assigned to</th>
                                 <th class="px-3 py-3 min-w-[110px] bg-[#fff4d6]">Deadline</th>
@@ -78,6 +88,28 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->remarks }}</td>
+                                <td class="px-3 py-4 bg-[#faf5ff] text-left">
+                                    @if ($item->client_status === 'approved')
+                                        <span class="inline-block px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">Approved ✔</span>
+                                    @elseif ($item->client_status === 'revision')
+                                        <span class="inline-block px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs font-semibold">Revision</span>
+                                    @elseif ($item->client_comment)
+                                        <span class="inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">Badla gaya, dobara check</span>
+                                    @endif
+                                    @if ($item->client_comment)
+                                        <div class="mt-1 text-xs text-gray-700 whitespace-pre-line">“{{ $item->client_comment }}”</div>
+                                    @endif
+                                    @can('reviewItems', $calendar)
+                                        <form method="POST" action="{{ route('calendars.items.review', [$calendar, $item]) }}" class="mt-2 space-y-1">
+                                            @csrf
+                                            <textarea name="comment" rows="2" placeholder="Comment (Revision ke liye zaroori)" class="block w-full border-gray-300 rounded text-xs">{{ $item->client_status === 'revision' ? $item->client_comment : '' }}</textarea>
+                                            <div class="flex gap-1">
+                                                <button name="action" value="approved" class="px-2 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-500">Approve ✔</button>
+                                                <button name="action" value="revision" class="px-2 py-1 rounded bg-orange-500 text-white text-xs font-semibold hover:bg-orange-400">Revision</button>
+                                            </div>
+                                        </form>
+                                    @endcan
+                                </td>
                                 @if ($showTasks)
                                     <td class="px-3 py-4 bg-[#fffaeb]">
                                         @can('assign', $calendar)
@@ -108,7 +140,7 @@
                                 @endcan
                             </tr>
                         @empty
-                            <tr><td colspan="9" class="px-4 py-6 text-center text-gray-500">Abhi koi post nahi. "+ Add Post" se shuru karo.</td></tr>
+                            <tr><td colspan="10" class="px-4 py-6 text-center text-gray-500">Abhi koi post nahi. "+ Add Post" se shuru karo.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -53,13 +53,16 @@ class CalendarPolicy
         return $user->hasPermission(Permission::AssignTasks) && $calendar->status === CalendarStatus::ClientApproved;
     }
 
-    /** Pehle Admin/Ops Manager ("calendar approve" permission), phir apne brand ka Customer */
+    /** Ops step: poora calendar ("calendar approve" permission) */
     public function review(User $user, Calendar $calendar): bool
     {
-        return match ($calendar->status) {
-            CalendarStatus::Submitted => $user->hasPermission(Permission::ApproveCalendar),
-            CalendarStatus::ApproverApproved => $user->role === Role::Client && $user->client_id === $calendar->client_id,
-            default => false,
-        };
+        return $calendar->status === CalendarStatus::Submitted && $user->hasPermission(Permission::ApproveCalendar);
+    }
+
+    /** Customer step: apne brand ka Customer har row alag check karta hai */
+    public function reviewItems(User $user, Calendar $calendar): bool
+    {
+        return $calendar->status === CalendarStatus::ApproverApproved
+            && $user->role === Role::Client && $user->client_id === $calendar->client_id;
     }
 }

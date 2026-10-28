@@ -72,7 +72,10 @@ class CalendarTest extends TestCase
         $this->assertSame(1, $this->clientUser->notifications()->count());
 
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Reel');
-        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
+        // Customer poora calendar ek saath approve nahi kar sakta, har row alag
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
+        $item = $calendar->items()->first();
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items/{$item->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
 
         // Customer approve karte hi task auto-assign (Designer ko)
@@ -104,18 +107,45 @@ class CalendarTest extends TestCase
         $this->assertSame($editor->id, $reel->fresh()->task->assigned_to);
     }
 
-    public function test_revision_needs_comment_and_returns_to_draft(): void
+    public function test_customer_checks_line_by_line(): void
+    {
+        $calendar = $this->draftWithItem();
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-11-09', 'post_types' => ['instagram_post']]);
+        [$row1, $row2] = $calendar->items()->get()->all();
+        $this->submitAndOpsApprove($calendar);
+        $url = fn ($row) => "/calendars/{$calendar->id}/items/{$row->id}/review";
+
+        // Revision par comment zaroori
+        $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'revision'])->assertSessionHasErrors('comment');
+
+        // Row 1 revision, Row 2 abhi baaki => calendar Customer ke paas hi
+        $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'revision', 'comment' => 'Date badlo']);
+        $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
+
+        // Row 2 approve => saari rows check => revision thi toh SMM ke paas wapas
+        $this->actingAs($this->clientUser)->post($url($row2), ['action' => 'approved']);
+        $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
+        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Date badlo');
+
+        // SMM row 1 badalta hai => sirf wahi dobara check; row 2 approved hi rehti hai
+        $this->actingAs($this->team)->put("/calendars/{$calendar->id}/items/{$row1->id}", ['post_date' => '2026-11-12', 'post_types' => $row1->post_types]);
+        $this->assertNull($row1->fresh()->client_status);
+        $this->assertSame('approved', $row2->fresh()->client_status);
+
+        $this->submitAndOpsApprove($calendar);
+        $this->actingAs($this->clientUser)->post($url($row1), ['action' => 'approved']);
+        $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
+    }
+
+    public function test_other_customer_cannot_review_rows(): void
     {
         $calendar = $this->draftWithItem();
         $this->submitAndOpsApprove($calendar);
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Other'])->id]);
+        $item = $calendar->items()->first();
 
-        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'revision'])
-            ->assertSessionHasErrors('comment');
-        $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
-
-        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'revision', 'comment' => 'Date badlo']);
-        $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
-        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Date badlo');
+        $this->actingAs($other)->post("/calendars/{$calendar->id}/items/{$item->id}/review", ['action' => 'approved'])->assertForbidden();
+        $this->assertNull($item->fresh()->client_status);
     }
 
     public function test_other_client_cannot_see_calendar(): void

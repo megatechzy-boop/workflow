@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('calendars', CalendarController::class)->except(['edit', 'update']);
     Route::post('calendars/{calendar}/submit', [CalendarController::class, 'submit'])->name('calendars.submit');
     Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
+    Route::post('calendars/{calendar}/items/{item}/review', [CalendarController::class, 'reviewItem'])->scopeBindings()->name('calendars.items.review');
     Route::post('calendars/{calendar}/assign', [TaskController::class, 'assign'])->name('calendars.assign');
     Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\CalendarStatus;
 use App\Enums\Role;
 use App\Models\Calendar;
+use App\Models\CalendarItem;
 use App\Models\Client;
 use App\Enums\Permission;
 use App\Models\Task;
@@ -116,6 +117,7 @@ class CalendarController extends Controller
         return back()->with('status', 'Calendar Ops Manager ko bhej diya.');
     }
 
+    /** Ops Manager poore calendar ko approve / revision karta hai */
     public function review(Request $request, Calendar $calendar): RedirectResponse
     {
         Gate::authorize('review', $calendar);
@@ -125,19 +127,51 @@ class CalendarController extends Controller
             'comment' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
         ], ['comment.required_if' => 'Revision ke liye comment zaroori hai.']);
 
-        $next = match (true) {
-            $data['action'] === 'revision' => CalendarStatus::Draft,
-            $calendar->status === CalendarStatus::Submitted => CalendarStatus::ApproverApproved,
-            default => CalendarStatus::ClientApproved,
-        };
+        $approved = $data['action'] === 'approved';
+        $this->transition($request, $calendar, $approved ? CalendarStatus::ApproverApproved : CalendarStatus::Draft, $data['action'], $data['comment'] ?? null);
 
-        $autoTasks = DB::transaction(function () use ($request, $calendar, $data, $next) {
+        return back()->with('status', $approved ? 'Calendar Customer ko bhej diya.' : 'Revision ke liye wapas bhej diya.');
+    }
+
+    /**
+     * Customer har row alag check karta hai. Saari rows check hone par:
+     * sab approve => calendar approved (+ auto-assign), koi bhi revision => SMM ke paas wapas.
+     */
+    public function reviewItem(Request $request, Calendar $calendar, CalendarItem $item): RedirectResponse
+    {
+        Gate::authorize('reviewItems', $calendar);
+
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['approved', 'revision'])],
+            'comment' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
+        ], ['comment.required_if' => 'Revision ke liye comment zaroori hai.']);
+
+        $item->update(['client_status' => $data['action'], 'client_comment' => $data['comment'] ?? null]);
+
+        $items = $calendar->items()->get();
+        if ($items->whereNull('client_status')->isNotEmpty()) {
+            return back()->with('status', 'Row '.($data['action'] === 'approved' ? 'approve' : 'revision').' ho gayi. Baaki rows: '.$items->whereNull('client_status')->count());
+        }
+
+        $revisions = $items->where('client_status', 'revision');
+        if ($revisions->isEmpty()) {
+            $this->transition($request, $calendar, CalendarStatus::ClientApproved, 'approved', null);
+
+            return back()->with('status', 'Saari rows approve! Calendar approved ✔');
+        }
+
+        $summary = $revisions->map(fn ($i) => $i->post_date->format('d M').': '.$i->client_comment)->implode("\n");
+        $this->transition($request, $calendar, CalendarStatus::Draft, 'revision', $summary);
+
+        return back()->with('status', $revisions->count().' rows par revision. Calendar SMM ko wapas bhej diya.');
+    }
+
+    /** Status badlo + history + (approve par) auto-assign + notifications */
+    private function transition(Request $request, Calendar $calendar, CalendarStatus $next, string $action, ?string $comment): void
+    {
+        $autoTasks = DB::transaction(function () use ($request, $calendar, $next, $action, $comment) {
             $calendar->update(['status' => $next]);
-            $calendar->reviews()->create([
-                'user_id' => $request->user()->id,
-                'action' => $data['action'],
-                'comment' => $data['comment'] ?? null,
-            ]);
+            $calendar->reviews()->create(['user_id' => $request->user()->id, 'action' => $action, 'comment' => $comment]);
 
             // Customer ne approve kiya => tasks apne aap ban jaate hain
             return $next === CalendarStatus::ClientApproved ? Task::autoAssign($calendar, $request->user()->id) : [];
@@ -146,7 +180,7 @@ class CalendarController extends Controller
         $url = route('calendars.show', $calendar);
         $name = $this->name($calendar);
         match ($next) {
-            CalendarStatus::Draft => Notify::send([$calendar->creator], 'Calendar par revision', "$name: ".$data['comment'], $url),
+            CalendarStatus::Draft => Notify::send([$calendar->creator], 'Calendar par revision', "$name:\n$comment", $url),
             CalendarStatus::ApproverApproved => $this->notifyCustomers($calendar),
             CalendarStatus::ClientApproved => Notify::send(
                 User::withPermission(Permission::AssignTasks)->push($calendar->creator),
@@ -156,8 +190,6 @@ class CalendarController extends Controller
         foreach ($autoTasks as $task) {
             $task->notifyAssignee();
         }
-
-        return back()->with('status', $data['action'] === 'revision' ? 'Revision ke liye wapas bhej diya.' : 'Calendar approve ho gaya.');
     }
 
     private function notifyCustomers(Calendar $calendar): void

@@ -39,7 +39,8 @@ class CalendarItemController extends Controller
     {
         Gate::authorize('update', $calendar);
 
-        $item->update($this->validated($request, $calendar));
+        // Row badli => Customer ko ye row dobara check karni hogi (pichla comment reference ke liye rehta hai)
+        $item->update([...$this->validated($request, $calendar), 'client_status' => null]);
 
         return redirect()->route('calendars.show', $calendar)->with('status', 'Post update ho gaya.');
     }
