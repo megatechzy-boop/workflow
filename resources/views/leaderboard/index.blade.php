@@ -21,7 +21,7 @@
                             <tr class="{{ $row->user->id === auth()->id() ? 'bg-indigo-50' : '' }}">
                                 <td class="px-4 py-3 font-semibold">{{ [1 => '🥇', 2 => '🥈', 3 => '🥉'][$loop->iteration] ?? $loop->iteration }}</td>
                                 <td class="px-4 py-3">
-                                    @if (auth()->user()->role->isPlanner())
+                                    @if (auth()->user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                                         <a href="{{ route('leaderboard', ['month' => $month->format('Y-m'), 'user' => $row->user->id]) }}" class="hover:underline">{{ $row->user->name }}</a>
                                     @else
                                         {{ $row->user->name }}

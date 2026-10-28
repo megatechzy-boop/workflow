@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\CalendarStatus;
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\User;
@@ -25,15 +26,15 @@ class CalendarPolicy
         return true;
     }
 
-    /** Calendar SMM (ya Admin/Ops Manager) banata hai */
+    /** "Calendar banana" permission wale (default: SMM, Ops Manager) */
     public function create(User $user): bool
     {
-        return $user->role->isPlanner();
+        return $user->hasPermission(Permission::ManageCalendars);
     }
 
     public function update(User $user, Calendar $calendar): bool
     {
-        return $user->role->isPlanner() && $calendar->status === CalendarStatus::Draft;
+        return $user->hasPermission(Permission::ManageCalendars) && $calendar->status === CalendarStatus::Draft;
     }
 
     public function delete(User $user, Calendar $calendar): bool
@@ -49,14 +50,14 @@ class CalendarPolicy
     /** Customer-approved calendar ke posts par Designer/Editor assign karna */
     public function assign(User $user, Calendar $calendar): bool
     {
-        return $user->role->isPlanner() && $calendar->status === CalendarStatus::ClientApproved;
+        return $user->hasPermission(Permission::AssignTasks) && $calendar->status === CalendarStatus::ClientApproved;
     }
 
-    /** Customer review karta hai; purane "Submitted" calendars Admin/Ops/SMM aage badha sakte hain */
+    /** Customer review karta hai; purane "Submitted" calendars calendar-permission wale aage badha sakte hain */
     public function review(User $user, Calendar $calendar): bool
     {
         return match ($calendar->status) {
-            CalendarStatus::Submitted => $user->role->isPlanner(),
+            CalendarStatus::Submitted => $user->hasPermission(Permission::ManageCalendars),
             CalendarStatus::ApproverApproved => $user->role === Role::Client && $user->client_id === $calendar->client_id,
             default => false,
         };

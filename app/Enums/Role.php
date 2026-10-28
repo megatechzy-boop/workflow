@@ -28,10 +28,4 @@ enum Role: string
     {
         return in_array($this, [self::GraphicDesigner, self::VideoEditor], true);
     }
-
-    /** Calendar, assign, approvals, schedule sambhalne wale */
-    public function isPlanner(): bool
-    {
-        return in_array($this, [self::Admin, self::Manager, self::SocialMediaManager], true);
-    }
 }

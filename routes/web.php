@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarItemController;
@@ -47,12 +48,18 @@ Route::middleware('auth')->group(function () {
     Route::resource('calendars.items', CalendarItemController::class)->except(['index', 'show'])->scoped();
 });
 
-Route::middleware(['auth', 'role:admin,manager'])->group(function () {
+Route::middleware(['auth', 'permission:manage_clients'])->group(function () {
     Route::resource('clients', ClientController::class)->except('show');
 });
 
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'permission:manage_users'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('users', UserController::class)->except('show');
+});
+
+// Roles ki permissions sirf Admin badal sakta hai
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::put('roles', [RoleController::class, 'update'])->name('roles.update');
 });
 
 require __DIR__.'/auth.php';

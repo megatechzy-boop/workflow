@@ -71,6 +71,25 @@
                         <input type="hidden" name="is_active" value="1">
                     @endunless
 
+                    {{-- Extra permissions: sirf Admin ko dikhta hai; Admin/Customer role par lagu nahi --}}
+                    @if (count($permissions) && ! in_array($user->role, [App\Enums\Role::Admin, App\Enums\Role::Client], true))
+                        @php($fromRole = $rolePermissions[$user->role?->value] ?? [])
+                        <fieldset class="border border-gray-200 rounded-md p-4">
+                            <legend class="px-1 text-sm font-medium text-gray-700">Extra permissions (role ke upar)</legend>
+                            <div class="grid sm:grid-cols-2 gap-2 mt-1">
+                                @foreach ($permissions as $p)
+                                    @php($viaRole = in_array($p->value, $fromRole, true))
+                                    <label class="flex items-start gap-2 text-sm {{ $viaRole ? 'text-gray-400' : 'text-gray-700' }}">
+                                        <input type="checkbox" name="extra_permissions[]" value="{{ $p->value }}" class="mt-0.5 rounded border-gray-300"
+                                            @checked($viaRole || in_array($p->value, old('extra_permissions', $extra), true)) @disabled($viaRole)>
+                                        <span>{{ $p->label() }}@if ($viaRole) <span class="text-xs">(role se)</span>@endif</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Role badla ho toh pehle Update karo, phir yahan dekho. Role ki permissions <a href="{{ route('admin.roles.index') }}" class="underline">Roles</a> page par.</p>
+                        </fieldset>
+                    @endif
+
                     <div class="flex items-center gap-3">
                         <x-primary-button>{{ $user->exists ? 'Update' : 'Create' }}</x-primary-button>
                         <a href="{{ route('admin.users.index') }}" class="text-sm text-gray-600 hover:underline">Cancel</a>

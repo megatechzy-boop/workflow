@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -68,9 +70,39 @@ class User extends Authenticatable
             ->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role']);
     }
 
-    public static function socialMediaManagers()
+    /** Is request mein permissions ek baar load (role + extra) */
+    private ?array $permissionCache = null;
+
+    public function hasPermission(Permission $permission): bool
     {
-        return static::where('role', Role::SocialMediaManager)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        if ($this->isAdmin()) {
+            return true; // Admin ke paas hamesha sab, taaki koi lock na ho
+        }
+        if ($this->role === Role::Client) {
+            return false; // Customer ko internal permissions nahi
+        }
+
+        $this->permissionCache ??= DB::table('role_permissions')->where('role', $this->role->value)->pluck('permission')
+            ->merge(DB::table('user_permissions')->where('user_id', $this->id)->pluck('permission'))
+            ->unique()->all();
+
+        return in_array($permission->value, $this->permissionCache, true);
+    }
+
+    public function extraPermissions(): array
+    {
+        return DB::table('user_permissions')->where('user_id', $this->id)->pluck('permission')->all();
+    }
+
+    /** Jin users ke paas permission hai (role se ya extra), active, Customer ke alawa */
+    public static function withPermission(Permission $permission)
+    {
+        $roles = DB::table('role_permissions')->where('permission', $permission->value)->pluck('role')->push(Role::Admin->value);
+        $ids = DB::table('user_permissions')->where('permission', $permission->value)->pluck('user_id');
+
+        return static::where('is_active', true)->where('role', '!=', Role::Client)
+            ->where(fn ($q) => $q->whereIn('role', $roles)->orWhereIn('id', $ids))
+            ->orderBy('name')->get(['id', 'name', 'role']);
     }
 
     /** @mention handle: "Team Member" => "teammember" */

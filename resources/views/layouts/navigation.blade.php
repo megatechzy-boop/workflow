@@ -18,9 +18,9 @@
                     <x-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                         {{ __('Calendars') }}
                     </x-nav-link>
-                    @if (Auth::user()->role->isPlanner() || Auth::user()->role->isCreator())
+                    @if (Auth::user()->role->isCreator() || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                         <x-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
-                            {{ Auth::user()->role->isCreator() ? __('My Tasks') : __('Tasks') }}
+                            {{ Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks) ? __('Tasks') : __('My Tasks') }}
                         </x-nav-link>
                     @endif
                     @unless (Auth::user()->hasRole('client'))
@@ -28,19 +28,24 @@
                             {{ __('Leaderboard') }}
                         </x-nav-link>
                     @endunless
-                    @if (Auth::user()->role->isPlanner())
+                    @if (Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                         <x-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                             {{ __('Approvals') }}
                         </x-nav-link>
                     @endif
-                    @if (Auth::user()->hasRole('admin', 'manager'))
+                    @if (Auth::user()->hasPermission(App\Enums\Permission::ManageClients))
                         <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                             {{ __('Clients') }}
                         </x-nav-link>
                     @endif
-                    @if (Auth::user()->isAdmin())
+                    @if (Auth::user()->hasPermission(App\Enums\Permission::ManageUsers))
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                             {{ __('Users') }}
+                        </x-nav-link>
+                    @endif
+                    @if (Auth::user()->isAdmin())
+                        <x-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')">
+                            {{ __('Roles') }}
                         </x-nav-link>
                     @endif
                 </div>
@@ -103,9 +108,9 @@
             <x-responsive-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                 {{ __('Calendars') }}
             </x-responsive-nav-link>
-            @if (Auth::user()->role->isPlanner() || Auth::user()->role->isCreator())
+            @if (Auth::user()->role->isCreator() || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                 <x-responsive-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
-                    {{ Auth::user()->role->isCreator() ? __('My Tasks') : __('Tasks') }}
+                    {{ Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks) ? __('Tasks') : __('My Tasks') }}
                 </x-responsive-nav-link>
             @endif
             @unless (Auth::user()->hasRole('client'))
@@ -113,19 +118,24 @@
                     {{ __('Leaderboard') }}
                 </x-responsive-nav-link>
             @endunless
-            @if (Auth::user()->role->isPlanner())
+            @if (Auth::user()->hasPermission(App\Enums\Permission::ApproveContent) || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                 <x-responsive-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                     {{ __('Approvals') }}
                 </x-responsive-nav-link>
             @endif
-            @if (Auth::user()->hasRole('admin', 'manager'))
+            @if (Auth::user()->hasPermission(App\Enums\Permission::ManageClients))
                 <x-responsive-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
                     {{ __('Clients') }}
                 </x-responsive-nav-link>
             @endif
-            @if (Auth::user()->isAdmin())
+            @if (Auth::user()->hasPermission(App\Enums\Permission::ManageUsers))
                 <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                     {{ __('Users') }}
+                </x-responsive-nav-link>
+            @endif
+            @if (Auth::user()->isAdmin())
+                <x-responsive-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')">
+                    {{ __('Roles') }}
                 </x-responsive-nav-link>
             @endif
         </div>

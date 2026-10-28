@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Permission;
 use App\Models\Calendar;
 use App\Models\Task;
 use App\Models\User;
@@ -16,11 +17,11 @@ use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    /** Designer/Editor: apne tasks. Admin/Ops/SMM: sabke, member filter ke saath. */
+    /** Designer/Editor: apne tasks. "Sab dekhna" permission: sabke, member filter ke saath. */
     public function index(Request $request): View
     {
         $user = $request->user();
-        $canSeeAll = $user->role->isPlanner();
+        $canSeeAll = $user->hasPermission(Permission::ViewAllTasks);
         abort_unless($canSeeAll || $user->role->isCreator(), 403);
 
         $tasks = Task::query()
@@ -42,11 +43,11 @@ class TaskController extends Controller
     public function show(Request $request, Task $task): View
     {
         $user = $request->user();
-        abort_unless($task->assigned_to === $user->id || $user->role->isPlanner(), 403);
+        abort_unless($task->assigned_to === $user->id || $user->hasPermission(Permission::ViewAllTasks) || $user->hasPermission(Permission::ApproveContent), 403);
 
         $task->load(['item.calendar.client', 'assignee', 'contents.approver']);
 
-        return view('tasks.show', ['task' => $task, 'approvers' => User::socialMediaManagers()]);
+        return view('tasks.show', ['task' => $task, 'approvers' => User::withPermission(Permission::ApproveContent)]);
     }
 
     /** Approved calendar ke har post par member chuno; deadline apne aap */

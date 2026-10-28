@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\ContentStatus;
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Content;
 use App\Models\Task;
@@ -16,10 +17,10 @@ class ContentPolicy
         return $user->role !== Role::Client;
     }
 
-    /** Upload: assigned Designer/Editor, ya Admin/Ops Manager (SMM khud content nahi banata) */
+    /** Upload: assigned Designer/Editor, ya "kisi bhi task par upload" permission wale */
     public function upload(User $user, Task $task): bool
     {
-        return $task->assigned_to === $user->id || $user->hasRole('admin', 'manager');
+        return $task->assigned_to === $user->id || $user->hasPermission(Permission::UploadAnyContent);
     }
 
     public function resubmit(User $user, Content $content): bool
@@ -39,10 +40,10 @@ class ContentPolicy
         return $this->view($user, $content);
     }
 
-    /** Approved => Scheduled => Published (SMM scheduling karta hai) */
+    /** Approved => Scheduled => Published ("publish" permission wale) */
     public function markStatus(User $user, Content $content): bool
     {
-        return $user->role->isPlanner()
+        return $user->hasPermission(Permission::PublishContent)
             && in_array($content->status, [ContentStatus::Approved, ContentStatus::Scheduled], true);
     }
 }

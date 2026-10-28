@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\PointEntry;
 use App\Models\User;
@@ -33,8 +34,8 @@ class LeaderboardController extends Controller
             ->map(fn ($u) => (object) ['user' => $u, 'total' => (int) ($totals[$u->id]->total ?? 0)])
             ->sortByDesc('total')->values();
 
-        // History: member ko apni, Admin/Ops/SMM kisi ki bhi (?user=)
-        $historyUser = $user->role->isPlanner() && $request->user
+        // History: member ko apni, "sab dekhna" permission wale ko kisi ki bhi (?user=)
+        $historyUser = $user->hasPermission(Permission::ViewAllTasks) && $request->user
             ? User::findOrFail($request->user)
             : $user;
         $history = PointEntry::with(['task.item.calendar.client', 'content'])
