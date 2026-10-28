@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarItemController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\LeaderboardController;
@@ -44,6 +46,19 @@ Route::middleware('auth')->group(function () {
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
+
+    // Brand library (customer/team photos-videos)
+    Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+    Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
+    Route::get('assets/{asset}/download', [AssetController::class, 'download'])->name('assets.download');
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+
+    // Group chat (room = team | client:{id} | internal:{id})
+    Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('chat/{room}/messages', [ChatController::class, 'poll'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.poll');
+    Route::post('chat/{room}/messages', [ChatController::class, 'store'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.store');
+    Route::get('chat/attachment/{message}', [ChatController::class, 'attachment'])->name('chat.attachment');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');

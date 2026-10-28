@@ -65,6 +65,7 @@
                             <th class="px-3 py-3 min-w-[160px]">Brief about the post</th>
                             <th class="px-3 py-3 min-w-[120px]">Reference link, if any</th>
                             <th class="px-3 py-3 min-w-[140px]">Remarks</th>
+                            <th class="px-3 py-3 min-w-[170px] bg-[#e0f2fe]">Files (photos/videos)</th>
                             <th class="px-3 py-3 min-w-[220px] bg-[#f3e8ff]">Customer check</th>
                             @if ($showTasks)
                                 <th class="px-3 py-3 min-w-[170px] bg-[#fff4d6]">Assigned to</th>
@@ -88,6 +89,25 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->remarks }}</td>
+                                <td class="px-3 py-4 bg-[#f0f9ff] text-left text-xs">
+                                    @foreach ($item->assets as $asset)
+                                        <a href="{{ route('assets.download', $asset) }}" class="block truncate max-w-[160px] text-indigo-700 hover:underline" title="{{ $asset->original_name }}">
+                                            {{ $asset->isVideo() ? '🎬' : '📷' }} {{ $asset->original_name }}
+                                        </a>
+                                    @endforeach
+                                    @if ($item->assets->count() > 3)
+                                        <a href="{{ route('assets.index', ['client' => $calendar->client_id, 'item' => $item->id]) }}" class="block mt-1 text-gray-600 hover:underline">Sab dekho ({{ $item->assets->count() }})</a>
+                                    @endif
+                                    <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" class="mt-2">
+                                        @csrf
+                                        <input type="hidden" name="client_id" value="{{ $calendar->client_id }}">
+                                        <input type="hidden" name="calendar_item_id" value="{{ $item->id }}">
+                                        <label class="inline-block cursor-pointer px-2 py-1 rounded border border-sky-300 text-sky-700 hover:bg-sky-50">
+                                            + Upload
+                                            <input type="file" name="files[]" multiple accept="image/*,video/mp4,video/quicktime" class="sr-only" onchange="this.form.submit()">
+                                        </label>
+                                    </form>
+                                </td>
                                 <td class="px-3 py-4 bg-[#faf5ff] text-left">
                                     @if ($item->client_status === 'approved')
                                         <span class="inline-block px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">Approved ✔</span>
@@ -140,7 +160,7 @@
                                 @endcan
                             </tr>
                         @empty
-                            <tr><td colspan="10" class="px-4 py-6 text-center text-gray-500">Abhi koi post nahi. "+ Add Post" se shuru karo.</td></tr>
+                            <tr><td colspan="11" class="px-4 py-6 text-center text-gray-500">Abhi koi post nahi. "+ Add Post" se shuru karo.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

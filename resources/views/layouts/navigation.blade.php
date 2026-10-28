@@ -18,6 +18,13 @@
                     <x-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                         {{ __('Calendars') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*')">
+                        {{ __('Assets') }}
+                    </x-nav-link>
+                    @php($chatUnread = array_sum(App\Models\ChatMessage::unreadCounts(Auth::user())))
+                    <x-nav-link :href="route('chat.index')" :active="request()->routeIs('chat.*')">
+                        {{ __('Chat') }}@if ($chatUnread)<span class="ms-1 min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] text-center">{{ $chatUnread }}</span>@endif
+                    </x-nav-link>
                     @if (Auth::user()->role->isCreator() || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                         <x-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
                             {{ Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks) ? __('Tasks') : __('My Tasks') }}
@@ -107,6 +114,12 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                 {{ __('Calendars') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*')">
+                {{ __('Assets') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('chat.index')" :active="request()->routeIs('chat.*')">
+                {{ __('Chat') }}@if ($chatUnread ?? 0) ({{ $chatUnread }})@endif
             </x-responsive-nav-link>
             @if (Auth::user()->role->isCreator() || Auth::user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                 <x-responsive-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">

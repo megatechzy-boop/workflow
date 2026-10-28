@@ -7,6 +7,7 @@ use App\Enums\PostType;
 use App\Enums\Role;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CalendarItem extends Model
@@ -54,6 +55,12 @@ class CalendarItem extends Model
             $types->contains(fn ($t) => $t !== PostType::Reel) ? Role::GraphicDesigner : null,
             $types->contains(PostType::Reel) ? Role::VideoEditor : null,
         ]));
+    }
+
+    /** Customer/team ki is post ke liye di gayi photos-videos */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class)->latest();
     }
 
     public function task(): HasOne
