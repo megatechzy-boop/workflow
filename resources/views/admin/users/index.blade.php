@@ -1,15 +1,15 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Users</h2>
+            <h2 class="font-bold text-2xl text-gray-900 tracking-tight">Users</h2>
             <div class="flex items-center gap-2">
                 @if (auth()->user()->isAdmin())
                     <form method="POST" action="{{ route('admin.mail.test') }}">
                         @csrf
-                        <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50">✉ Send test email to me</button>
+                        <button class="inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"><x-icon name="mail" class="w-4 h-4" /> Send test email to me</button>
                     </form>
                 @endif
-                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-md text-xs font-semibold text-white uppercase tracking-widest hover:bg-gray-700">+ New User</a>
+                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-4 py-2 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 min-h-[44px]">+ New User</a>
             </div>
         </div>
     </x-slot>
@@ -24,8 +24,8 @@
             @endif
 
             <form method="GET" class="flex flex-wrap gap-2">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Name or email..." class="border-gray-300 rounded-md shadow-sm text-sm">
-                <select name="role" class="border-gray-300 rounded-md shadow-sm text-sm">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Name or email..." class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
+                <select name="role" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
                     <option value="">All roles</option>
                     @foreach ($roles as $role)
                         <option value="{{ $role->value }}" @selected(request('role') === $role->value)>{{ $role->label() }}</option>
@@ -34,7 +34,7 @@
                 <x-secondary-button type="submit">Filter</x-secondary-button>
             </form>
 
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
+            <div class="card overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 text-left text-gray-600">
                         <tr>
@@ -50,7 +50,7 @@
                             <tr>
                                 <td class="px-4 py-3 font-medium">{{ $user->name }}</td>
                                 <td class="px-4 py-3">{{ $user->email }}</td>
-                                <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs">{{ $user->role->label() }}</span>
+                                <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-brand-50 text-brand-700 text-xs">{{ $user->role->label() }}</span>
                                     @if ($user->client)<span class="text-xs text-gray-500"> · {{ $user->client->name }}</span>@endif
                                 </td>
                                 <td class="px-4 py-3">
@@ -61,7 +61,7 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-indigo-600 hover:underline">Edit</a>
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-brand-600 hover:underline">Edit</a>
                                     @unless ($user->is(auth()->user()))
                                         <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" onsubmit="return confirm('Delete this user?')">
                                             @csrf @method('DELETE')

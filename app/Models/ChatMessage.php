@@ -10,10 +10,26 @@ use Illuminate\Support\Facades\DB;
 
 class ChatMessage extends Model
 {
-    protected $fillable = ['room', 'user_id', 'body', 'attachment_path', 'attachment_name', 'attachment_mime'];
+    protected $fillable = ['room', 'user_id', 'reply_to_id', 'content_id', 'body', 'attachment_path', 'attachment_name', 'attachment_mime'];
+
+    protected $casts = ['deleted_at' => 'datetime', 'pinned_at' => 'datetime'];
+
+    /** Own messages can be deleted for everyone within this many minutes */
+    public const DELETE_MINUTES = 10;
+
+    /** Customers get no chat push from 22:00 to 09:00 (app timezone) */
+    public static function isQuietHours(): bool
+    {
+        return now()->hour >= 22 || now()->hour < 9;
+    }
+
+    public function content(): BelongsTo
+    {
+        return $this->belongsTo(Content::class);
+    }
 
     /**
-     * Rooms of a user: ['team' => '👥 All team', 'client:3' => '🏷 Acme · Client group', 'internal:3' => '🔒 Acme · Internal']
+     * Rooms of a user: ['team' => 'All team', 'client:3' => 'Acme · Client group', 'internal:3' => 'Acme · Internal']
      * Customers only get their own brand's client group.
      */
     public static function roomsFor(User $user): array
@@ -21,13 +37,13 @@ class ChatMessage extends Model
         if ($user->role === Role::Client) {
             $client = $user->client;
 
-            return $client ? ['client:'.$client->id => '🏷 '.$client->name.' · Chat with team'] : [];
+            return $client ? ['client:'.$client->id => $client->name.' · Chat with team'] : [];
         }
 
-        $rooms = ['team' => '👥 All team (internal)'];
+        $rooms = ['team' => 'All team (internal)'];
         foreach (Client::where('is_active', true)->orderBy('name')->get(['id', 'name']) as $c) {
-            $rooms['client:'.$c->id] = '🏷 '.$c->name.' · Client group';
-            $rooms['internal:'.$c->id] = '🔒 '.$c->name.' · Internal';
+            $rooms['client:'.$c->id] = $c->name.' · Client group';
+            $rooms['internal:'.$c->id] = $c->name.' · Internal';
         }
 
         return $rooms;
@@ -85,8 +101,28 @@ class ChatMessage extends Model
         return str_starts_with((string) $this->attachment_mime, 'image/');
     }
 
+    /** Voice notes: Chrome records webm (detected as video/webm), so the name decides too */
+    public function isAudio(): bool
+    {
+        return str_starts_with((string) $this->attachment_mime, 'audio/') || str_starts_with((string) $this->attachment_name, 'Voice note');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replyTo(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reply_to_id');
+    }
+
+    /** Members (other than the sender) whose read marker has passed this message */
+    public function seenBy(): Collection
+    {
+        $ids = DB::table('chat_reads')->where('room', $this->room)->where('last_read_id', '>=', $this->id)
+            ->where('user_id', '!=', $this->user_id)->pluck('user_id');
+
+        return static::membersOf($this->room)->whereIn('id', $ids)->values();
     }
 }

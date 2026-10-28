@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $item->calendar->client->name }} · {{ $item->post_date->format('d M l') }}</h2>
+                <h2 class="font-bold text-2xl text-gray-900 tracking-tight">{{ $item->calendar->client->name }} · {{ $item->post_date->format('d M l') }}</h2>
                 <p class="text-sm text-gray-500 mt-1">{{ $item->typeLabel() }} · Member: {{ $task->assignee->name }}</p>
             </div>
             <div class="text-right {{ $task->isOverdue() ? 'text-red-600' : 'text-gray-700' }}">
@@ -20,7 +20,7 @@
             @endif
 
             {{-- Brief (calendar se) --}}
-            <div class="bg-white shadow-sm sm:rounded-lg p-6 grid md:grid-cols-2 gap-6 text-sm">
+            <div class="card p-6 grid md:grid-cols-2 gap-6 text-sm">
                 @foreach (['creative_copy' => 'Creative copy', 'visual_brief' => 'Visual brief', 'brief' => 'Brief about the post', 'remarks' => 'Remarks'] as $field => $label)
                     @if ($item->$field)
                         <div>
@@ -30,7 +30,7 @@
                     @endif
                 @endforeach
                 @if ($item->reference_link)
-                    <div><div class="font-semibold text-gray-800 mb-1">Reference</div><a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline break-all">{{ $item->reference_link }}</a></div>
+                    <div><div class="font-semibold text-gray-800 mb-1">Reference</div><a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-brand-600 underline break-all">{{ $item->reference_link }}</a></div>
                 @endif
             </div>
 
@@ -39,7 +39,7 @@
             @foreach ($item->formatsFor(auth()->user()->role) as $format)
                 @php($postType = $format->value)
                 @php($content = $task->contents->first(fn ($c) => $c->type() === $format))
-                <div class="bg-white shadow-sm sm:rounded-lg p-6">
+                <div class="card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-lg text-gray-800">{{ $item->formatLabel($format) }}</h3>
                         @if ($content)
@@ -49,7 +49,7 @@
 
                     @if ($content)
                         <p class="text-sm text-gray-600">Approver: {{ $content->approver->name }}</p>
-                        <a href="{{ route('contents.show', $content) }}" class="inline-block mt-3 text-indigo-600 hover:underline">Open content →</a>
+                        <a href="{{ route('contents.show', $content) }}" class="inline-block mt-3 text-brand-600 hover:underline">Open content <x-icon name="chevron-right" class="w-4 h-4 inline -mt-0.5" /></a>
                     @elseif (auth()->user()->can('upload', [App\Models\Content::class, $task]))
                         <form method="POST" action="{{ route('tasks.contents.store', $task) }}" enctype="multipart/form-data" class="space-y-4">
                             @csrf

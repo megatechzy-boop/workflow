@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Roles &amp; Permissions</h2>
+        <h2 class="font-bold text-2xl text-gray-900 tracking-tight">Roles &amp; Permissions</h2>
     </x-slot>
 
     <div class="py-8">
@@ -16,7 +16,7 @@
 
             <form method="POST" action="{{ route('admin.roles.update') }}" class="space-y-4">
                 @csrf @method('PUT')
-                <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
+                <div class="card overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-600">
                             <tr>

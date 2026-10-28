@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\MailTestController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarImportController;
 use App\Http\Controllers\CalendarItemController;
@@ -63,11 +64,20 @@ Route::middleware('auth')->group(function () {
     Route::get('assets/{asset}/download', [AssetController::class, 'download'])->name('assets.download');
     Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
 
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push.store');
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
+
     // Group chat (room = team | client:{id} | internal:{id})
     Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
     Route::get('chat/{room}/messages', [ChatController::class, 'poll'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.poll');
     Route::post('chat/{room}/messages', [ChatController::class, 'store'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.store');
     Route::get('chat/attachment/{message}', [ChatController::class, 'attachment'])->name('chat.attachment');
+    Route::delete('chat/message/{message}', [ChatController::class, 'destroy'])->name('chat.destroy');
+    Route::get('chat/message/{message}/seen', [ChatController::class, 'seen'])->name('chat.seen');
+    Route::post('chat/message/{message}/pin', [ChatController::class, 'pin'])->name('chat.pin');
+    Route::post('chat/{room}/mute', [ChatController::class, 'mute'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.mute');
+    Route::get('chat/{room}/posts', [ChatController::class, 'posts'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.posts');
+    Route::get('chat/{room}/media', [ChatController::class, 'media'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.media');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');

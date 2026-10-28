@@ -10,7 +10,7 @@
 <body class="bg-gray-100 print:bg-white text-gray-900 font-sans">
     {{-- Controls (hidden when printing) --}}
     <div class="print:hidden max-w-4xl mx-auto px-4 pt-6 flex flex-wrap items-center gap-2">
-        <a href="{{ route('dashboard') }}" class="text-sm text-indigo-600 hover:underline">← Back</a>
+        <a href="{{ route('dashboard') }}" class="text-sm text-brand-600 hover:underline inline-flex items-center gap-1"><x-icon name="arrow-left" class="w-4 h-4" /> Back</a>
         <form method="GET" class="flex flex-wrap items-center gap-2 ms-auto">
             @if ($brands->count() > 1)
                 <select name="client" class="border-gray-300 rounded-md text-sm" aria-label="Brand">
@@ -21,7 +21,7 @@
             @endif
             <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-md text-sm" aria-label="Month">
             <button class="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm">Show</button>
-            <button type="button" onclick="window.print()" class="px-3 py-2 rounded-md bg-gray-800 text-white text-sm font-semibold">📄 Save as PDF</button>
+            <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold"><x-icon name="download" class="w-4 h-4" /> Save as PDF</button>
         </form>
     </div>
 

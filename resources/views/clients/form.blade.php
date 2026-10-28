@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-bold text-2xl text-gray-900 tracking-tight">
             {{ $client->exists ? 'Edit Client: '.$client->name : 'New Client' }}
         </h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="card p-6">
                 <form method="POST" action="{{ $client->exists ? route('clients.update', $client) : route('clients.store') }}" class="space-y-5">
                     @csrf
                     @if ($client->exists) @method('PUT') @endif
@@ -32,7 +32,7 @@
 
                     <div>
                         <x-input-label for="notes" value="Notes" />
-                        <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('notes', $client->notes) }}</textarea>
+                        <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('notes', $client->notes) }}</textarea>
                         <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                     </div>
 

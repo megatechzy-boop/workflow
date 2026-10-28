@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-bold text-2xl text-gray-900 tracking-tight">
             {{ $calendar->client->name }} · {{ $calendar->month->format('F Y') }} — Import from sheet
         </h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 text-sm text-gray-700 space-y-2">
+            <div class="card p-4 text-sm text-gray-700 space-y-2">
                 <p><strong>How:</strong> in Excel / Google Sheets select the rows (with or without the header row), copy, and paste below.</p>
                 <p><strong>Columns in this order:</strong> Sr. No. (optional) · Date · Post type · Creative copy · Visual brief · Brief · Reference link · Remarks</p>
                 <p><strong>Post type</strong> = one format + platforms, e.g. <code>LinkedIn Post</code>, <code>Instagram, Facebook Reel</code>, <code>IG Carousel</code>.
@@ -25,10 +25,10 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('calendars.import.store', $calendar) }}" class="bg-white shadow-sm sm:rounded-lg p-4 space-y-3">
+            <form method="POST" action="{{ route('calendars.import.store', $calendar) }}" class="card p-4 space-y-3">
                 @csrf
                 <x-input-label for="rows" value="Paste rows here" />
-                <textarea id="rows" name="rows" rows="16" required class="block w-full border-gray-300 rounded-md shadow-sm font-mono text-xs">{{ old('rows') }}</textarea>
+                <textarea id="rows" name="rows" rows="16" required class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 font-mono text-xs">{{ old('rows') }}</textarea>
                 <div class="flex items-center gap-3">
                     <x-primary-button>Import rows</x-primary-button>
                     <a href="{{ route('calendars.show', $calendar) }}" class="text-sm text-gray-600 hover:underline">Cancel</a>

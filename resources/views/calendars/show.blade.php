@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $calendar->client->name }} · {{ $calendar->month->format('F Y') }}</h2>
+                <h2 class="font-bold text-2xl text-gray-900 tracking-tight">{{ $calendar->client->name }} · {{ $calendar->month->format('F Y') }}</h2>
                 <p class="text-sm text-gray-500 mt-1">Created by: {{ $calendar->creator->name }}</p>
             </div>
             <span class="px-3 py-1 rounded text-sm {{ $calendar->status->color() }}">{{ $calendar->status->label() }}</span>
@@ -26,8 +26,8 @@
             {{-- Actions --}}
             <div class="flex flex-wrap items-center gap-3">
                 @can('update', $calendar)
-                    <a href="{{ route('calendars.items.create', $calendar) }}" class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-md text-xs font-semibold text-white uppercase tracking-widest hover:bg-gray-700">+ Add Post</a>
-                    <a href="{{ route('calendars.import', $calendar) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-gray-50">⇪ Import from sheet</a>
+                    <a href="{{ route('calendars.items.create', $calendar) }}" class="inline-flex items-center px-4 py-2 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 min-h-[44px]">+ Add Post</a>
+                    <a href="{{ route('calendars.import', $calendar) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-gray-50"><x-icon name="upload" class="w-4 h-4" /> Import from sheet</a>
                 @endcan
                 @can('submit', $calendar)
                     <form method="POST" action="{{ route('calendars.submit', $calendar) }}">
@@ -46,7 +46,7 @@
             @can('reviewItems', $calendar)
                 @php($pending = $calendar->items->whereNull('client_status')->count())
                 <div class="p-4 rounded bg-purple-50 border border-purple-200 text-sm">
-                    <strong>Please check every row:</strong> use Approve ✔ or Revision (with a comment) in the "Customer check" column.
+                    <strong>Please check every row:</strong> use Approve or Revision (with a comment) in the "Customer check" column.
                     Once every row is checked, the calendar moves on automatically.
                     <span class="block mt-1 font-semibold">{{ $calendar->items->count() - $pending }} / {{ $calendar->items->count() }} rows checked</span>
                 </div>
@@ -86,14 +86,14 @@
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->brief }}</td>
                                 <td class="px-3 py-4">
                                     @if ($item->reference_link)
-                                        <a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-700 underline break-all">Link</a>
+                                        <a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline break-all">Link</a>
                                     @endif
                                 </td>
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->remarks }}</td>
                                 <td class="px-3 py-4 bg-[#f0f9ff] text-left text-xs">
                                     @foreach ($item->assets as $asset)
-                                        <a href="{{ route('assets.download', $asset) }}" class="block truncate max-w-[160px] text-indigo-700 hover:underline" title="{{ $asset->original_name }}">
-                                            {{ $asset->isVideo() ? '🎬' : '📷' }} {{ $asset->original_name }}
+                                        <a href="{{ route('assets.download', $asset) }}" class="block truncate max-w-[160px] text-brand-700 hover:underline" title="{{ $asset->original_name }}">
+                                            <x-icon :name="$asset->isVideo() ? 'film' : 'photo'" class="w-3.5 h-3.5 inline -mt-0.5" /> {{ $asset->original_name }}
                                         </a>
                                     @endforeach
                                     @if ($item->assets->count() > 3)
@@ -111,7 +111,7 @@
                                 </td>
                                 <td class="px-3 py-4 bg-[#faf5ff] text-left">
                                     @if ($item->client_status === 'approved')
-                                        <span class="inline-block px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">Approved ✔</span>
+                                        <span class="inline-block px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold"><x-icon name="tick" class="w-3.5 h-3.5 inline -mt-0.5" /> Approved</span>
                                     @elseif ($item->client_status === 'revision')
                                         <span class="inline-block px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs font-semibold">Revision</span>
                                     @elseif ($item->client_comment)
@@ -125,7 +125,7 @@
                                             @csrf
                                             <textarea name="comment" rows="2" placeholder="Comment (required for Revision)" class="block w-full border-gray-300 rounded text-xs">{{ $item->client_status === 'revision' ? $item->client_comment : '' }}</textarea>
                                             <div class="flex gap-1">
-                                                <button name="action" value="approved" class="px-2 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-500">Approve ✔</button>
+                                                <button name="action" value="approved" class="px-2 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-500"><x-icon name="tick" class="w-3.5 h-3.5 inline -mt-0.5" /> Approve</button>
                                                 <button name="action" value="revision" class="px-2 py-1 rounded bg-orange-500 text-white text-xs font-semibold hover:bg-orange-400">Revision</button>
                                             </div>
                                         </form>
@@ -134,7 +134,7 @@
                                 @if ($showTasks)
                                     <td class="px-3 py-4 bg-[#fffaeb]">
                                         @can('assign', $calendar)
-                                            <select name="assign[{{ $item->id }}]" form="assign-form" class="border-gray-300 rounded-md shadow-sm text-sm w-full">
+                                            <select name="assign[{{ $item->id }}]" form="assign-form" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm w-full">
                                                 <option value="">— Member —</option>
                                                 {{-- Reel => Video Editors, Post/Carousel => Graphic Designers --}}
                                                 @foreach ($members->filter(fn ($m) => in_array($m->role, $item->assigneeRoles(), true)) as $m)
@@ -152,7 +152,7 @@
                                 @endif
                                 @can('update', $calendar)
                                     <td class="px-3 py-4 whitespace-nowrap space-x-2">
-                                        <a href="{{ route('calendars.items.edit', [$calendar, $item]) }}" class="text-indigo-600 hover:underline">Edit</a>
+                                        <a href="{{ route('calendars.items.edit', [$calendar, $item]) }}" class="text-brand-600 hover:underline">Edit</a>
                                         <form method="POST" action="{{ route('calendars.items.destroy', [$calendar, $item]) }}" class="inline" onsubmit="return confirm('Delete this post?')">
                                             @csrf @method('DELETE')
                                             <button class="text-red-600 hover:underline">Delete</button>
@@ -177,11 +177,11 @@
 
             {{-- Review box: Ops (Submitted) --}}
             @can('review', $calendar)
-                <div class="bg-white shadow-sm sm:rounded-lg p-6">
+                <div class="card p-6">
                     <h3 class="font-semibold text-gray-800 mb-3">Your review</h3>
                     <form method="POST" action="{{ route('calendars.review', $calendar) }}" class="space-y-3">
                         @csrf
-                        <textarea name="comment" rows="3" placeholder="Comment (required for Revision)" class="block w-full border-gray-300 rounded-md shadow-sm">{{ old('comment') }}</textarea>
+                        <textarea name="comment" rows="3" placeholder="Comment (required for Revision)" class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('comment') }}</textarea>
                         <x-input-error :messages="$errors->get('comment')" />
                         <div class="flex gap-3">
                             <button name="action" value="approved" class="px-4 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-500">Approve</button>
@@ -193,7 +193,7 @@
 
             {{-- History --}}
             @if ($calendar->reviews->isNotEmpty())
-                <div class="bg-white shadow-sm sm:rounded-lg p-6">
+                <div class="card p-6">
                     <h3 class="font-semibold text-gray-800 mb-3">History</h3>
                     <ul class="space-y-2 text-sm">
                         @foreach ($calendar->reviews as $review)

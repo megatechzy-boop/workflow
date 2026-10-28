@@ -1,9 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">🏆 Leaderboard · {{ $month->format('F Y') }}</h2>
+            <h2 class="font-bold text-2xl text-gray-900 tracking-tight flex items-center gap-2"><x-icon name="trophy" class="w-7 h-7 text-accent-500" /> Leaderboard · {{ $month->format('F Y') }}</h2>
             <form method="GET" class="flex gap-2">
-                <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-md shadow-sm text-sm">
+                <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
                 <x-secondary-button type="submit">View</x-secondary-button>
             </form>
         </div>
@@ -11,15 +11,15 @@
 
     <div class="py-8">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 grid md:grid-cols-2 gap-6">
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
+            <div class="card overflow-hidden">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 text-left text-gray-600">
                         <tr><th class="px-4 py-3 w-12">#</th><th class="px-4 py-3">Member</th><th class="px-4 py-3 text-right">Points</th></tr>
                     </thead>
                     <tbody class="divide-y">
                         @forelse ($board as $row)
-                            <tr class="{{ $row->user->id === auth()->id() ? 'bg-indigo-50' : '' }}">
-                                <td class="px-4 py-3 font-semibold">{{ [1 => '🥇', 2 => '🥈', 3 => '🥉'][$loop->iteration] ?? $loop->iteration }}</td>
+                            <tr class="{{ $row->user->id === auth()->id() ? 'bg-brand-50' : '' }}">
+                                <td class="px-4 py-3 font-semibold">@if ($loop->iteration <= 3)<x-icon name="trophy" class="w-5 h-5 {{ [1 => 'text-accent-500', 2 => 'text-gray-400', 3 => 'text-orange-700'][$loop->iteration] }}" /><span class="sr-only">{{ $loop->iteration }}</span>@else{{ $loop->iteration }}@endif</td>
                                 <td class="px-4 py-3">
                                     @if (auth()->user()->hasPermission(App\Enums\Permission::ViewAllTasks))
                                         <a href="{{ route('leaderboard', ['month' => $month->format('Y-m'), 'user' => $row->user->id]) }}" class="hover:underline">{{ $row->user->name }}</a>
@@ -36,7 +36,7 @@
                 </table>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-4">
+            <div class="card p-4">
                 <h3 class="font-semibold text-gray-800 mb-3">{{ $historyUser->id === auth()->id() ? 'My points' : $historyUser->name.'s points' }} ({{ $history->sum('points') }})</h3>
                 <ul class="divide-y text-sm">
                     @forelse ($history as $entry)

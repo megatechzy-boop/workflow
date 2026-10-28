@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-bold text-2xl text-gray-900 tracking-tight">
             {{ $user->exists ? 'Edit User: '.$user->name : 'New User' }}
         </h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="card p-6">
                 <form method="POST" action="{{ $user->exists ? route('admin.users.update', $user) : route('admin.users.store') }}" class="space-y-5">
                     @csrf
                     @if ($user->exists) @method('PUT') @endif
@@ -28,7 +28,7 @@
 
                     <div>
                         <x-input-label for="role" value="Role" />
-                        <select id="role" name="role" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" @disabled($isSelf)>
+                        <select id="role" name="role" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500" @disabled($isSelf)>
                             @foreach ($roles as $role)
                                 <option value="{{ $role->value }}" @selected(old('role', $user->role?->value) === $role->value)>{{ $role->label() }}</option>
                             @endforeach
@@ -42,7 +42,7 @@
 
                     <div>
                         <x-input-label for="client_id" value="Brand (Customer role only)" />
-                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">
                             <option value="">— None —</option>
                             @foreach ($clients as $c)
                                 <option value="{{ $c->id }}" @selected((string) old('client_id', $user->client_id) === (string) $c->id)>{{ $c->name }}</option>

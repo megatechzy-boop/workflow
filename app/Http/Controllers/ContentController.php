@@ -186,7 +186,7 @@ class ContentController extends Controller
             }
         });
 
-        $title = $data['action'] === 'approved' ? 'Customer approved ✔' : 'Customer requested changes';
+        $title = $data['action'] === 'approved' ? 'Customer approved' : 'Customer requested changes';
         Notify::send([$content->task->assignee, $content->approver], $title,
             $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), route('contents.show', $content));
 
@@ -235,7 +235,7 @@ class ContentController extends Controller
         return redirect()->route('contents.show', [$content, 'v' => $data['version']])->with('status', 'Comment added.');
     }
 
-    /** "Fixed ✔" checklist: the member marks (or unmarks) a revision/comment as fixed */
+    /** "Fixed" checklist: the member marks (or unmarks) a revision/comment as fixed */
     public function toggleFixed(Request $request, Content $content, ContentComment $comment): RedirectResponse
     {
         Gate::authorize('upload', [Content::class, $content->task]);

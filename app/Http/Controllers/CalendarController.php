@@ -157,7 +157,7 @@ class CalendarController extends Controller
         if ($revisions->isEmpty()) {
             $this->transition($request, $calendar, CalendarStatus::ClientApproved, 'approved', null);
 
-            return back()->with('status', 'All rows approved! Calendar approved ✔');
+            return back()->with('status', 'All rows approved! Calendar approved.');
         }
 
         $summary = $revisions->map(fn ($i) => $i->post_date->format('d M').': '.$i->client_comment)->implode("\n");
@@ -184,7 +184,7 @@ class CalendarController extends Controller
             CalendarStatus::ApproverApproved => $this->notifyCustomers($calendar),
             CalendarStatus::ClientApproved => Notify::send(
                 User::withPermission(Permission::AssignTasks)->push($calendar->creator),
-                'Calendar approved ✔', "$name was approved by the customer. ".count($autoTasks).' task(s) were auto-assigned; change them if needed.', $url),
+                'Calendar approved', "$name was approved by the customer. ".count($autoTasks).' task(s) were auto-assigned; change them if needed.', $url),
             default => null,
         };
         foreach ($autoTasks as $task) {

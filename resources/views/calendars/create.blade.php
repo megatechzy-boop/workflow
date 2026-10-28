@@ -1,17 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">New Content Calendar</h2>
+        <h2 class="font-bold text-2xl text-gray-900 tracking-tight">New Content Calendar</h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="card p-6">
                 <form method="POST" action="{{ route('calendars.store') }}" class="space-y-5">
                     @csrf
 
                     <div>
                         <x-input-label for="client_id" value="Client" />
-                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500" required>
                             <option value="">— Choose client —</option>
                             @foreach ($clients as $c)
                                 <option value="{{ $c->id }}" @selected(old('client_id') == $c->id)>{{ $c->name }}</option>

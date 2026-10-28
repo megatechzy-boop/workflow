@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">🗓 Schedule · {{ $month->format('F Y') }}</h2>
+            <h2 class="font-bold text-2xl text-gray-900 tracking-tight flex items-center gap-2"><x-icon name="grid" class="w-7 h-7 text-brand-600" /> Schedule · {{ $month->format('F Y') }}</h2>
             <form method="GET" class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('schedule', ['month' => $month->copy()->subMonth()->format('Y-m'), 'client' => $clientId]) }}" class="px-2 py-1 rounded border text-sm" aria-label="Previous month">←</a>
-                <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-md shadow-sm text-sm" aria-label="Month">
-                <a href="{{ route('schedule', ['month' => $month->copy()->addMonth()->format('Y-m'), 'client' => $clientId]) }}" class="px-2 py-1 rounded border text-sm" aria-label="Next month">→</a>
+                <a href="{{ route('schedule', ['month' => $month->copy()->subMonth()->format('Y-m'), 'client' => $clientId]) }}" class="px-2 py-1 rounded border text-sm" aria-label="Previous month"><x-icon name="chevron-left" class="w-4 h-4" /></a>
+                <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" aria-label="Month">
+                <a href="{{ route('schedule', ['month' => $month->copy()->addMonth()->format('Y-m'), 'client' => $clientId]) }}" class="px-2 py-1 rounded border text-sm" aria-label="Next month"><x-icon name="chevron-right" class="w-4 h-4" /></a>
                 @if ($brands->isNotEmpty())
-                    <select name="client" class="border-gray-300 rounded-md shadow-sm text-sm" aria-label="Brand">
+                    <select name="client" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" aria-label="Brand">
                         <option value="">All brands</option>
                         @foreach ($brands as $b)
                             <option value="{{ $b->id }}" @selected($clientId === $b->id)>{{ $b->name }}</option>
@@ -21,7 +21,7 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
+            <div class="card overflow-x-auto">
                 <div class="grid grid-cols-7 min-w-[840px] text-xs">
                     @foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $d)
                         <div class="px-2 py-2 font-semibold text-gray-600 bg-gray-50 border-b">{{ $d }}</div>
@@ -34,8 +34,8 @@
 
                     @for ($day = 1; $day <= $month->daysInMonth; $day++)
                         @php($date = $month->copy()->day($day))
-                        <div class="border-b border-r min-h-[110px] p-1.5 {{ $date->isToday() ? 'bg-indigo-50' : '' }}">
-                            <div class="font-semibold {{ $date->isToday() ? 'text-indigo-700' : 'text-gray-500' }}">{{ $day }}</div>
+                        <div class="border-b border-r min-h-[110px] p-1.5 {{ $date->isToday() ? 'bg-brand-50' : '' }}">
+                            <div class="font-semibold {{ $date->isToday() ? 'text-brand-700' : 'text-gray-500' }}">{{ $day }}</div>
                             <div class="space-y-1 mt-1">
                                 @foreach ($byDay[$day] ?? [] as $item)
                                     @php([$label, $color] = App\Http\Controllers\ScheduleController::status($item))

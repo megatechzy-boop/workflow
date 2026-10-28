@@ -1,3 +1,125 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Brand colours from the MegaTechzy logo (RGB triplets). Change colours here only.
+ * brand  = logo teal-green (#0A7A6C at 600)
+ * accent = logo amber      (#F5A800 at 500)
+ */
+:root {
+    --brand-50: 236 250 247;
+    --brand-100: 209 243 236;
+    --brand-200: 164 230 217;
+    --brand-300: 103 207 190;
+    --brand-400: 45 178 160;
+    --brand-500: 17 145 128;
+    --brand-600: 10 122 108;
+    --brand-700: 9 99 89;
+    --brand-800: 11 79 72;
+    --brand-900: 12 64 59;
+
+    --accent-50: 255 248 230;
+    --accent-100: 255 238 194;
+    --accent-400: 251 191 36;
+    --accent-500: 245 168 0;
+    --accent-600: 217 140 0;
+
+    /* Tailwind gray (light) */
+    --gray-50: 249 250 251;
+    --gray-100: 243 244 246;
+    --gray-200: 229 231 235;
+    --gray-300: 209 213 219;
+    --gray-400: 156 163 175;
+    --gray-500: 107 114 128;
+    --gray-600: 75 85 99;
+    --gray-700: 55 65 81;
+    --gray-800: 31 41 55;
+    --gray-900: 17 24 39;
+    --gray-950: 3 7 18;
+}
+
+/*
+ * Dark mode (html.dark, set by the theme switch): grays flip, light tints of
+ * brand/accent become dark tints, and "white" surfaces become dark cards.
+ */
+html.dark {
+    color-scheme: dark;
+    --surface: 24 33 45;
+
+    --gray-50: 15 21 30;
+    --gray-100: 31 41 55;
+    --gray-200: 51 62 78;
+    --gray-300: 75 85 99;
+    --gray-400: 120 128 142;
+    --gray-500: 150 158 172;
+    --gray-600: 178 185 197;
+    --gray-700: 205 210 218;
+    --gray-800: 226 229 234;
+    --gray-900: 243 244 246;
+    --gray-950: 249 250 251;
+
+    --brand-50: 13 48 45;
+    --brand-100: 16 66 60;
+    --brand-200: 22 92 84;
+    --brand-700: 110 214 196;
+    --brand-800: 150 228 214;
+    --brand-900: 190 240 231;
+
+    --accent-50: 58 44 12;
+    --accent-100: 82 62 14;
+}
+
+html.dark .bg-white { background-color: rgb(var(--surface)); }
+html.dark .bg-white\/85 { background-color: rgb(var(--surface) / 0.85); }
+html.dark .bg-white\/90 { background-color: rgb(var(--surface) / 0.9); }
+html.dark .bg-white\/95 { background-color: rgb(var(--surface) / 0.95); }
+html.dark .hover\:bg-white:hover { background-color: rgb(var(--surface)); }
+
+/* Form fields (the forms plugin paints them white) */
+html.dark :is(input, select, textarea):not([type=checkbox]):not([type=radio]) {
+    background-color: rgb(var(--surface));
+    border-color: rgb(var(--gray-300));
+    color: rgb(var(--gray-900));
+}
+html.dark .bg-transparent { background-color: transparent; }
+
+/* Fixed light colours: chat wallpaper, calendar sheet column tints */
+html.dark .bg-\[\#efeae2\] { background-color: #0b141a; }
+html.dark .bg-\[\#eef3fb\] { background-color: #172233; }
+html.dark .bg-\[\#dfe8f7\] { background-color: #1e2d45; }
+html.dark :is(.bg-\[\#e0f2fe\], .bg-\[\#f0f9ff\]) { background-color: #12283a; }
+html.dark :is(.bg-\[\#f3e8ff\], .bg-\[\#faf5ff\]) { background-color: #2a1f3d; }
+html.dark :is(.bg-\[\#fff4d6\], .bg-\[\#fffaeb\]) { background-color: #33290f; }
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* iPhone: no zoom-on-focus (inputs >= 16px on phones) */
+    @media (max-width: 640px) {
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+    }
+}
+
+@layer components {
+    /* Room for the iPhone home indicator under the bottom tab bar */
+    .pb-safe {
+        padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    }
+
+    .pt-safe {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    .card {
+        @apply bg-white rounded-2xl border border-gray-200/70 shadow-sm;
+    }
+}
+
+[x-cloak] {
+    display: none !important;
+}

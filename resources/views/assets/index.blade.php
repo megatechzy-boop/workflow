@@ -1,10 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">📁 Assets · {{ $client->name }}</h2>
+            <h2 class="font-bold text-2xl text-gray-900 tracking-tight flex items-center gap-2"><x-icon name="folder" class="w-7 h-7 text-brand-600" /> Assets · {{ $client->name }}</h2>
             @if ($brands->count() > 1)
                 <form method="GET">
-                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm text-sm" aria-label="Choose brand">
+                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" aria-label="Choose brand">
                         @foreach ($brands as $b)
                             <option value="{{ $b->id }}" @selected($b->id === $client->id)>{{ $b->name }}</option>
                         @endforeach
@@ -20,7 +20,7 @@
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
 
-            <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" class="bg-white shadow-sm sm:rounded-lg p-4 flex flex-wrap items-end gap-3">
+            <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" class="card p-4 flex flex-wrap items-end gap-3">
                 @csrf
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
                 <div>
@@ -34,7 +34,7 @@
             </form>
 
             @if (request('item'))
-                <p class="text-sm">Showing files of one calendar row · <a href="{{ route('assets.index', ['client' => $client->id]) }}" class="text-indigo-600 hover:underline">Show all</a></p>
+                <p class="text-sm">Showing files of one calendar row · <a href="{{ route('assets.index', ['client' => $client->id]) }}" class="text-brand-600 hover:underline">Show all</a></p>
             @endif
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -55,7 +55,7 @@
                             @endif
                         </div>
                         <div class="px-2 pb-2 flex items-center gap-3 text-xs">
-                            <a href="{{ route('assets.download', $asset) }}" class="text-indigo-600 hover:underline">⬇ Download</a>
+                            <a href="{{ route('assets.download', $asset) }}" class="text-brand-600 hover:underline inline-flex items-center gap-1"><x-icon name="download" class="w-4 h-4" /> Download</a>
                             @if ($asset->uploaded_by === auth()->id() || auth()->user()->isAdmin())
                                 <form method="POST" action="{{ route('assets.destroy', $asset) }}" onsubmit="return confirm('Delete this file?')">
                                     @csrf @method('DELETE')

@@ -93,7 +93,7 @@ class NotificationTest extends TestCase
         $this->actingAs($this->approver)->post("/contents/{$content->id}/comments/{$comment->id}/fixed")->assertForbidden();
         $this->actingAs($this->member)->post("/contents/{$content->id}/comments/{$comment->id}/fixed");
         $this->assertNotNull($comment->fresh()->fixed_at);
-        $this->actingAs($this->member)->get("/contents/{$content->id}")->assertSee('Fixed ✔');
+        $this->actingAs($this->member)->get("/contents/{$content->id}")->assertSee('Fixed ·', false);
 
         $id = $this->member->notifications()->first()->id;
         $this->actingAs($this->member)->get("/notifications/{$id}")->assertRedirect();
