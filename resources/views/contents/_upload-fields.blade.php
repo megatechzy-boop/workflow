@@ -1,4 +1,4 @@
-{{-- Upload fields: $type (PostType), $caption/$hashtags defaults --}}
+{{-- Upload fields (files only): $type (PostType). Caption/hashtags are handled by the SMM on the content page. --}}
 @if ($type === App\Enums\PostType::Reel)
     <div class="grid sm:grid-cols-2 gap-4">
         <div>
@@ -20,12 +20,3 @@
         <x-input-error :messages="$errors->get('images.*')" class="mt-2" />
     </div>
 @endif
-
-<div>
-    <x-input-label value="Caption" />
-    <textarea name="caption" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('caption', $caption ?? '') }}</textarea>
-</div>
-<div>
-    <x-input-label value="Hashtags" />
-    <x-text-input name="hashtags" class="mt-1 block w-full" placeholder="#brand #offer" :value="old('hashtags', $hashtags ?? '')" />
-</div>

@@ -66,14 +66,19 @@ class ContentController extends Controller
         }
 
         $data = $request->validate([
-            'approver_id' => ['required', Rule::in(User::withPermission(Permission::ApproveContent)->pluck('id'))],
+            // Not shown to Designers/Editors; picked automatically below
+            'approver_id' => ['nullable', Rule::in(User::withPermission(Permission::ApproveContent)->pluck('id'))],
             ...$this->versionRules(Content::typeOf($postType)),
         ]);
+        $approverId = $data['approver_id'] ?? $this->defaultApprover($task);
+        if (! $approverId) {
+            throw ValidationException::withMessages(['approver_id' => 'No Social Media Manager is available to review this. Please ask an Admin.']);
+        }
 
-        $content = DB::transaction(function () use ($request, $task, $postType, $data, $formats) {
+        $content = DB::transaction(function () use ($request, $task, $postType, $data, $formats, $approverId) {
             $content = $task->contents()->create([
                 'post_type' => $postType,
-                'approver_id' => $data['approver_id'],
+                'approver_id' => $approverId,
                 'status' => ContentStatus::Submitted,
             ]);
             $this->storeVersion($request, $content, 1, $data);
@@ -119,7 +124,9 @@ class ContentController extends Controller
 
         DB::transaction(function () use ($request, $content, $data) {
             $number = $content->current_version + 1;
-            $this->storeVersion($request, $content, $number, $data);
+            // Keep the SMM's caption/hashtags on the new version
+            $previous = $content->versions()->where('number', $content->current_version)->first();
+            $this->storeVersion($request, $content, $number, ['caption' => $previous?->caption, 'hashtags' => $previous?->hashtags] + $data);
             $content->update(['current_version' => $number, 'status' => ContentStatus::Resubmitted]);
         });
 
@@ -283,13 +290,36 @@ class ContentController extends Controller
         return $content->typeLabel().' · '.$item->calendar->client->name.' · '.$item->post_date->format('d M');
     }
 
+    /** SMM sets caption + hashtags on the latest version (Designers/Editors only upload files) */
+    public function updateCaption(Request $request, Content $content): RedirectResponse
+    {
+        Gate::authorize('editCaption', $content);
+
+        $data = $request->validate([
+            'caption' => ['nullable', 'string', 'max:5000'],
+            'hashtags' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $content->versions()->where('number', $content->current_version)->update($data);
+
+        return back()->with('status', 'Caption and hashtags saved.');
+    }
+
+    /** Calendar creator if they can approve content, otherwise the first active SMM (Admin as last resort) */
+    private function defaultApprover(Task $task): ?int
+    {
+        $approvers = User::withPermission(Permission::ApproveContent);
+        $creatorId = $task->item->calendar->created_by;
+
+        return $approvers->firstWhere('id', $creatorId)?->id
+            ?? $approvers->firstWhere('role', Role::SocialMediaManager)?->id
+            ?? $approvers->first()?->id;
+    }
+
     private function versionRules(PostType $type): array
     {
         $image = ['image', 'mimes:jpg,jpeg,png,webp', 'max:10240']; // 10 MB
 
         return [
-            'caption' => ['nullable', 'string', 'max:5000'],
-            'hashtags' => ['nullable', 'string', 'max:2000'],
             ...match ($type) {
                 PostType::Post => ['images' => ['required', 'array', 'size:1'], 'images.*' => $image],
                 PostType::Carousel => ['images' => ['required', 'array', 'min:2', 'max:10'], 'images.*' => $image],

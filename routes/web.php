@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/resubmit', [ContentController::class, 'resubmit'])->name('contents.resubmit');
     Route::post('contents/{content}/review', [ContentController::class, 'review'])->name('contents.review');
     Route::post('contents/{content}/comments', [ContentController::class, 'comment'])->name('contents.comment');
+    Route::post('contents/{content}/caption', [ContentController::class, 'updateCaption'])->name('contents.caption');
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');

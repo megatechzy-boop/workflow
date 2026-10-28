@@ -195,4 +195,27 @@ class ContentTest extends TestCase
         ])->assertSessionHasErrors('post_type');
         $this->assertSame(1, Content::count());
     }
+
+    public function test_designer_uploads_files_only_and_smm_sets_caption(): void
+    {
+        // No approver chosen by the designer: the SMM is picked automatically
+        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'carousel', 'images' => $this->images(2), 'caption' => 'designer caption',
+        ])->assertSessionHasNoErrors();
+        $content = Content::firstOrFail();
+        $this->assertSame($this->approver->id, $content->approver_id);
+        $this->assertNull($content->versions()->first()->caption); // designer cannot set it
+
+        $this->actingAs($this->member)->get("/tasks/{$this->task->id}")->assertDontSee('Choose approver');
+        $this->actingAs($this->member)->post("/contents/{$content->id}/caption", ['caption' => 'x'])->assertForbidden();
+
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/caption", ['caption' => 'Final caption', 'hashtags' => '#acme'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Final caption', $content->versions()->first()->caption);
+
+        // Caption carries over to V2 after a revision
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Fix colors']);
+        $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => $this->images(2)]);
+        $this->assertSame('#acme', $content->versions()->where('number', 2)->value('hashtags'));
+    }
 }

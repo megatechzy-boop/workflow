@@ -53,18 +53,10 @@
                         <form method="POST" action="{{ route('tasks.contents.store', $task) }}" enctype="multipart/form-data" class="space-y-4">
                             @csrf
                             <input type="hidden" name="post_type" value="{{ $postType }}">
-                            @include('contents._upload-fields', ['type' => App\Models\Content::typeOf($postType), 'caption' => $item->creative_copy])
-                            <div>
-                                <x-input-label value="Approver" />
-                                <select name="approver_id" required class="mt-1 block w-full sm:w-1/2 border-gray-300 rounded-md shadow-sm">
-                                    <option value="">— Choose approver —</option>
-                                    @foreach ($approvers as $a)
-                                        <option value="{{ $a->id }}" @selected(old('approver_id') == $a->id)>{{ $a->name }}</option>
-                                    @endforeach
-                                </select>
-                                <x-input-error :messages="$errors->get('approver_id')" class="mt-2" />
-                                <x-input-error :messages="$errors->get('post_type')" class="mt-2" />
-                            </div>
+                            @include('contents._upload-fields', ['type' => $format])
+                            <x-input-error :messages="$errors->get('post_type')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('approver_id')" class="mt-2" />
+                            <p class="text-xs text-gray-500">Goes to the Social Media Manager for review. Caption and hashtags are added by the SMM.</p>
                             <x-primary-button>Upload &amp; Submit</x-primary-button>
                         </form>
                     @else

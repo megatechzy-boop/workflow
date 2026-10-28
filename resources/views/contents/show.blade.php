@@ -83,7 +83,20 @@
                         <p class="text-xs text-gray-400">On "Download all" the browser may ask once to allow multiple downloads — please allow it.</p>
                     @endif
 
-                    @if ($version->caption || $version->hashtags)
+                    {{-- Caption + hashtags: written by the SMM (Designers/Editors only upload files) --}}
+                    @if (auth()->user()->can('editCaption', $content) && $version->number === $content->current_version)
+                        <form method="POST" action="{{ route('contents.caption', $content) }}" class="border-t pt-4 space-y-2">
+                            @csrf
+                            <x-input-label for="caption" value="Caption (SMM)" />
+                            <textarea id="caption" name="caption" rows="5" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">{{ old('caption', $version->caption ?? $item->creative_copy) }}</textarea>
+                            <x-input-label for="hashtags" value="Hashtags" />
+                            <x-text-input id="hashtags" name="hashtags" class="block w-full text-sm" placeholder="#brand #offer" :value="old('hashtags', $version->hashtags)" />
+                            <div class="flex items-center gap-2">
+                                <x-secondary-button type="submit">Save caption</x-secondary-button>
+                                @unless ($version->caption)<span class="text-xs text-gray-500">Pre-filled from the calendar's creative copy — edit and save.</span>@endunless
+                            </div>
+                        </form>
+                    @elseif ($version->caption || $version->hashtags)
                         <div class="border-t pt-4 text-sm">
                             <div class="whitespace-pre-line text-gray-800">{{ $version->caption }}</div>
                             <div class="text-indigo-700 mt-2">{{ $version->hashtags }}</div>
@@ -145,7 +158,7 @@
                             @endif
                             <form method="POST" action="{{ route('contents.resubmit', $content) }}" enctype="multipart/form-data" class="space-y-3">
                                 @csrf
-                                @include('contents._upload-fields', ['type' => $type, 'caption' => $version->caption, 'hashtags' => $version->hashtags])
+                                @include('contents._upload-fields', ['type' => $type])
                                 <x-primary-button>Resubmit</x-primary-button>
                             </form>
                         </div>

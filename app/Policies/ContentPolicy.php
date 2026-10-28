@@ -48,6 +48,12 @@ class ContentPolicy
             && $user->client_id === $content->task->item->calendar->client_id;
     }
 
+    /** Caption + hashtags belong to the SMM (approve or publish permission) */
+    public function editCaption(User $user, Content $content): bool
+    {
+        return $user->hasPermission(Permission::ApproveContent) || $user->hasPermission(Permission::PublishContent);
+    }
+
     public function comment(User $user, Content $content): bool
     {
         return $this->view($user, $content);

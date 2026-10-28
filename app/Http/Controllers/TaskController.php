@@ -46,7 +46,7 @@ class TaskController extends Controller
 
         $task->load(['item.calendar.client', 'assignee', 'contents.approver']);
 
-        return view('tasks.show', ['task' => $task, 'approvers' => User::withPermission(Permission::ApproveContent)]);
+        return view('tasks.show', ['task' => $task]);
     }
 
     /** Pick a member for each post of an approved calendar; the deadline is automatic */
