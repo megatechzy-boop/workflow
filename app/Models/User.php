@@ -32,7 +32,7 @@ class User extends Authenticatable
      * Default attribute values.
      */
     protected $attributes = [
-        'role' => 'team_member',
+        'role' => 'graphic_designer',
         'is_active' => true,
     ];
 
@@ -61,10 +61,16 @@ class User extends Authenticatable
         ];
     }
 
-    /** Tasks assign karne layak: active Team Members */
-    public static function teamMembers()
+    /** Tasks assign karne layak: active Designers/Editors (ya sirf diye gaye roles) */
+    public static function creators(?array $roles = null)
     {
-        return static::where('role', Role::TeamMember)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        return static::whereIn('role', $roles ?? [Role::GraphicDesigner, Role::VideoEditor])
+            ->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role']);
+    }
+
+    public static function socialMediaManagers()
+    {
+        return static::where('role', Role::SocialMediaManager)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
     /** @mention handle: "Team Member" => "teammember" */

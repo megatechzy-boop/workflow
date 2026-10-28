@@ -26,10 +26,11 @@ class DatabaseSeeder extends Seeder
 
         $users = [
             ['Admin User', 'admin@workflow.test', Role::Admin],
-            ['Manager User', 'manager@workflow.test', Role::Manager],
-            ['Approver User', 'approver@workflow.test', Role::Approver],
-            ['Team Member', 'team@workflow.test', Role::TeamMember],
-            ['Client User', 'client@workflow.test', Role::Client],
+            ['Ops Manager', 'manager@workflow.test', Role::Manager],
+            ['Social Media Manager', 'approver@workflow.test', Role::SocialMediaManager],
+            ['Graphic Designer', 'team@workflow.test', Role::GraphicDesigner],
+            ['Video Editor', 'editor@workflow.test', Role::VideoEditor],
+            ['Customer User', 'client@workflow.test', Role::Client],
         ];
 
         foreach ($users as [$name, $email, $role]) {

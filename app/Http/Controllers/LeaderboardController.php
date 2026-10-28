@@ -27,14 +27,14 @@ class LeaderboardController extends Controller
             ->get()->keyBy('user_id');
 
         // Sab active members dikhein, jinke 0 points hain woh bhi
-        $board = User::where('role', Role::TeamMember)->where('is_active', true)->get(['id', 'name'])
-            ->merge(User::whereIn('id', $totals->keys())->get(['id', 'name']))
+        $board = User::creators()
+            ->merge(User::whereIn('id', $totals->keys())->get(['id', 'name', 'role']))
             ->unique('id')
             ->map(fn ($u) => (object) ['user' => $u, 'total' => (int) ($totals[$u->id]->total ?? 0)])
             ->sortByDesc('total')->values();
 
-        // History: member ko apni, Admin/Manager kisi ki bhi (?user=)
-        $historyUser = $user->hasRole('admin', 'manager') && $request->user
+        // History: member ko apni, Admin/Ops/SMM kisi ki bhi (?user=)
+        $historyUser = $user->role->isPlanner() && $request->user
             ? User::findOrFail($request->user)
             : $user;
         $history = PointEntry::with(['task.item.calendar.client', 'content'])

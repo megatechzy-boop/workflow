@@ -84,9 +84,8 @@ class CalendarController extends Controller
             'calendar' => $calendar,
             // Tasks columns: approved calendar par, client ko chhod kar sabko
             'showTasks' => $calendar->status === CalendarStatus::ClientApproved && $user->role !== Role::Client,
-            'members' => $user->can('assign', $calendar)
-                ? User::teamMembers()
-                : collect(),
+            // Saare Designers/Editors; view har post ke type ke hisaab se filter karta hai
+            'members' => $user->can('assign', $calendar) ? User::creators() : collect(),
         ]);
     }
 
@@ -103,14 +102,15 @@ class CalendarController extends Controller
     {
         Gate::authorize('submit', $calendar);
 
+        // Internal approval step nahi: SMM seedha Customer ko bhejta hai
         DB::transaction(function () use ($request, $calendar) {
-            $calendar->update(['status' => CalendarStatus::Submitted]);
+            $calendar->update(['status' => CalendarStatus::ApproverApproved]);
             $calendar->reviews()->create(['user_id' => $request->user()->id, 'action' => 'submitted']);
         });
 
-        Notify::send(Notify::role(Role::Approver), 'Calendar approval ke liye', $this->name($calendar).' ka calendar review ke liye aaya hai.', route('calendars.show', $calendar));
+        $this->notifyCustomers($calendar);
 
-        return back()->with('status', 'Calendar Approver ko bhej diya.');
+        return back()->with('status', 'Calendar Customer ko bhej diya.');
     }
 
     public function review(Request $request, Calendar $calendar): RedirectResponse
@@ -141,16 +141,22 @@ class CalendarController extends Controller
         $name = $this->name($calendar);
         match ($next) {
             CalendarStatus::Draft => Notify::send([$calendar->creator], 'Calendar par revision', "$name: ".$data['comment'], $url),
-            CalendarStatus::ApproverApproved => Notify::send(
-                User::where('role', Role::Client)->where('client_id', $calendar->client_id)->get(),
-                'Calendar aapke approval ke liye', "$name ka content calendar review karein.", $url),
+            CalendarStatus::ApproverApproved => $this->notifyCustomers($calendar),
             CalendarStatus::ClientApproved => Notify::send(
-                Notify::role(Role::Admin, Role::Manager)->push($calendar->creator),
-                'Calendar approved ✔', "$name client ne approve kar diya. Ab tasks assign karein.", $url),
+                Notify::role(Role::SocialMediaManager, Role::Manager)->push($calendar->creator),
+                'Calendar approved ✔', "$name customer ne approve kar diya. Ab tasks assign karein.", $url),
             default => null,
         };
 
         return back()->with('status', $data['action'] === 'revision' ? 'Revision ke liye wapas bhej diya.' : 'Calendar approve ho gaya.');
+    }
+
+    private function notifyCustomers(Calendar $calendar): void
+    {
+        Notify::send(
+            User::where('role', Role::Client)->where('client_id', $calendar->client_id)->get(),
+            'Calendar aapke approval ke liye', $this->name($calendar).' ka content calendar review karein.',
+            route('calendars.show', $calendar));
     }
 
     private function name(Calendar $calendar): string

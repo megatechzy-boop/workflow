@@ -23,15 +23,15 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ContentController extends Controller
 {
-    /** Approvals list: Approver ko apne pending, Admin/Manager ko sab */
+    /** Approvals list: SMM ko apne, Admin/Ops Manager ko sab */
     public function index(Request $request): View
     {
         $user = $request->user();
-        abort_unless($user->hasRole('admin', 'manager', 'approver'), 403);
+        abort_unless($user->role->isPlanner(), 403);
 
         $contents = Content::query()
             ->with(['task.item.calendar.client', 'task.assignee', 'approver'])
-            ->when($user->role === Role::Approver, fn ($q) => $q->where('approver_id', $user->id))
+            ->when($user->role === Role::SocialMediaManager, fn ($q) => $q->where('approver_id', $user->id))
             ->when($request->status ?? 'pending', fn ($q, $s) => match ($s) {
                 'all' => $q,
                 'pending' => $q->whereIn('status', [ContentStatus::Submitted, ContentStatus::Resubmitted]),
@@ -54,7 +54,7 @@ class ContentController extends Controller
         ], ['post_type.unique' => 'Is post type ka content pehle se upload hai.'])['post_type'];
 
         $data = $request->validate([
-            'approver_id' => ['required', Rule::in(User::where('role', Role::Approver)->where('is_active', true)->pluck('id'))],
+            'approver_id' => ['required', Rule::in(User::socialMediaManagers()->pluck('id'))],
             ...$this->versionRules(Content::typeOf($postType)),
         ]);
 

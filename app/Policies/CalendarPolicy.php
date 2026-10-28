@@ -9,12 +9,6 @@ use App\Models\User;
 
 class CalendarPolicy
 {
-    /** Calendar banane/edit karne wale roles */
-    private function isStaff(User $user): bool
-    {
-        return $user->hasRole('admin', 'manager', 'team_member');
-    }
-
     public function viewAny(User $user): bool
     {
         return true;
@@ -23,7 +17,7 @@ class CalendarPolicy
     public function view(User $user, Calendar $calendar): bool
     {
         if ($user->role === Role::Client) {
-            // Client ko sirf apna calendar, aur woh bhi Approver ke OK ke baad
+            // Customer ko sirf apna calendar, aur woh bhi submit hone ke baad
             return $user->client_id === $calendar->client_id
                 && in_array($calendar->status, [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved], true);
         }
@@ -31,19 +25,20 @@ class CalendarPolicy
         return true;
     }
 
+    /** Calendar SMM (ya Admin/Ops Manager) banata hai */
     public function create(User $user): bool
     {
-        return $this->isStaff($user);
+        return $user->role->isPlanner();
     }
 
     public function update(User $user, Calendar $calendar): bool
     {
-        return $this->isStaff($user) && $calendar->status === CalendarStatus::Draft;
+        return $user->role->isPlanner() && $calendar->status === CalendarStatus::Draft;
     }
 
     public function delete(User $user, Calendar $calendar): bool
     {
-        return $user->hasRole('admin', 'manager') && $calendar->status === CalendarStatus::Draft;
+        return $this->update($user, $calendar);
     }
 
     public function submit(User $user, Calendar $calendar): bool
@@ -51,17 +46,17 @@ class CalendarPolicy
         return $this->update($user, $calendar) && $calendar->items()->exists();
     }
 
-    /** Client-approved calendar ke posts par team member assign karna */
+    /** Customer-approved calendar ke posts par Designer/Editor assign karna */
     public function assign(User $user, Calendar $calendar): bool
     {
-        return $user->hasRole('admin', 'manager') && $calendar->status === CalendarStatus::ClientApproved;
+        return $user->role->isPlanner() && $calendar->status === CalendarStatus::ClientApproved;
     }
 
-    /** Approver ya Client ka review: jiska turn hai wahi approve/revision kar sakta hai */
+    /** Customer review karta hai; purane "Submitted" calendars Admin/Ops/SMM aage badha sakte hain */
     public function review(User $user, Calendar $calendar): bool
     {
         return match ($calendar->status) {
-            CalendarStatus::Submitted => $user->hasRole('admin', 'approver'),
+            CalendarStatus::Submitted => $user->role->isPlanner(),
             CalendarStatus::ApproverApproved => $user->role === Role::Client && $user->client_id === $calendar->client_id,
             default => false,
         };

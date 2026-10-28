@@ -30,8 +30,8 @@ class ContentTest extends TestCase
         parent::setUp();
         Storage::fake('local');
         $manager = User::factory()->create(['role' => Role::Manager]);
-        $this->member = User::factory()->create(['role' => Role::TeamMember]);
-        $this->approver = User::factory()->create(['role' => Role::Approver]);
+        $this->member = User::factory()->create(['role' => Role::GraphicDesigner]);
+        $this->approver = User::factory()->create(['role' => Role::SocialMediaManager]);
         $calendar = Calendar::create([
             'client_id' => Client::create(['name' => 'Acme'])->id, 'month' => '2026-11-01',
             'created_by' => $manager->id, 'status' => CalendarStatus::ClientApproved,
@@ -83,7 +83,7 @@ class ContentTest extends TestCase
             'post_type' => 'linkedin_post', 'approver_id' => $this->approver->id, 'images' => $this->images(1),
         ])->assertSessionHasErrors('post_type');
 
-        $other = User::factory()->create(['role' => Role::TeamMember]);
+        $other = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->actingAs($other)->post("/tasks/{$this->task->id}/contents", [
             'post_type' => 'instagram_carousel', 'approver_id' => $this->approver->id, 'images' => $this->images(2),
         ])->assertForbidden();
@@ -95,7 +95,7 @@ class ContentTest extends TestCase
         $content = Content::firstOrFail();
 
         // Sirf chuna hua approver review kar sakta hai
-        $this->actingAs(User::factory()->create(['role' => Role::Approver]))
+        $this->actingAs(User::factory()->create(['role' => Role::SocialMediaManager]))
             ->post("/contents/{$content->id}/review", ['action' => 'approved'])->assertForbidden();
 
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision'])

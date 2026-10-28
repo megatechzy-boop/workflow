@@ -31,8 +31,8 @@ class NotificationTest extends TestCase
         parent::setUp();
         Storage::fake('local');
         $this->manager = User::factory()->create(['role' => Role::Manager, 'name' => 'Ravi Manager']);
-        $this->member = User::factory()->create(['role' => Role::TeamMember, 'name' => 'Priya Sharma']);
-        $this->approver = User::factory()->create(['role' => Role::Approver, 'name' => 'Amit Approver']);
+        $this->member = User::factory()->create(['role' => Role::GraphicDesigner, 'name' => 'Priya Sharma']);
+        $this->approver = User::factory()->create(['role' => Role::SocialMediaManager, 'name' => 'Amit Approver']);
         $this->calendar = Calendar::create([
             'client_id' => Client::create(['name' => 'Acme'])->id, 'month' => '2026-11-01',
             'created_by' => $this->manager->id, 'status' => CalendarStatus::ClientApproved,

@@ -86,7 +86,7 @@ class UserController extends Controller
             'role' => ['required', Rule::enum(Role::class)],
             'client_id' => ['nullable', 'required_if:role,client', 'exists:clients,id'],
             'password' => [$user ? 'nullable' : 'required', 'confirmed', Rules\Password::defaults()],
-        ], ['client_id.required_if' => 'Client role ke liye client chunna zaroori hai.']);
+        ], ['client_id.required_if' => 'Customer role ke liye brand chunna zaroori hai.']);
         $data['is_active'] = $request->boolean('is_active');
         // client_id sirf Client role par matlab rakhta hai
         if ($data['role'] !== Role::Client->value) {

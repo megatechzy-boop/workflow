@@ -83,10 +83,12 @@
                                         @can('assign', $calendar)
                                             <select name="assign[{{ $item->id }}]" form="assign-form" class="border-gray-300 rounded-md shadow-sm text-sm w-full">
                                                 <option value="">— Member —</option>
-                                                @foreach ($members as $m)
-                                                    <option value="{{ $m->id }}" @selected($item->task?->assigned_to === $m->id)>{{ $m->name }}</option>
+                                                {{-- Reel => Video Editors, Post/Carousel => Graphic Designers --}}
+                                                @foreach ($members->filter(fn ($m) => in_array($m->role, $item->assigneeRoles(), true)) as $m)
+                                                    <option value="{{ $m->id }}" @selected($item->task?->assigned_to === $m->id)>{{ $m->name }} ({{ $m->role->label() }})</option>
                                                 @endforeach
                                             </select>
+                                            <x-input-error :messages="$errors->get('assign.'.$item->id)" class="mt-1" />
                                         @else
                                             {{ $item->task?->assignee->name ?? '—' }}
                                         @endcan

@@ -5,16 +5,16 @@ namespace App\Enums;
 enum CalendarStatus: string
 {
     case Draft = 'draft';
-    case Submitted = 'submitted';               // Approver ke paas
-    case ApproverApproved = 'approver_approved'; // Client ke paas
+    case Submitted = 'submitted';               // purana internal step (ab use nahi hota)
+    case ApproverApproved = 'approver_approved'; // Customer ke paas
     case ClientApproved = 'client_approved';     // Final: ab tasks banenge
 
     public function label(): string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Submitted => 'Waiting for Approver',
-            self::ApproverApproved => 'Waiting for Client',
+            self::Submitted => 'Waiting for Review',
+            self::ApproverApproved => 'Waiting for Customer',
             self::ClientApproved => 'Approved',
         };
     }

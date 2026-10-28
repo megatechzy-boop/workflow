@@ -27,7 +27,7 @@ class TaskTest extends TestCase
         parent::setUp();
         Carbon::setTestNow('2026-10-28 10:00:00');
         $this->manager = User::factory()->create(['role' => Role::Manager]);
-        $this->member = User::factory()->create(['role' => Role::TeamMember]);
+        $this->member = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->calendar = Calendar::create([
             'client_id' => Client::create(['name' => 'Acme'])->id,
             'month' => '2026-11-01',
@@ -81,7 +81,7 @@ class TaskTest extends TestCase
 
     public function test_member_sees_only_own_tasks(): void
     {
-        $other = User::factory()->create(['role' => Role::TeamMember]);
+        $other = User::factory()->create(['role' => Role::GraphicDesigner]);
         $a = $this->item('2026-11-10');
         $b = $this->item('2026-11-12');
         $a->update(['creative_copy' => 'Mera task']);
@@ -91,5 +91,23 @@ class TaskTest extends TestCase
         $this->actingAs($this->member)->get('/tasks')->assertOk()->assertSee('Mera task')->assertDontSee('Doosre ka task');
         $this->actingAs($this->manager)->get('/tasks')->assertSee('Mera task')->assertSee('Doosre ka task');
         $this->actingAs(User::factory()->create(['role' => Role::Client]))->get('/tasks')->assertForbidden();
+    }
+
+    public function test_reel_goes_to_video_editor_and_post_to_designer(): void
+    {
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        $post = $this->item('2026-11-10');
+        $reel = $this->calendar->items()->create(['post_date' => '2026-11-12', 'post_types' => ['instagram_reel']]);
+
+        $this->actingAs($this->manager)->post("/calendars/{$this->calendar->id}/assign", ['assign' => [$post->id => $editor->id]])
+            ->assertSessionHasErrors("assign.{$post->id}");
+        $this->actingAs($this->manager)->post("/calendars/{$this->calendar->id}/assign", ['assign' => [$reel->id => $this->member->id]])
+            ->assertSessionHasErrors("assign.{$reel->id}");
+        $this->assertSame(0, Task::count());
+
+        $smm = User::factory()->create(['role' => Role::SocialMediaManager]);
+        $this->actingAs($smm)->post("/calendars/{$this->calendar->id}/assign", ['assign' => [$post->id => $this->member->id, $reel->id => $editor->id]])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(2, Task::count());
     }
 }

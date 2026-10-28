@@ -26,8 +26,9 @@ class CalendarTest extends TestCase
     {
         parent::setUp();
         $this->client = Client::create(['name' => 'Acme']);
-        $this->team = User::factory()->create(['role' => Role::TeamMember]);
-        $this->approver = User::factory()->create(['role' => Role::Approver]);
+        // Calendar ab SMM banata hai; Designer sirf dekh sakta hai
+        $this->team = User::factory()->create(['role' => Role::SocialMediaManager]);
+        $this->approver = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->clientUser = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
     }
 
@@ -42,21 +43,23 @@ class CalendarTest extends TestCase
         return $calendar;
     }
 
-    public function test_full_flow_team_to_approver_to_client(): void
+    public function test_full_flow_smm_to_customer(): void
     {
+        // Designer calendar nahi bana sakta
+        $this->actingAs($this->approver)->get('/calendars/create')->assertForbidden();
+
         $calendar = $this->draftWithItem();
 
-        // Client draft nahi dekh sakta
+        // Customer draft nahi dekh sakta
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
 
+        // SMM submit => seedha Customer ke paas
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
-        $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
-
-        // Client approver se pehle approve nahi kar sakta
-        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
-
-        $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
+        $this->assertSame(1, $this->clientUser->notifications()->count());
+
+        // Designer review nahi kar sakta
+        $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
 
         $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Reel');
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
@@ -71,11 +74,11 @@ class CalendarTest extends TestCase
         $calendar = $this->draftWithItem();
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
 
-        $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'revision'])
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'revision'])
             ->assertSessionHasErrors('comment');
-        $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
+        $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
 
-        $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'revision', 'comment' => 'Date badlo']);
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'revision', 'comment' => 'Date badlo']);
         $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
         $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Date badlo');
     }

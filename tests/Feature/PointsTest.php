@@ -28,8 +28,8 @@ class PointsTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
-        $this->member = User::factory()->create(['role' => Role::TeamMember]);
-        $this->approver = User::factory()->create(['role' => Role::Approver]);
+        $this->member = User::factory()->create(['role' => Role::GraphicDesigner]);
+        $this->approver = User::factory()->create(['role' => Role::SocialMediaManager]);
     }
 
     private function task(string $deadline): Task

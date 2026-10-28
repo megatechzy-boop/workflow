@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Enums\Role;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -39,6 +40,20 @@ class CalendarItem extends Model
         $options = self::typeOptions();
 
         return collect($this->post_types ?? [])->map(fn ($key) => $options[$key] ?? $key)->implode(', ');
+    }
+
+    /**
+     * Kaun is post ka task le sakta hai: Reel => Video Editor, Post/Carousel => Graphic Designer.
+     * shortcut: ek item ka ek task hai, toh "Post + Reel" mix par dono roles dikhte hain; alag-alag log chahiye toh task per type banana hoga.
+     */
+    public function assigneeRoles(): array
+    {
+        $types = collect($this->post_types ?? [])->map(fn ($key) => Content::typeOf($key));
+
+        return array_values(array_filter([
+            $types->contains(fn ($t) => $t !== PostType::Reel) ? Role::GraphicDesigner : null,
+            $types->contains(PostType::Reel) ? Role::VideoEditor : null,
+        ]));
     }
 
     public function task(): HasOne

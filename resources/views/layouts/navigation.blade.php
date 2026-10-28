@@ -18,9 +18,9 @@
                     <x-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                         {{ __('Calendars') }}
                     </x-nav-link>
-                    @if (Auth::user()->hasRole('admin', 'manager', 'team_member'))
+                    @if (Auth::user()->role->isPlanner() || Auth::user()->role->isCreator())
                         <x-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
-                            {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
+                            {{ Auth::user()->role->isCreator() ? __('My Tasks') : __('Tasks') }}
                         </x-nav-link>
                     @endif
                     @unless (Auth::user()->hasRole('client'))
@@ -28,7 +28,7 @@
                             {{ __('Leaderboard') }}
                         </x-nav-link>
                     @endunless
-                    @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
+                    @if (Auth::user()->role->isPlanner())
                         <x-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                             {{ __('Approvals') }}
                         </x-nav-link>
@@ -103,9 +103,9 @@
             <x-responsive-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                 {{ __('Calendars') }}
             </x-responsive-nav-link>
-            @if (Auth::user()->hasRole('admin', 'manager', 'team_member'))
+            @if (Auth::user()->role->isPlanner() || Auth::user()->role->isCreator())
                 <x-responsive-nav-link :href="route('tasks.index')" :active="request()->routeIs('tasks.*')">
-                    {{ Auth::user()->hasRole('team_member') ? __('My Tasks') : __('Tasks') }}
+                    {{ Auth::user()->role->isCreator() ? __('My Tasks') : __('Tasks') }}
                 </x-responsive-nav-link>
             @endif
             @unless (Auth::user()->hasRole('client'))
@@ -113,7 +113,7 @@
                     {{ __('Leaderboard') }}
                 </x-responsive-nav-link>
             @endunless
-            @if (Auth::user()->hasRole('admin', 'manager', 'approver'))
+            @if (Auth::user()->role->isPlanner())
                 <x-responsive-nav-link :href="route('contents.index')" :active="request()->routeIs('contents.*')">
                     {{ __('Approvals') }}
                 </x-responsive-nav-link>

@@ -20,7 +20,7 @@ class RoleAccessTest extends TestCase
 
     public function test_non_admin_roles_are_blocked_from_user_management(): void
     {
-        foreach ([Role::Manager, Role::Approver, Role::TeamMember, Role::Client] as $role) {
+        foreach ([Role::Manager, Role::SocialMediaManager, Role::GraphicDesigner, Role::Client] as $role) {
             $user = User::factory()->create(['role' => $role]);
 
             $this->actingAs($user)->get('/admin/users')->assertForbidden();
@@ -34,13 +34,13 @@ class RoleAccessTest extends TestCase
         $this->actingAs($admin)->post('/admin/users', [
             'name' => 'New Approver',
             'email' => 'new@workflow.test',
-            'role' => 'approver',
+            'role' => 'social_media_manager',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'is_active' => '1',
         ])->assertRedirect('/admin/users');
 
-        $this->assertSame(Role::Approver, User::where('email', 'new@workflow.test')->first()->role);
+        $this->assertSame(Role::SocialMediaManager, User::where('email', 'new@workflow.test')->first()->role);
     }
 
     public function test_inactive_user_cannot_login(): void
@@ -73,7 +73,7 @@ class RoleAccessTest extends TestCase
 
     public function test_deactivated_user_is_logged_out_on_next_request(): void
     {
-        $user = User::factory()->create(['role' => Role::TeamMember]);
+        $user = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->actingAs($user)->get('/dashboard')->assertOk();
 
         $user->update(['is_active' => false]);

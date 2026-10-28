@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\Task;
 use App\Models\User;
@@ -12,16 +11,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    /** Team Member: apne tasks. Admin/Manager: sabke, member filter ke saath. */
+    /** Designer/Editor: apne tasks. Admin/Ops/SMM: sabke, member filter ke saath. */
     public function index(Request $request): View
     {
         $user = $request->user();
-        $canSeeAll = $user->hasRole('admin', 'manager');
-        abort_unless($canSeeAll || $user->role === Role::TeamMember, 403);
+        $canSeeAll = $user->role->isPlanner();
+        abort_unless($canSeeAll || $user->role->isCreator(), 403);
 
         $tasks = Task::query()
             ->with(['item.calendar.client', 'assignee'])
@@ -34,7 +34,7 @@ class TaskController extends Controller
 
         return view('tasks.index', [
             'tasks' => $tasks,
-            'members' => $canSeeAll ? User::teamMembers() : collect(),
+            'members' => $canSeeAll ? User::creators() : collect(),
         ]);
     }
 
@@ -42,14 +42,11 @@ class TaskController extends Controller
     public function show(Request $request, Task $task): View
     {
         $user = $request->user();
-        abort_unless($task->assigned_to === $user->id || $user->hasRole('admin', 'manager', 'approver'), 403);
+        abort_unless($task->assigned_to === $user->id || $user->role->isPlanner(), 403);
 
         $task->load(['item.calendar.client', 'assignee', 'contents.approver']);
 
-        return view('tasks.show', [
-            'task' => $task,
-            'approvers' => User::where('role', Role::Approver)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
-        ]);
+        return view('tasks.show', ['task' => $task, 'approvers' => User::socialMediaManagers()]);
     }
 
     /** Approved calendar ke har post par member chuno; deadline apne aap */
@@ -57,18 +54,25 @@ class TaskController extends Controller
     {
         Gate::authorize('assign', $calendar);
 
+        $creators = User::creators()->keyBy('id');
         $data = $request->validate([
             'assign' => ['array'],
-            'assign.*' => ['nullable', Rule::in(User::teamMembers()->pluck('id')->all())],
+            'assign.*' => ['nullable', Rule::in($creators->keys()->all())],
         ]);
 
-        $newlyAssigned = DB::transaction(function () use ($data, $calendar, $request) {
+        $newlyAssigned = DB::transaction(function () use ($data, $calendar, $request, $creators) {
             $changed = [];
             // Sirf isi calendar ke items par chalte hain, toh doosre calendar ka item ID kaam nahi karega
             foreach ($calendar->items()->with('task')->get() as $item) {
                 $memberId = (int) ($data['assign'][$item->id] ?? 0);
                 if (! $memberId || $item->task?->assigned_to === $memberId) {
                     continue; // khaali ya same member = kuch nahi badla
+                }
+                // Reel => Video Editor, Post/Carousel => Graphic Designer
+                if (! in_array($creators[$memberId]->role, $item->assigneeRoles(), true)) {
+                    throw ValidationException::withMessages([
+                        "assign.{$item->id}" => $creators[$memberId]->name.' ('.$creators[$memberId]->role->label().') ko '.$item->typeLabel().' assign nahi ho sakta.',
+                    ]);
                 }
 
                 if ($item->task) {

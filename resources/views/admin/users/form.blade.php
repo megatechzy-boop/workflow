@@ -41,7 +41,7 @@
                     </div>
 
                     <div>
-                        <x-input-label for="client_id" value="Client (sirf Client role ke liye)" />
+                        <x-input-label for="client_id" value="Brand (sirf Customer role ke liye)" />
                         <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                             <option value="">— None —</option>
                             @foreach ($clients as $c)

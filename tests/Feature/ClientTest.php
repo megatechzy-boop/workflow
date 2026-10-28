@@ -27,7 +27,7 @@ class ClientTest extends TestCase
 
     public function test_other_roles_cannot_open_clients(): void
     {
-        foreach ([Role::Approver, Role::TeamMember, Role::Client] as $role) {
+        foreach ([Role::SocialMediaManager, Role::GraphicDesigner, Role::Client] as $role) {
             $user = User::factory()->create(['role' => $role]);
 
             $this->actingAs($user)->get('/clients')->assertForbidden();
@@ -56,7 +56,7 @@ class ClientTest extends TestCase
         $client = Client::create(['name' => 'Acme']);
 
         $this->actingAs($admin)->post('/admin/users', [
-            'name' => 'Staff', 'email' => 'staff@acme.test', 'role' => 'team_member', 'client_id' => $client->id,
+            'name' => 'Staff', 'email' => 'staff@acme.test', 'role' => 'graphic_designer', 'client_id' => $client->id,
             'password' => 'password123', 'password_confirmation' => 'password123',
         ]);
 
