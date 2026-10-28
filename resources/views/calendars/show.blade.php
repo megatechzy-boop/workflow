@@ -27,6 +27,7 @@
             <div class="flex flex-wrap items-center gap-3">
                 @can('update', $calendar)
                     <a href="{{ route('calendars.items.create', $calendar) }}" class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-md text-xs font-semibold text-white uppercase tracking-widest hover:bg-gray-700">+ Add Post</a>
+                    <a href="{{ route('calendars.import', $calendar) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-gray-50">⇪ Import from sheet</a>
                 @endcan
                 @can('submit', $calendar)
                     <form method="POST" action="{{ route('calendars.submit', $calendar) }}">

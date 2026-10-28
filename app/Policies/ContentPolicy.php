@@ -48,6 +48,12 @@ class ContentPolicy
             && $user->client_id === $content->task->item->calendar->client_id;
     }
 
+    /** Swap wrong files of the current version while it still waits for the SMM's review */
+    public function replace(User $user, Content $content): bool
+    {
+        return $content->status->awaitingReview() && $this->upload($user, $content->task);
+    }
+
     /** Caption + hashtags belong to the SMM (approve or publish permission) */
     public function editCaption(User $user, Content $content): bool
     {

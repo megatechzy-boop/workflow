@@ -81,4 +81,22 @@ class RoleAccessTest extends TestCase
         $this->actingAs($user)->get('/dashboard')->assertRedirect('/login');
         $this->assertGuest();
     }
+
+    public function test_admin_can_send_test_email_and_failures_are_shown(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        \Illuminate\Support\Facades\Config::set('mail.default', 'array');
+
+        $this->actingAs($admin)->post('/admin/mail-test')->assertSessionHas('status');
+        $this->assertCount(1, app('mailer')->getSymfonyTransport()->messages());
+
+        // Broken SMTP => clear error message, no crash
+        \Illuminate\Support\Facades\Config::set('mail.default', 'smtp');
+        \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.host', '127.0.0.1');
+        \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.port', 1);
+        $this->actingAs($admin)->post('/admin/mail-test')->assertSessionHas('error');
+
+        // Only Admins
+        $this->actingAs(User::factory()->create(['role' => Role::Manager]))->post('/admin/mail-test')->assertForbidden();
+    }
 }

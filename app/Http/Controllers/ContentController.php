@@ -9,6 +9,7 @@ use App\Enums\Role;
 use App\Models\Content;
 use App\Models\ContentComment;
 use App\Models\ContentMedia;
+use App\Models\ContentVersion;
 use App\Models\PointEntry;
 use App\Models\Task;
 use App\Models\User;
@@ -56,11 +57,13 @@ class ContentController extends Controller
     {
         Gate::authorize('upload', [Content::class, $task]);
 
-        // One upload per format (post / carousel / reel) covers every platform of the row
-        $formats = $task->item->formats();
+        // One upload per format (post / carousel / reel) covers every platform of the row.
+        // Uploader may only send formats of their role; the task is done when the assignee's formats are in.
+        $allowed = $task->item->formatsFor($request->user()->role);
+        $formats = $task->item->formatsFor($task->assignee->role);
         $postType = $request->validate([
-            'post_type' => ['required', Rule::in(array_map(fn ($f) => $f->value, $formats))],
-        ])['post_type'];
+            'post_type' => ['required', Rule::in(array_map(fn ($f) => $f->value, $allowed))],
+        ], ['post_type.in' => 'This format is not part of your role.'])['post_type'];
         if ($task->contents->contains(fn ($c) => $c->type()->value === $postType)) {
             throw ValidationException::withMessages(['post_type' => 'Content for this format is already uploaded.']);
         }
@@ -85,7 +88,7 @@ class ContentController extends Controller
 
             // The task becomes "submitted" once every format of the item is uploaded
             $uploaded = $task->contents()->get()->map(fn ($c) => $c->type())->unique();
-            if ($uploaded->count() >= count($formats)) {
+            if (collect($formats)->every(fn ($f) => $uploaded->contains($f))) {
                 $task->update(['status' => 'submitted', 'submitted_at' => $task->submitted_at ?? now()]);
                 PointEntry::forSubmittedTask($task);
             }
@@ -290,6 +293,26 @@ class ContentController extends Controller
         return $content->typeLabel().' · '.$item->calendar->client->name.' · '.$item->post_date->format('d M');
     }
 
+    /** Wrong file? Before review the uploader swaps the files of the current version (same V number) */
+    public function replace(Request $request, Content $content): RedirectResponse
+    {
+        Gate::authorize('replace', $content);
+
+        $request->validate($this->versionRules($content->type()));
+        $version = $content->versions()->where('number', $content->current_version)->firstOrFail();
+        $oldPaths = $version->media()->pluck('path')->all();
+
+        DB::transaction(function () use ($request, $content, $version) {
+            $version->media()->delete();
+            $this->storeMedia($request, $content, $version, 'replaced');
+        });
+        Storage::disk('local')->delete($oldPaths); // only after the new files are safely saved
+
+        Notify::send([$content->approver], 'Files replaced', $this->title($content).': V'.$version->number.' files were replaced before review.', route('contents.show', $content));
+
+        return back()->with('status', 'Files replaced.');
+    }
+
     /** SMM sets caption + hashtags on the latest version (Designers/Editors only upload files) */
     public function updateCaption(Request $request, Content $content): RedirectResponse
     {
@@ -325,7 +348,7 @@ class ContentController extends Controller
                 PostType::Carousel => ['images' => ['required', 'array', 'min:2', 'max:10'], 'images.*' => $image],
                 PostType::Reel => [
                     'video' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime', 'max:102400'], // 100 MB
-                    'cover' => ['required', ...$image],
+                    'cover' => ['nullable', ...$image], // optional reel cover
                 ],
             },
         ];
@@ -340,14 +363,20 @@ class ContentController extends Controller
             'submitted_by' => $request->user()->id,
         ]);
 
-        $dir = "contents/{$content->id}/v{$number}";
+        $this->storeMedia($request, $content, $version, 'submitted');
+    }
+
+    /** Save the uploaded files on a version (cover is optional for reels) */
+    private function storeMedia(Request $request, Content $content, ContentVersion $version, string $action): void
+    {
+        $dir = "contents/{$content->id}/v{$version->number}";
         $files = $content->type() === PostType::Reel
-            ? [['video', $request->file('video')], ['cover', $request->file('cover')]]
+            ? array_filter([['video', $request->file('video')], ['cover', $request->file('cover')]], fn ($f) => $f[1])
             : array_map(fn ($f) => ['image', $f], $request->file('images'));
 
         $stored = [];
         try {
-            foreach ($files as $i => [$kind, $file]) {
+            foreach (array_values($files) as $i => [$kind, $file]) {
                 $stored[] = $path = $file->store($dir, 'local');
                 $version->media()->create([
                     'kind' => $kind,
@@ -356,7 +385,7 @@ class ContentController extends Controller
                     'sort_order' => $i + 1,
                 ]);
             }
-            $this->log($request, $content, 'submitted', null, $version->id);
+            $this->log($request, $content, $action, null, $version->id);
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($stored); // remove files together with the DB rollback
             throw $e;

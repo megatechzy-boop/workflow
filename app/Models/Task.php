@@ -16,7 +16,7 @@ class Task extends Model
 
     protected function casts(): array
     {
-        return ['deadline' => 'date', 'submitted_at' => 'datetime'];
+        return ['deadline' => 'date', 'submitted_at' => 'datetime', 'reminded_on' => 'date'];
     }
 
     /** Auto deadline: 2 days before the posting date, never before today */
@@ -52,6 +52,33 @@ class Task extends Model
         }
 
         return $created;
+    }
+
+    /**
+     * Daily reminders for pending tasks: due tomorrow, due today, or overdue.
+     * At most one reminder per task per day (reminded_on). Returns how many were sent.
+     */
+    public static function sendDeadlineReminders(): int
+    {
+        $tasks = static::with(['assignee', 'item.calendar.client'])
+            ->where('status', 'pending')
+            ->whereDate('deadline', '<=', today()->addDay())
+            ->where(fn ($q) => $q->whereNull('reminded_on')->orWhereDate('reminded_on', '<', today()))
+            ->get();
+
+        foreach ($tasks as $task) {
+            $when = match (true) {
+                $task->deadline->isTomorrow() => 'is due tomorrow',
+                $task->deadline->isToday() => 'is due today',
+                default => 'is overdue since '.$task->deadline->format('d M'),
+            };
+            Notify::send([$task->assignee], 'Deadline reminder',
+                $task->item->calendar->client->name.' · post '.$task->item->post_date->format('d M')." $when.",
+                route('tasks.show', $task));
+            $task->forceFill(['reminded_on' => today()])->save();
+        }
+
+        return $tasks->count();
     }
 
     public function notifyAssignee(): void

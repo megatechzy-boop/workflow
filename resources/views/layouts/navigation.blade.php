@@ -18,6 +18,9 @@
                     <x-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                         {{ __('Calendars') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('schedule')" :active="request()->routeIs('schedule')">
+                        {{ __('Schedule') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*')">
                         {{ __('Assets') }}
                     </x-nav-link>
@@ -114,6 +117,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('calendars.index')" :active="request()->routeIs('calendars.*')">
                 {{ __('Calendars') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('schedule')" :active="request()->routeIs('schedule')">
+                {{ __('Schedule') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*')">
                 {{ __('Assets') }}

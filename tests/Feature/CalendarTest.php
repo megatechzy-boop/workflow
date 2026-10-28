@@ -37,7 +37,7 @@ class CalendarTest extends TestCase
         $this->actingAs($this->team)->post('/calendars', ['client_id' => $this->client->id, 'month' => '2026-11']);
         $calendar = Calendar::firstOrFail();
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", [
-            'post_date' => '2026-11-05', 'post_types' => ['linkedin_carousel', 'instagram_reel'], 'creative_copy' => 'Diwali offer',
+            'post_date' => '2026-11-05', 'format' => 'carousel', 'platforms' => ['linkedin', 'instagram'], 'creative_copy' => 'Diwali offer',
         ])->assertSessionHasNoErrors();
 
         return $calendar;
@@ -71,7 +71,7 @@ class CalendarTest extends TestCase
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
         $this->assertSame(1, $this->clientUser->notifications()->count());
 
-        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Reel');
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel, Instagram Carousel');
         // Customer cannot approve the whole calendar at once, only row by row
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
         $item = $calendar->items()->first();
@@ -177,5 +177,25 @@ class CalendarTest extends TestCase
             ->assertSessionHasErrors('post_types');
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-11-03', 'post_types' => ['youtube_carousel']])
             ->assertSessionHasErrors('post_types.0');
+    }
+
+    public function test_one_format_per_row(): void
+    {
+        $this->actingAs($this->team)->post('/calendars', ['client_id' => $this->client->id, 'month' => '2026-11']);
+        $calendar = Calendar::firstOrFail();
+        $url = "/calendars/{$calendar->id}/items";
+
+        // Post + Reel in one row => refused (make two rows instead)
+        $this->actingAs($this->team)->post($url, ['post_date' => '2026-11-05', 'post_types' => ['instagram_post', 'instagram_reel']])
+            ->assertSessionHasErrors('post_types');
+        // YouTube has no carousel
+        $this->actingAs($this->team)->post($url, ['post_date' => '2026-11-05', 'format' => 'carousel', 'platforms' => ['youtube']])
+            ->assertSessionHasErrors('post_types.0');
+        // Same day, two rows: fine
+        $this->actingAs($this->team)->post($url, ['post_date' => '2026-11-05', 'format' => 'reel', 'platforms' => ['instagram']])->assertSessionHasNoErrors();
+        $this->actingAs($this->team)->post($url, ['post_date' => '2026-11-05', 'format' => 'post', 'platforms' => ['instagram', 'facebook', 'linkedin']])->assertSessionHasNoErrors();
+
+        $this->assertSame([['instagram_reel'], ['instagram_post', 'facebook_post', 'linkedin_post']],
+            $calendar->items()->orderBy('id')->pluck('post_types')->all());
     }
 }

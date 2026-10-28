@@ -20,19 +20,36 @@
                         <x-input-error :messages="$errors->get('post_date')" class="mt-2" />
                     </div>
 
+                    {{-- One content per row: pick ONE format, then any platforms. Same day Post + Reel = two rows. --}}
+                    @php($current = $item->post_types ?? [])
+                    @php($currentFormat = $current ? App\Models\Content::typeOf($current[0])->value : null)
+                    @php($currentPlatforms = array_map(fn ($k) => strstr($k, '_', true), $current))
                     <fieldset>
-                        <legend class="block font-medium text-sm text-gray-700">Post type (choose one or more)</legend>
-                        @php($selected = old('post_types', $item->post_types ?? []))
-                        <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            @foreach (App\Models\CalendarItem::typeOptions() as $value => $label)
+                        <legend class="block font-medium text-sm text-gray-700">Format (one per row)</legend>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            @foreach (App\Enums\PostType::cases() as $format)
                                 <label class="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
-                                    <input type="checkbox" name="post_types[]" value="{{ $value }}" class="rounded border-gray-300" @checked(in_array($value, $selected, true))>
-                                    {{ $label }}
+                                    <input type="radio" name="format" value="{{ $format->value }}" required @checked(old('format', $currentFormat) === $format->value)>
+                                    {{ $format->label() }}
                                 </label>
                             @endforeach
                         </div>
+                        <x-input-error :messages="$errors->get('format')" class="mt-2" />
+                    </fieldset>
+
+                    <fieldset>
+                        <legend class="block font-medium text-sm text-gray-700">Platforms (one or more)</legend>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            @foreach (App\Enums\Platform::cases() as $platform)
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+                                    <input type="checkbox" name="platforms[]" value="{{ $platform->value }}" class="rounded border-gray-300" @checked(in_array($platform->value, old('platforms', $currentPlatforms), true))>
+                                    {{ $platform->label() }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <x-input-error :messages="$errors->get('platforms')" class="mt-2" />
                         <x-input-error :messages="$errors->get('post_types')" class="mt-2" />
-                        <x-input-error :messages="$errors->get('post_types.*')" class="mt-2" />
+                        <p class="text-xs text-gray-500 mt-1">Posting a Post and a Reel on the same day? Add two rows.</p>
                     </fieldset>
 
                     @foreach ([

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Asset;
 use App\Models\CalendarItem;
 use App\Models\Client;
+use App\Models\User;
+use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,7 +76,28 @@ class AssetController extends Controller
             throw $e;
         }
 
+        if ($user->role === Role::Client) {
+            $this->notifyTeam($clientId, $data['calendar_item_id'] ?? null, count($stored));
+        }
+
         return back()->with('status', count($stored).' file(s) uploaded.');
+    }
+
+    /** Customer uploaded files => tell the row's Designer/Editor + calendar owner (or the planners for the library) */
+    private function notifyTeam(int $clientId, ?int $itemId, int $count): void
+    {
+        $brand = Client::find($clientId)->name;
+        $item = $itemId ? CalendarItem::with(['task.assignee', 'calendar.creator'])->find($itemId) : null;
+
+        if ($item) {
+            Notify::send(array_filter([$item->task?->assignee, $item->calendar->creator]),
+                'Customer sent files', "$brand uploaded $count file(s) for the ".$item->post_date->format('d M').' post.',
+                route('calendars.show', $item->calendar));
+        } else {
+            Notify::send(User::withPermission(Permission::ManageCalendars),
+                'Customer sent files', "$brand uploaded $count file(s) to the brand library.",
+                route('assets.index', ['client' => $clientId]));
+        }
     }
 
     /** Preview (image/video inline) */

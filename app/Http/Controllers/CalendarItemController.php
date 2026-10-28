@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Models\Calendar;
 use App\Models\CalendarItem;
+use App\Models\Content;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CalendarItemController extends Controller
@@ -58,7 +62,19 @@ class CalendarItemController extends Controller
     {
         $month = $calendar->month;
 
-        return $request->validate([
+        // Form sends one format + platforms => post_types like ["instagram_post", "linkedin_post"]
+        if ($request->has('format')) {
+            $request->validate([
+                'format' => ['required', Rule::enum(PostType::class)],
+                'platforms' => ['required', 'array', 'min:1'],
+                'platforms.*' => [Rule::enum(Platform::class)],
+            ], ['platforms.required' => 'Choose at least one platform.']);
+            $request->merge(['post_types' => array_values(array_unique(array_map(
+                fn ($p) => $p.'_'.$request->input('format'), $request->input('platforms')
+            )))]);
+        }
+
+        $data = $request->validate([
             // The post date must fall inside the calendar month
             'post_date' => ['required', 'date', 'after_or_equal:'.$month->toDateString(), 'before_or_equal:'.$month->copy()->endOfMonth()->toDateString()],
             'post_types' => ['required', 'array', 'min:1'],
@@ -71,6 +87,14 @@ class CalendarItemController extends Controller
         ], [
             'post_date.after_or_equal' => 'The date must be in '.$month->format('F Y').'.',
             'post_date.before_or_equal' => 'The date must be in '.$month->format('F Y').'.',
+            'post_types.*.in' => 'That format is not available on one of the platforms (e.g. YouTube has no Carousel).',
         ]);
+
+        // One content per row: every platform must share the same format
+        if (collect($data['post_types'])->map(fn ($k) => Content::typeOf($k))->unique()->count() > 1) {
+            throw ValidationException::withMessages(['post_types' => 'One row can only have one format. Add a separate row for the other format.']);
+        }
+
+        return $data;
     }
 }

@@ -1,24 +1,27 @@
 <?php
 
+use App\Http\Controllers\Admin\MailTestController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CalendarImportController;
 use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -38,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::get('contents', [ContentController::class, 'index'])->name('contents.index');
     Route::get('contents/{content}', [ContentController::class, 'show'])->name('contents.show');
     Route::post('contents/{content}/resubmit', [ContentController::class, 'resubmit'])->name('contents.resubmit');
+    Route::post('contents/{content}/replace', [ContentController::class, 'replace'])->name('contents.replace');
     Route::post('contents/{content}/review', [ContentController::class, 'review'])->name('contents.review');
     Route::post('contents/{content}/comments', [ContentController::class, 'comment'])->name('contents.comment');
     Route::post('contents/{content}/caption', [ContentController::class, 'updateCaption'])->name('contents.caption');
@@ -47,6 +51,10 @@ Route::middleware('auth')->group(function () {
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
+    Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule');
+    Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
+    Route::get('calendars/{calendar}/import', [CalendarImportController::class, 'create'])->name('calendars.import');
+    Route::post('calendars/{calendar}/import', [CalendarImportController::class, 'store'])->name('calendars.import.store');
 
     // Brand library (customer/team photos-videos)
     Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
@@ -79,6 +87,7 @@ Route::middleware(['auth', 'permission:manage_users'])->prefix('admin')->name('a
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
     Route::put('roles', [RoleController::class, 'update'])->name('roles.update');
+    Route::post('mail-test', MailTestController::class)->name('mail.test');
 });
 
 require __DIR__.'/auth.php';

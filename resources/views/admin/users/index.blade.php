@@ -2,7 +2,15 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Users</h2>
-            <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-md text-xs font-semibold text-white uppercase tracking-widest hover:bg-gray-700">+ New User</a>
+            <div class="flex items-center gap-2">
+                @if (auth()->user()->isAdmin())
+                    <form method="POST" action="{{ route('admin.mail.test') }}">
+                        @csrf
+                        <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50">✉ Send test email to me</button>
+                    </form>
+                @endif
+                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-md text-xs font-semibold text-white uppercase tracking-widest hover:bg-gray-700">+ New User</a>
+            </div>
         </div>
     </x-slot>
 

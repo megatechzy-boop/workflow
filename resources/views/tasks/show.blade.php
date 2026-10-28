@@ -35,7 +35,8 @@
             </div>
 
             {{-- One upload per format (Post / Carousel / Reel) for all its platforms --}}
-            @foreach ($item->formats() as $format)
+            {{-- Only formats relevant to the viewer's role (Designer: Post/Carousel, Editor: Reel) --}}
+            @foreach ($item->formatsFor(auth()->user()->role) as $format)
                 @php($postType = $format->value)
                 @php($content = $task->contents->first(fn ($c) => $c->type() === $format))
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">

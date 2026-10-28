@@ -146,6 +146,19 @@
                         </form>
                     @endcan
 
+                    @can('replace', $content)
+                        <details class="bg-white shadow-sm sm:rounded-lg p-4 border border-gray-200">
+                            <summary class="cursor-pointer font-semibold text-gray-800">Wrong file? Replace V{{ $content->current_version }}</summary>
+                            <p class="text-xs text-gray-500 mt-2">Allowed until the SMM reviews it. The version number stays the same; the old files are removed.</p>
+                            <form method="POST" action="{{ route('contents.replace', $content) }}" enctype="multipart/form-data" class="space-y-3 mt-3"
+                                onsubmit="return confirm('Replace the current files? The old files will be deleted.')">
+                                @csrf
+                                @include('contents._upload-fields', ['type' => $type])
+                                <x-primary-button>Replace files</x-primary-button>
+                            </form>
+                        </details>
+                    @endcan
+
                     @can('resubmit', $content)
                         <div class="bg-white shadow-sm sm:rounded-lg p-4 border-2 border-orange-200">
                             <h3 class="font-semibold text-gray-800 mb-2">Submit a new version (V{{ $content->current_version + 1 }})</h3>
@@ -196,7 +209,7 @@
                         @endcan
 
                         <ul class="space-y-3 text-sm">
-                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved ✔', 'customer_revision' => 'Customer requested changes', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
+                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved ✔', 'replaced' => 'Replaced files', 'customer_revision' => 'Customer requested changes', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
                             {{-- Customers only see customer comments, never internal team notes --}}
                             @php($timeline = auth()->user()->role === App\Enums\Role::Client ? $content->comments->filter(fn ($c) => $c->user->role === App\Enums\Role::Client) : $content->comments)
                             @forelse ($timeline->reverse() as $c)

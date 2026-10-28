@@ -64,17 +64,22 @@ class ContentTest extends TestCase
         $this->assertSame(3, $content->versions()->first()->media()->count());
     }
 
-    public function test_reel_needs_video_and_cover(): void
+    public function test_reel_needs_video(): void
     {
-        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'reel', 'approver_id' => $this->approver->id,
-            'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'),
-        ])->assertSessionHasErrors('cover');
+        // Reels belong to the Video Editor
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        $this->task->update(['assigned_to' => $editor->id]);
 
-        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'reel', 'approver_id' => $this->approver->id,
+        // Video is required (cover is optional)
+        $this->actingAs($editor)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'reel', 'cover' => UploadedFile::fake()->image('c.jpg'),
+        ])->assertSessionHasErrors('video');
+
+        $this->actingAs($editor)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'reel',
             'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'), 'cover' => UploadedFile::fake()->image('c.jpg'),
         ])->assertSessionHasNoErrors();
+        $this->assertSame('submitted', $this->task->fresh()->status); // editor's only format = reel
     }
 
     public function test_post_type_must_belong_to_task_and_other_member_cannot_upload(): void
@@ -142,15 +147,10 @@ class ContentTest extends TestCase
         $this->actingAs($this->member)->get("/contents/{$content->id}")->assertOk()->assertSee('Slide 2')->assertSee('1:15');
     }
 
-    public function test_task_marked_submitted_only_when_all_types_uploaded_and_media_is_private(): void
+    public function test_task_submitted_after_assignee_formats_and_media_is_private(): void
     {
-        $this->uploadCarousel();
         $this->assertSame('pending', $this->task->fresh()->status);
-
-        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'reel', 'approver_id' => $this->approver->id,
-            'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'), 'cover' => UploadedFile::fake()->image('c.jpg'),
-        ]);
+        $this->uploadCarousel(); // designer's only format on this Carousel + Reel row
         $this->assertSame('submitted', $this->task->fresh()->status);
         $this->assertNotNull($this->task->fresh()->submitted_at);
 
@@ -217,5 +217,55 @@ class ContentTest extends TestCase
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'Fix colors']);
         $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => $this->images(2)]);
         $this->assertSame('#acme', $content->versions()->where('number', 2)->value('hashtags'));
+    }
+
+    public function test_designer_sees_and_uploads_only_post_formats(): void
+    {
+        // Row has Carousel + Reel, task belongs to the Graphic Designer
+        $this->actingAs($this->member)->get("/tasks/{$this->task->id}")
+            ->assertSee('Carousel · Instagram')->assertDontSee('Reel · Instagram');
+
+        // Reel is not the designer's format => refused
+        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'reel',
+            'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'), 'cover' => UploadedFile::fake()->image('c.jpg'),
+        ])->assertSessionHasErrors('post_type');
+
+        // Carousel done => the designer's task is submitted
+        $this->uploadCarousel(2)->assertSessionHasNoErrors();
+        $this->assertSame('submitted', $this->task->fresh()->status);
+    }
+
+    public function test_reel_cover_is_optional(): void
+    {
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        $this->task->update(['assigned_to' => $editor->id]);
+
+        $this->actingAs($editor)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'reel', 'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(['video'], Content::first()->versions()->first()->media()->pluck('kind')->all());
+    }
+
+    public function test_replace_wrong_files_before_review_only(): void
+    {
+        $this->uploadCarousel(2);
+        $content = Content::firstOrFail();
+        $oldPath = $content->versions()->first()->media()->first()->path;
+
+        // Another designer cannot replace
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))
+            ->post("/contents/{$content->id}/replace", ['images' => $this->images(3)])->assertForbidden();
+
+        $this->actingAs($this->member)->post("/contents/{$content->id}/replace", ['images' => $this->images(3)])->assertSessionHasNoErrors();
+        $content->refresh();
+        $this->assertSame(1, $content->current_version);                       // still V1
+        $this->assertSame(3, $content->versions()->first()->media()->count()); // new files
+        Storage::disk('local')->assertMissing($oldPath);                        // old file gone
+        $this->assertContains('Files replaced', $this->approver->notifications->pluck('data.title'));
+
+        // After the SMM reviews, replacing is closed
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
+        $this->actingAs($this->member)->post("/contents/{$content->id}/replace", ['images' => $this->images(2)])->assertForbidden();
     }
 }

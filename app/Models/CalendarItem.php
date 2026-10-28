@@ -54,6 +54,19 @@ class CalendarItem extends Model
         return array_values(array_filter(PostType::cases(), fn ($t) => $types->contains($t)));
     }
 
+    /**
+     * Formats a role works on: Graphic Designer => Post/Carousel, Video Editor => Reel, others => all.
+     * Formats not relevant to the role are skipped.
+     */
+    public function formatsFor(Role $role): array
+    {
+        return array_values(array_filter($this->formats(), fn (PostType $f) => match ($role) {
+            Role::GraphicDesigner => $f !== PostType::Reel,
+            Role::VideoEditor => $f === PostType::Reel,
+            default => true,
+        }));
+    }
+
     /** "Post · Instagram, Facebook, LinkedIn" */
     public function formatLabel(PostType $format): string
     {

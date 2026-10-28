@@ -7,8 +7,8 @@
             <x-input-error :messages="$errors->get('video')" class="mt-2" />
         </div>
         <div>
-            <x-input-label value="Cover image" />
-            <input type="file" name="cover" accept="image/jpeg,image/png,image/webp" required class="mt-1 block w-full text-sm">
+            <x-input-label value="Cover image (optional)" />
+            <input type="file" name="cover" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm">
             <x-input-error :messages="$errors->get('cover')" class="mt-2" />
         </div>
     </div>
