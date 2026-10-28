@@ -1,7 +1,9 @@
 ---
 # cPanel > Git Version Control > Update from Remote > Deploy HEAD Commit
 # Repo (~/repositories/workflow) se app files live folder (~/workflow) mein copy karta hai.
-# shortcut: vendor/ copy nahi hota (server par composer nahi hai); composer.lock badle toh nayi vendor ZIP upload karni hogi.
+# shortcut: vendor/ copy nahi hota (server par composer nahi hai). composer.lock badle toh:
+#   `composer install --no-dev` ka vendor/ "deploy-vendor" branch par push karo, cPanel mein
+#   ~/repositories/workflow-vendor update karo, phir vendor ko ~/workflow/vendor se swap karo.
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/megatechzy/workflow
