@@ -10,7 +10,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-[1600px] mx-auto sm:px-6 lg:px-8 space-y-6">
             @if (session('status'))
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
@@ -43,38 +43,39 @@
             </div>
 
             {{-- Items table --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
-                <table class="min-w-full text-sm align-top">
-                    <thead class="bg-gray-50 text-left text-gray-600">
+            {{-- Sheet jaisa look: grid borders, light blue cells, centered text --}}
+            <div class="shadow-sm overflow-x-auto border border-gray-800">
+                <table class="min-w-full text-sm border-collapse bg-[#eef3fb] text-gray-900 [&_td]:border [&_td]:border-gray-400 [&_th]:border [&_th]:border-gray-800">
+                    <thead class="bg-[#dfe8f7] text-center font-bold text-base">
                         <tr>
-                            <th class="px-3 py-3">Sr. No.</th>
-                            <th class="px-3 py-3">Date to post</th>
-                            <th class="px-3 py-3">Post type</th>
-                            <th class="px-3 py-3 min-w-[200px]">Creative copy for post</th>
-                            <th class="px-3 py-3 min-w-[180px]">Visual brief</th>
-                            <th class="px-3 py-3 min-w-[180px]">Brief about the post</th>
-                            <th class="px-3 py-3">Reference link</th>
+                            <th class="px-3 py-3 w-16">Sr. No.</th>
+                            <th class="px-3 py-3 w-36">Date to post</th>
+                            <th class="px-3 py-3 w-36">Post type</th>
+                            <th class="px-3 py-3 min-w-[380px]">Creative copy for post</th>
+                            <th class="px-3 py-3 min-w-[320px]">Visual brief</th>
+                            <th class="px-3 py-3 min-w-[160px]">Brief about the post</th>
+                            <th class="px-3 py-3 min-w-[120px]">Reference link, if any</th>
                             <th class="px-3 py-3 min-w-[140px]">Remarks</th>
                             @can('update', $calendar)<th class="px-3 py-3"></th>@endcan
                         </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody class="text-center align-middle">
                         @forelse ($calendar->items as $item)
-                            <tr class="align-top">
-                                <td class="px-3 py-3">{{ $loop->iteration }}</td>
-                                <td class="px-3 py-3 whitespace-nowrap">{{ $item->post_date->format('d M, D') }}</td>
-                                <td class="px-3 py-3">{{ $item->post_type->label() }}</td>
-                                <td class="px-3 py-3 whitespace-pre-line">{{ $item->creative_copy }}</td>
-                                <td class="px-3 py-3 whitespace-pre-line">{{ $item->visual_brief }}</td>
-                                <td class="px-3 py-3 whitespace-pre-line">{{ $item->brief }}</td>
-                                <td class="px-3 py-3">
+                            <tr>
+                                <td class="px-3 py-4 text-blue-800">{{ $loop->iteration }}</td>
+                                <td class="px-3 py-4">{{ $item->post_date->format('d M l') }}</td>
+                                <td class="px-3 py-4">{{ $item->typeLabel() }}</td>
+                                <td class="px-4 py-4 whitespace-pre-line">{{ $item->creative_copy }}</td>
+                                <td class="px-4 py-4 whitespace-pre-line">{{ $item->visual_brief }}</td>
+                                <td class="px-3 py-4 whitespace-pre-line">{{ $item->brief }}</td>
+                                <td class="px-3 py-4">
                                     @if ($item->reference_link)
-                                        <a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline break-all">Link</a>
+                                        <a href="{{ $item->reference_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-700 underline break-all">Link</a>
                                     @endif
                                 </td>
-                                <td class="px-3 py-3 whitespace-pre-line">{{ $item->remarks }}</td>
+                                <td class="px-3 py-4 whitespace-pre-line">{{ $item->remarks }}</td>
                                 @can('update', $calendar)
-                                    <td class="px-3 py-3 whitespace-nowrap space-x-2">
+                                    <td class="px-3 py-4 whitespace-nowrap space-x-2">
                                         <a href="{{ route('calendars.items.edit', [$calendar, $item]) }}" class="text-indigo-600 hover:underline">Edit</a>
                                         <form method="POST" action="{{ route('calendars.items.destroy', [$calendar, $item]) }}" class="inline" onsubmit="return confirm('Ye post hatana hai?')">
                                             @csrf @method('DELETE')

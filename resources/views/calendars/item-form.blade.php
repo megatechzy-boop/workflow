@@ -12,13 +12,22 @@
                     @csrf
                     @if ($item->exists) @method('PUT') @endif
 
-                    <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="grid sm:grid-cols-3 gap-4">
                         <div>
                             <x-input-label for="post_date" value="Date to post" />
                             <x-text-input id="post_date" name="post_date" type="date" class="mt-1 block w-full"
                                 :min="$calendar->month->toDateString()" :max="$calendar->month->copy()->endOfMonth()->toDateString()"
                                 :value="old('post_date', $item->post_date?->toDateString())" required />
                             <x-input-error :messages="$errors->get('post_date')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="platform" value="Platform" />
+                            <select id="platform" name="platform" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                @foreach (App\Enums\Platform::cases() as $p)
+                                    <option value="{{ $p->value }}" @selected(old('platform', $item->platform?->value) === $p->value)>{{ $p->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('platform')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="post_type" value="Post type" />

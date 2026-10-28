@@ -36,7 +36,7 @@ class CalendarTest extends TestCase
         $this->actingAs($this->team)->post('/calendars', ['client_id' => $this->client->id, 'month' => '2026-11']);
         $calendar = Calendar::firstOrFail();
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", [
-            'post_date' => '2026-11-05', 'post_type' => 'carousel', 'creative_copy' => 'Diwali offer',
+            'post_date' => '2026-11-05', 'platform' => 'linkedin', 'post_type' => 'carousel', 'creative_copy' => 'Diwali offer',
         ])->assertSessionHasNoErrors();
 
         return $calendar;
@@ -58,7 +58,7 @@ class CalendarTest extends TestCase
         $this->actingAs($this->approver)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
 
-        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer');
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('Diwali offer')->assertSee('LinkedIn Carousel');
         $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/review", ['action' => 'approved']);
         $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
 
@@ -96,7 +96,7 @@ class CalendarTest extends TestCase
         $calendar = Calendar::firstOrFail();
 
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit")->assertForbidden();
-        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-12-01', 'post_type' => 'post'])
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-12-01', 'platform' => 'instagram', 'post_type' => 'post'])
             ->assertSessionHasErrors('post_date');
     }
 }
