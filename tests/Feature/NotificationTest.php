@@ -44,7 +44,7 @@ class NotificationTest extends TestCase
         $item = $this->calendar->items()->create(['post_date' => '2026-11-10', 'post_types' => ['instagram_post']]);
         $this->actingAs($this->manager)->post("/calendars/{$this->calendar->id}/assign", ['assign' => [$item->id => $this->member->id]]);
         $this->actingAs($this->member)->post("/tasks/{$item->task->id}/contents", [
-            'post_type' => 'instagram_post', 'approver_id' => $this->approver->id, 'images' => [UploadedFile::fake()->image('a.jpg')],
+            'post_type' => 'post', 'approver_id' => $this->approver->id, 'images' => [UploadedFile::fake()->image('a.jpg')],
         ]);
 
         return Content::firstOrFail();

@@ -47,7 +47,7 @@ class PointsTest extends TestCase
     private function upload(Task $task): Content
     {
         $this->actingAs($this->member)->post("/tasks/{$task->id}/contents", [
-            'post_type' => 'instagram_post', 'approver_id' => $this->approver->id, 'images' => [UploadedFile::fake()->image('a.jpg')],
+            'post_type' => 'post', 'approver_id' => $this->approver->id, 'images' => [UploadedFile::fake()->image('a.jpg')],
         ]);
 
         return Content::latest('id')->firstOrFail();

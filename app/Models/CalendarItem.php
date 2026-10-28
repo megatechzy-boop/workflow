@@ -44,6 +44,28 @@ class CalendarItem extends Model
     }
 
     /**
+     * Formats to upload: one design per format serves every platform.
+     * ["instagram_post", "linkedin_post", "instagram_reel"] => [PostType::Post, PostType::Reel]
+     */
+    public function formats(): array
+    {
+        $types = collect($this->post_types ?? [])->map(fn ($key) => Content::typeOf($key));
+
+        return array_values(array_filter(PostType::cases(), fn ($t) => $types->contains($t)));
+    }
+
+    /** "Post · Instagram, Facebook, LinkedIn" */
+    public function formatLabel(PostType $format): string
+    {
+        $platforms = collect($this->post_types ?? [])
+            ->filter(fn ($key) => Content::typeOf($key) === $format)
+            ->map(fn ($key) => Platform::from(strstr($key, '_', true))->label())
+            ->implode(', ');
+
+        return $format->label().($platforms ? ' · '.$platforms : '');
+    }
+
+    /**
      * Who can take this post: Reel => Video Editor, Post/Carousel => Graphic Designer.
      * shortcut: one task per item, so a "Post + Reel" mix shows both roles; split tasks per format if different people are needed.
      */

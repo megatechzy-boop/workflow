@@ -34,12 +34,13 @@
                 @endif
             </div>
 
-            {{-- Content per format --}}
-            @foreach ($item->post_types as $postType)
-                @php($content = $task->contents->firstWhere('post_type', $postType))
+            {{-- One upload per format (Post / Carousel / Reel) for all its platforms --}}
+            @foreach ($item->formats() as $format)
+                @php($postType = $format->value)
+                @php($content = $task->contents->first(fn ($c) => $c->type() === $format))
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-lg text-gray-800">{{ App\Models\CalendarItem::typeOptions()[$postType] ?? $postType }}</h3>
+                        <h3 class="font-semibold text-lg text-gray-800">{{ $item->formatLabel($format) }}</h3>
                         @if ($content)
                             <span class="px-2 py-1 rounded text-xs {{ $content->status->color() }}">{{ $content->status->label() }} · V{{ $content->current_version }}</span>
                         @endif

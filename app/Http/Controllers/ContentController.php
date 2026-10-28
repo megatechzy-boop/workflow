@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -55,16 +56,21 @@ class ContentController extends Controller
     {
         Gate::authorize('upload', [Content::class, $task]);
 
+        // One upload per format (post / carousel / reel) covers every platform of the row
+        $formats = $task->item->formats();
         $postType = $request->validate([
-            'post_type' => ['required', Rule::in($task->item->post_types), Rule::unique('contents')->where('task_id', $task->id)],
-        ], ['post_type.unique' => 'Content for this format is already uploaded.'])['post_type'];
+            'post_type' => ['required', Rule::in(array_map(fn ($f) => $f->value, $formats))],
+        ])['post_type'];
+        if ($task->contents->contains(fn ($c) => $c->type()->value === $postType)) {
+            throw ValidationException::withMessages(['post_type' => 'Content for this format is already uploaded.']);
+        }
 
         $data = $request->validate([
             'approver_id' => ['required', Rule::in(User::withPermission(Permission::ApproveContent)->pluck('id'))],
             ...$this->versionRules(Content::typeOf($postType)),
         ]);
 
-        $content = DB::transaction(function () use ($request, $task, $postType, $data) {
+        $content = DB::transaction(function () use ($request, $task, $postType, $data, $formats) {
             $content = $task->contents()->create([
                 'post_type' => $postType,
                 'approver_id' => $data['approver_id'],
@@ -73,7 +79,8 @@ class ContentController extends Controller
             $this->storeVersion($request, $content, 1, $data);
 
             // The task becomes "submitted" once every format of the item is uploaded
-            if ($task->contents()->count() === count($task->item->post_types)) {
+            $uploaded = $task->contents()->get()->map(fn ($c) => $c->type())->unique();
+            if ($uploaded->count() >= count($formats)) {
                 $task->update(['status' => 'submitted', 'submitted_at' => $task->submitted_at ?? now()]);
                 PointEntry::forSubmittedTask($task);
             }
@@ -251,7 +258,7 @@ class ContentController extends Controller
         return response()->file(Storage::disk('local')->path($media->path));
     }
 
-    /** Download with a clean name: "acme-2026-11-05-instagram-carousel-slide-2.jpg" */
+    /** Download with a clean name: "acme-2026-11-05-carousel-slide-2.jpg" */
     public function download(ContentMedia $media): BinaryFileResponse
     {
         $content = $media->version->content;
@@ -263,7 +270,7 @@ class ContentController extends Controller
             default => $media->kind, // video / cover
         };
         $name = Str::slug($item->calendar->client->name).'-'.$item->post_date->format('Y-m-d').'-'
-            .Str::slug($content->typeLabel()).'-'.$part.'.'.pathinfo($media->path, PATHINFO_EXTENSION);
+            .$content->type()->value.'-'.$part.'.'.pathinfo($media->path, PATHINFO_EXTENSION);
 
         return response()->download(Storage::disk('local')->path($media->path), $name);
     }

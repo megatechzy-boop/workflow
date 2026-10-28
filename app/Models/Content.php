@@ -17,7 +17,7 @@ class Content extends Model
         return ['status' => ContentStatus::class];
     }
 
-    /** "linkedin_carousel" => PostType::Carousel (upload rules isi se) */
+    /** "carousel" (new: one upload for all platforms) or legacy "linkedin_carousel" => PostType::Carousel */
     public function type(): PostType
     {
         return self::typeOf($this->post_type);
@@ -25,12 +25,17 @@ class Content extends Model
 
     public static function typeOf(string $postType): PostType
     {
-        return PostType::from(substr(strrchr($postType, '_'), 1));
+        return PostType::from(str_contains($postType, '_') ? substr(strrchr($postType, '_'), 1) : $postType);
     }
 
+    /** "Carousel · Instagram, LinkedIn" (legacy rows keep "LinkedIn Carousel") */
     public function typeLabel(): string
     {
-        return CalendarItem::typeOptions()[$this->post_type] ?? $this->post_type;
+        if (str_contains($this->post_type, '_')) {
+            return CalendarItem::typeOptions()[$this->post_type] ?? $this->post_type;
+        }
+
+        return $this->task->item->formatLabel($this->type());
     }
 
     public function task(): BelongsTo

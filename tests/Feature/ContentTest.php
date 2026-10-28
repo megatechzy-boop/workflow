@@ -48,7 +48,7 @@ class ContentTest extends TestCase
     private function uploadCarousel(int $slides = 3)
     {
         return $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'instagram_carousel', 'approver_id' => $this->approver->id, 'images' => $this->images($slides),
+            'post_type' => 'carousel', 'approver_id' => $this->approver->id, 'images' => $this->images($slides),
         ]);
     }
 
@@ -67,12 +67,12 @@ class ContentTest extends TestCase
     public function test_reel_needs_video_and_cover(): void
     {
         $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'instagram_reel', 'approver_id' => $this->approver->id,
+            'post_type' => 'reel', 'approver_id' => $this->approver->id,
             'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'),
         ])->assertSessionHasErrors('cover');
 
         $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'instagram_reel', 'approver_id' => $this->approver->id,
+            'post_type' => 'reel', 'approver_id' => $this->approver->id,
             'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'), 'cover' => UploadedFile::fake()->image('c.jpg'),
         ])->assertSessionHasNoErrors();
     }
@@ -80,12 +80,12 @@ class ContentTest extends TestCase
     public function test_post_type_must_belong_to_task_and_other_member_cannot_upload(): void
     {
         $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'linkedin_post', 'approver_id' => $this->approver->id, 'images' => $this->images(1),
+            'post_type' => 'post', 'approver_id' => $this->approver->id, 'images' => $this->images(1),
         ])->assertSessionHasErrors('post_type');
 
         $other = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->actingAs($other)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'instagram_carousel', 'approver_id' => $this->approver->id, 'images' => $this->images(2),
+            'post_type' => 'carousel', 'approver_id' => $this->approver->id, 'images' => $this->images(2),
         ])->assertForbidden();
     }
 
@@ -148,7 +148,7 @@ class ContentTest extends TestCase
         $this->assertSame('pending', $this->task->fresh()->status);
 
         $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
-            'post_type' => 'instagram_reel', 'approver_id' => $this->approver->id,
+            'post_type' => 'reel', 'approver_id' => $this->approver->id,
             'video' => UploadedFile::fake()->create('r.mp4', 500, 'video/mp4'), 'cover' => UploadedFile::fake()->image('c.jpg'),
         ]);
         $this->assertSame('submitted', $this->task->fresh()->status);
@@ -167,11 +167,32 @@ class ContentTest extends TestCase
 
         $this->actingAs($this->approver)->get("/media/{$media[1]->id}/download")
             ->assertOk()
-            ->assertDownload('acme-2026-11-10-instagram-carousel-slide-2.jpg');
+            ->assertDownload('acme-2026-11-10-carousel-slide-2.jpg');
 
         // Customer cannot download before SMM approval
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
         $this->actingAs($customer)->get("/media/{$media[0]->id}/download")->assertForbidden();
         $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Download all (2)')->assertSee('PDF download (LinkedIn)');
+    }
+
+    public function test_one_upload_covers_all_platforms_of_a_format(): void
+    {
+        // Row: Instagram + Facebook + LinkedIn post => one "post" upload only
+        $item = $this->task->item;
+        $item->update(['post_types' => ['instagram_post', 'facebook_post', 'linkedin_post']]);
+
+        $this->actingAs($this->member)->get("/tasks/{$this->task->id}")
+            ->assertSee('Post · Instagram, Facebook, LinkedIn');
+
+        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'post', 'approver_id' => $this->approver->id, 'images' => $this->images(1),
+        ])->assertSessionHasNoErrors();
+
+        // Format done => task submitted, second upload of the same format refused
+        $this->assertSame('submitted', $this->task->fresh()->status);
+        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'post', 'approver_id' => $this->approver->id, 'images' => $this->images(1),
+        ])->assertSessionHasErrors('post_type');
+        $this->assertSame(1, Content::count());
     }
 }
