@@ -68,6 +68,12 @@
                             <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-gray-800 text-white text-xs font-semibold hover:bg-gray-700"
                                 onclick="document.querySelectorAll('.dl-link').forEach((a, i) => setTimeout(() => a.click(), i * 700))">⬇ Sab download karo ({{ $files->count() }})</button>
                         @endif
+                        @if ($type === App\Enums\PostType::Carousel)
+                            {{-- LinkedIn carousel = PDF document: har slide ek page --}}
+                            @php($pdfName = Str::slug($item->calendar->client->name.' '.$item->post_date->format('Y-m-d').' '.$content->typeLabel()).'-v'.$version->number.'.pdf')
+                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-blue-700 text-white text-xs font-semibold hover:bg-blue-600"
+                                onclick="this.disabled = true; this.textContent = 'PDF ban rahi hai…'; window.downloadCarouselPdf({{ Js::from($images->map(fn ($m) => route('media.show', $m))->values()) }}, {{ Js::from($pdfName) }}).then(() => { this.textContent = '✔ PDF download ho gayi'; }).catch(() => { this.textContent = 'PDF fail, dobara try karein'; this.disabled = false; })">📄 PDF download (LinkedIn)</button>
+                        @endif
                         @if ($version->caption || $version->hashtags)
                             <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-indigo-300 text-indigo-700 text-xs font-semibold hover:bg-indigo-50"
                                 onclick="navigator.clipboard.writeText({{ Js::from(trim($version->caption."\n\n".$version->hashtags)) }}).then(() => { this.textContent = '✔ Copy ho gaya'; })">📋 Caption copy karo</button>

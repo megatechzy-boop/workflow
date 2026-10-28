@@ -172,6 +172,6 @@ class ContentTest extends TestCase
         // Customer ko SMM ke OK se pehle download nahi
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
         $this->actingAs($customer)->get("/media/{$media[0]->id}/download")->assertForbidden();
-        $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Sab download karo (2)');
+        $this->actingAs($this->approver)->get("/contents/{$content->id}")->assertSee('Sab download karo (2)')->assertSee('PDF download (LinkedIn)');
     }
 }
