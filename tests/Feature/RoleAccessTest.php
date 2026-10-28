@@ -56,4 +56,29 @@ class RoleAccessTest extends TestCase
     {
         $this->get('/register')->assertNotFound();
     }
+
+    public function test_admin_cannot_demote_deactivate_or_delete_self(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $this->actingAs($admin)->put("/admin/users/{$admin->id}", [
+            'name' => 'Admin', 'email' => $admin->email, 'role' => 'client', 'is_active' => '0',
+        ]);
+        $this->actingAs($admin)->delete("/admin/users/{$admin->id}");
+
+        $admin->refresh();
+        $this->assertSame(Role::Admin, $admin->role);
+        $this->assertTrue($admin->is_active);
+    }
+
+    public function test_deactivated_user_is_logged_out_on_next_request(): void
+    {
+        $user = User::factory()->create(['role' => Role::TeamMember]);
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+
+        $user->update(['is_active' => false]);
+
+        $this->actingAs($user)->get('/dashboard')->assertRedirect('/login');
+        $this->assertGuest();
+    }
 }
