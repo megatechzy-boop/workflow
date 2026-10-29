@@ -173,7 +173,7 @@ class ChatController extends Controller
 
         $data = $request->validate([
             'body' => ['nullable', 'string', 'max:5000', 'required_without:file'],
-            'file' => ['nullable', 'file', 'max:102400',
+            'file' => ['nullable', 'file', 'max:'.config('filesystems.max_upload_mb') * 1024,
                 'mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/quicktime,'
                 .'audio/webm,video/webm,audio/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/ogg,'
                 .'application/vnd.openxmlformats-officedocument.wordprocessingml.document,'

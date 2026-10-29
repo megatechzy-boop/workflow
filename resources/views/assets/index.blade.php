@@ -24,7 +24,7 @@
                 @csrf
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
                 <div>
-                    <x-input-label value="Upload photos / videos (several at once, max 100 MB each)" />
+                    <x-input-label value="Upload photos / videos (several at once, max {{ config('filesystems.max_upload_mb') >= 1024 ? config('filesystems.max_upload_mb') / 1024 .' GB' : config('filesystems.max_upload_mb').' MB' }} each)" />
                     <input type="file" name="files[]" multiple required accept="image/*,video/mp4,video/quicktime" class="mt-1 block text-sm">
                     <x-input-error :messages="$errors->get('files')" class="mt-1" />
                     <x-input-error :messages="$errors->get('files.*')" class="mt-1" />

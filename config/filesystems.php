@@ -15,6 +15,9 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    // Biggest photo / video / chat file one upload may be (the server's PHP limits must allow it too)
+    'max_upload_mb' => (int) env('MAX_UPLOAD_MB', 1024),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

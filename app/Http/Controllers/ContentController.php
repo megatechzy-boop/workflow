@@ -347,7 +347,7 @@ class ContentController extends Controller
                 PostType::Post => ['images' => ['required', 'array', 'size:1'], 'images.*' => $image],
                 PostType::Carousel => ['images' => ['required', 'array', 'min:2', 'max:10'], 'images.*' => $image],
                 PostType::Reel => [
-                    'video' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime', 'max:102400'], // 100 MB
+                    'video' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime', 'max:'.config('filesystems.max_upload_mb') * 1024], // MAX_UPLOAD_MB
                     'cover' => ['nullable', ...$image], // optional reel cover
                 ],
             },

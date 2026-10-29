@@ -79,6 +79,16 @@ class AssetChatTest extends TestCase
         ])->assertSessionHasErrors('files.0');
     }
 
+    public function test_videos_up_to_one_gb(): void
+    {
+        $this->actingAs($this->customer)->post('/assets', [
+            'client_id' => $this->acme->id, 'files' => [UploadedFile::fake()->create('shoot.mp4', 200 * 1024, 'video/mp4')],
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($this->customer)->post('/assets', [
+            'client_id' => $this->acme->id, 'files' => [UploadedFile::fake()->create('huge.mp4', 1025 * 1024, 'video/mp4')],
+        ])->assertSessionHasErrors('files.0');
+    }
+
     public function test_chat_rooms_access(): void
     {
         $this->assertSame(['client:'.$this->acme->id], array_keys(ChatMessage::roomsFor($this->customer)));

@@ -2,7 +2,7 @@
 @if ($type === App\Enums\PostType::Reel)
     <div class="grid sm:grid-cols-2 gap-4">
         <div>
-            <x-input-label value="Reel video (mp4/mov, max 100 MB)" />
+            <x-input-label value="Reel video (mp4/mov, max {{ config('filesystems.max_upload_mb') >= 1024 ? config('filesystems.max_upload_mb') / 1024 .' GB' : config('filesystems.max_upload_mb').' MB' }})" />
             <input type="file" name="video" accept="video/mp4,video/quicktime" required class="mt-1 block w-full text-sm">
             <x-input-error :messages="$errors->get('video')" class="mt-2" />
         </div>

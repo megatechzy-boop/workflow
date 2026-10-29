@@ -44,8 +44,8 @@ class AssetController extends Controller
             'client_id' => ['required', 'exists:clients,id'],
             'calendar_item_id' => ['nullable', 'exists:calendar_items,id'],
             'files' => ['required', 'array', 'max:20'],
-            // Photos + videos, max 100 MB per file
-            'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime', 'max:102400'],
+            // Photos + videos, up to MAX_UPLOAD_MB (1 GB) per file
+            'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime', 'max:'.config('filesystems.max_upload_mb') * 1024],
         ], ['files.*.mimetypes' => 'Only photos (jpg/png/webp/gif) or videos (mp4/mov) are allowed.']);
 
         $clientId = (int) $data['client_id'];
