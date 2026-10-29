@@ -168,6 +168,27 @@ class CalendarTest extends TestCase
             ->assertSessionHasErrors('post_date');
     }
 
+    public function test_draft_rows_may_have_no_date_but_submit_needs_dates(): void
+    {
+        $calendar = $this->draftWithItem();
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/import", [
+            'rows' => "Date\tPost type\tCopy\n\tInstagram, Facebook Reel\tDesk reset\n",
+        ])->assertSessionHasNoErrors();
+        $undated = $calendar->items()->whereNull('post_date')->sole();
+        $this->assertSame(['instagram_reel', 'facebook_reel'], $undated->post_types);
+        $this->assertSame($undated->id, $calendar->fresh()->items->last()->id); // undated rows last
+
+        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('No date');
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit")->assertSessionHas('status', 'Add a date to 1 row before submitting.');
+        $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
+
+        $this->actingAs($this->team)->put("/calendars/{$calendar->id}/items/{$undated->id}", [
+            'post_date' => '2026-11-20', 'format' => 'reel', 'platforms' => ['instagram', 'facebook'],
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
+        $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
+    }
+
     public function test_post_types_must_be_valid_options(): void
     {
         $this->actingAs($this->team)->post('/calendars', ['client_id' => $this->client->id, 'month' => '2026-11']);

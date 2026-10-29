@@ -75,8 +75,8 @@ class CalendarItemController extends Controller
         }
 
         $data = $request->validate([
-            // The post date must fall inside the calendar month
-            'post_date' => ['required', 'date', 'after_or_equal:'.$month->toDateString(), 'before_or_equal:'.$month->copy()->endOfMonth()->toDateString()],
+            // The post date must fall inside the calendar month; it may stay blank while the calendar is a draft
+            'post_date' => ['nullable', 'date', 'after_or_equal:'.$month->toDateString(), 'before_or_equal:'.$month->copy()->endOfMonth()->toDateString()],
             'post_types' => ['required', 'array', 'min:1'],
             'post_types.*' => ['distinct', Rule::in(array_keys(CalendarItem::typeOptions()))],
             'creative_copy' => ['nullable', 'string', 'max:5000'],

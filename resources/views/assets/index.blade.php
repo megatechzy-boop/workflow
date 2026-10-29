@@ -51,7 +51,7 @@
                             <div class="font-medium text-gray-800 truncate" title="{{ $asset->original_name }}">{{ $asset->original_name }}</div>
                             <div class="text-gray-500">{{ $asset->sizeLabel() }} · {{ $asset->uploader->name }} · {{ $asset->created_at->format('d M') }}</div>
                             @if ($asset->item)
-                                <div class="text-purple-700">Post: {{ $asset->item->post_date->format('d M') }}</div>
+                                <div class="text-purple-700">Post: {{ $asset->item->post_date?->format('d M') ?? 'no date' }}</div>
                             @endif
                         </div>
                         <div class="px-2 pb-2 flex items-center gap-3 text-xs">

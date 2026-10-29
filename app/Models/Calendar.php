@@ -31,7 +31,8 @@ class Calendar extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(CalendarItem::class)->orderBy('post_date')->orderBy('id');
+        // Rows without a date (drafts) come last
+        return $this->hasMany(CalendarItem::class)->orderByRaw('post_date is null')->orderBy('post_date')->orderBy('id');
     }
 
     /** Rows per format, for the package counter: ['post' => 4, 'carousel' => 2, 'reel' => 5] */

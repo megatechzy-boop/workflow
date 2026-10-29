@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -104,6 +105,12 @@ class CalendarController extends Controller
     public function submit(Request $request, Calendar $calendar): RedirectResponse
     {
         Gate::authorize('submit', $calendar);
+
+        // Tasks, deadlines and the schedule all need a date
+        $undated = $calendar->items()->whereNull('post_date')->count();
+        if ($undated) {
+            return back()->with('status', "Add a date to {$undated} ".Str::plural('row', $undated).' before submitting.');
+        }
 
         // First the Admin/Ops Manager approves, then the Customer
         DB::transaction(function () use ($request, $calendar) {

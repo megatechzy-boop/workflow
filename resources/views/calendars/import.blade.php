@@ -12,7 +12,7 @@
                 <p><strong>Columns in this order:</strong> Sr. No. (optional) · Date · Post type · Creative copy · Visual brief · Brief · Reference link · Remarks</p>
                 <p><strong>Post type</strong> = one format + platforms, e.g. <code>LinkedIn Post</code>, <code>Instagram, Facebook Reel</code>, <code>IG Carousel</code>.
                     Same day Post and Reel? Use two rows.</p>
-                <p><strong>Date</strong> can be <code>11 Oct Sunday</code>, <code>11</code> or <code>2026-10-11</code> (must be in {{ $calendar->month->format('F Y') }}).</p>
+                <p><strong>Date</strong> can be <code>11 Oct Sunday</code>, <code>11</code> or <code>2026-10-11</code> (must be in {{ $calendar->month->format('F Y') }}), or blank to set later (every row needs a date before submitting).</p>
                 <p class="text-gray-500">If any row has a problem, nothing is imported and the problems are listed — fix the sheet and paste again.</p>
             </div>
 

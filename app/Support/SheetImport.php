@@ -43,8 +43,9 @@ class SheetImport
             $cells = array_pad($cells, 7, '');
             [$date, $type, $copy, $visual, $brief, $link, $remarks] = $cells;
 
-            $postDate = self::date($date, $month);
-            if (! $postDate) {
+            // A blank date is allowed (set it later, before submitting)
+            $postDate = $date === '' ? null : self::date($date, $month);
+            if ($date !== '' && ! $postDate) {
                 $errors[] = "Row $line: date \"$date\" is not a day in ".$month->format('F Y').'.';
 
                 continue;
@@ -64,7 +65,7 @@ class SheetImport
             }
 
             $rows[] = [
-                'post_date' => $postDate->toDateString(),
+                'post_date' => $postDate?->toDateString(),
                 'post_types' => $postTypes,
                 'creative_copy' => $copy ?: null,
                 'visual_brief' => $visual ?: null,

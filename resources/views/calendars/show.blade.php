@@ -83,7 +83,7 @@
                         @forelse ($calendar->items as $item)
                             <tr>
                                 <td class="px-3 py-4 text-blue-800">{{ $loop->iteration }}</td>
-                                <td class="px-3 py-4">{{ $item->post_date->format('d M l') }}</td>
+                                <td class="px-3 py-4">{!! $item->post_date ? e($item->post_date->format('d M l')) : '<span class="text-accent-600 font-semibold">No date</span>' !!}</td>
                                 <td class="px-3 py-4">{{ $item->typeLabel() }}</td>
                                 <td class="px-4 py-4 whitespace-pre-line">{{ $item->creative_copy }}</td>
                                 <td class="px-4 py-4 whitespace-pre-line">{{ $item->visual_brief }}</td>

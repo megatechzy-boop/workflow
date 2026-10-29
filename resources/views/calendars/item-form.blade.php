@@ -13,10 +13,11 @@
                     @if ($item->exists) @method('PUT') @endif
 
                     <div class="max-w-xs">
-                        <x-input-label for="post_date" value="Date to post" />
+                        <x-input-label for="post_date" value="Date to post (optional in draft)" />
                         <x-text-input id="post_date" name="post_date" type="date" class="mt-1 block w-full"
                             :min="$calendar->month->toDateString()" :max="$calendar->month->copy()->endOfMonth()->toDateString()"
-                            :value="old('post_date', $item->post_date?->toDateString())" required />
+                            :value="old('post_date', $item->post_date?->toDateString())" />
+                        <p class="mt-1 text-xs text-gray-500">Can stay blank for now; every row needs a date before the calendar is submitted.</p>
                         <x-input-error :messages="$errors->get('post_date')" class="mt-2" />
                     </div>
 

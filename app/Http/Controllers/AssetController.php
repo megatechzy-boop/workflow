@@ -91,7 +91,7 @@ class AssetController extends Controller
 
         if ($item) {
             Notify::send(array_filter([$item->task?->assignee, $item->calendar->creator]),
-                'Customer sent files', "$brand uploaded $count file(s) for the ".$item->post_date->format('d M').' post.',
+                'Customer sent files', "$brand uploaded $count file(s) for the ".($item->post_date?->format('d M') ?? 'undated').' post.',
                 route('calendars.show', $item->calendar));
         } else {
             Notify::send(User::withPermission(Permission::ManageCalendars),

@@ -18,6 +18,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   Graphic Designer, least-loaded; deadline = post date − 2 days) → Designer/Editor uploads files only →
   SMM approves (caption, hashtags, approver are SMM's) → Customer approves → Scheduled → Published → points.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
+- Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.
 - Roles: Admin, Operation Manager (`manager`), Social Media Manager, Graphic Designer, Video Editor, Customer (`client`).
 - Designers/Editors never see caption, hashtags or approver, and only see formats for their role.
 - Chat groups: All team, per brand Client group and Internal. Customers get no chat push 22:00–09:00.
