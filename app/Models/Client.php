@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
@@ -25,5 +26,11 @@ class Client extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /** Team members who work on this brand (Admin > Users > Brands) */
+    public function team(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class);
     }
 }

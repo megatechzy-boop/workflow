@@ -7,6 +7,7 @@ use App\Enums\Role;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
@@ -122,6 +123,12 @@ class User extends Authenticatable
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Brands a team member works on (a Customer uses client_id instead) */
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Client::class)->orderBy('name');
     }
 
     public function hasRole(Role|string ...$roles): bool

@@ -107,6 +107,50 @@ class CalendarTest extends TestCase
         $this->assertSame($editor->id, $reel->fresh()->task->assigned_to);
     }
 
+    public function test_auto_assign_follows_brand_team(): void
+    {
+        $other = Client::create(['name' => 'Other brand']);
+        $mine = User::factory()->create(['role' => Role::GraphicDesigner]);      // ticked for this brand
+        $elsewhere = User::factory()->create(['role' => Role::GraphicDesigner]); // ticked only for the other brand
+        $mine->brands()->sync([$this->client->id]);
+        $elsewhere->brands()->sync([$other->id]);
+        $this->approver->brands()->sync([$other->id]); // the existing designer works elsewhere too
+
+        $calendar = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-11-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+        $a = $calendar->items()->create(['post_date' => '2026-11-05', 'post_types' => ['instagram_post']]);
+        $b = $calendar->items()->create(['post_date' => '2026-11-06', 'post_types' => ['instagram_post']]);
+        \App\Models\Task::autoAssign($calendar, $this->team->id);
+
+        // both go to the brand's designer, even though she gets busier than the others
+        $this->assertSame($mine->id, $a->fresh()->task->assigned_to);
+        $this->assertSame($mine->id, $b->fresh()->task->assigned_to);
+
+        // a brand nobody is ticked for: members with no brands, else anyone of the role
+        $third = Client::create(['name' => 'Third']);
+        $cal3 = Calendar::create(['client_id' => $third->id, 'month' => '2026-11-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+        $c = $cal3->items()->create(['post_date' => '2026-11-07', 'post_types' => ['instagram_post']]);
+        \App\Models\Task::autoAssign($cal3, $this->team->id);
+        $this->assertNotNull($c->fresh()->task);
+    }
+
+    public function test_admin_sets_team_brands(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $other = Client::create(['name' => 'Other brand']);
+        $this->actingAs($admin)->put("/admin/users/{$this->approver->id}", [
+            'name' => $this->approver->name, 'email' => $this->approver->email, 'role' => $this->approver->role->value,
+            'is_active' => 1, 'brands' => [$this->client->id, $other->id],
+        ])->assertSessionHasNoErrors();
+        $this->assertEqualsCanonicalizing([$this->client->id, $other->id], $this->approver->brands()->pluck('clients.id')->all());
+
+        // a Customer never keeps team brands
+        $this->actingAs($admin)->put("/admin/users/{$this->clientUser->id}", [
+            'name' => $this->clientUser->name, 'email' => $this->clientUser->email, 'role' => 'client',
+            'client_id' => $this->client->id, 'is_active' => 1, 'brands' => [$other->id],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(0, $this->clientUser->brands()->count());
+    }
+
     public function test_customer_checks_line_by_line(): void
     {
         $calendar = $this->draftWithItem();

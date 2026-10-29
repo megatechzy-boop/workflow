@@ -19,7 +19,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
-            ->with('client')
+            ->with('client', 'brands')
             ->when($request->role, fn ($q, $role) => $q->where('role', $role))
             ->when($request->search, fn ($q, $s) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$s}%")
@@ -43,6 +43,7 @@ class UserController extends Controller
 
         $user = User::create($data);
         $this->syncExtraPermissions($request, $user);
+        $this->syncBrands($request, $user);
 
         return redirect()->route('admin.users.index')->with('status', 'User created.');
     }
@@ -70,6 +71,7 @@ class UserController extends Controller
 
         $user->update($data);
         $this->syncExtraPermissions($request, $user);
+        $this->syncBrands($request, $user);
 
         return redirect()->route('admin.users.index')->with('status', 'User updated.');
     }
@@ -123,6 +125,12 @@ class UserController extends Controller
         });
     }
 
+    /** Team brands; a Customer has only client_id */
+    private function syncBrands(Request $request, User $user): void
+    {
+        $user->brands()->sync($user->role === Role::Client ? [] : array_map('intval', $request->input('brands', [])));
+    }
+
     private function validated(Request $request, ?User $user = null): array
     {
         $data = $request->validate([
@@ -133,11 +141,13 @@ class UserController extends Controller
             'password' => [$user ? 'nullable' : 'required', 'confirmed', Rules\Password::defaults()],
             'extra_permissions' => ['array'],
             'extra_permissions.*' => [Rule::enum(Permission::class)],
+            'brands' => ['array'],
+            'brands.*' => ['integer', 'exists:clients,id'],
         ], [
             'client_id.required_if' => 'Please choose a brand for the Customer role.',
             'role.not_in' => 'Only an Admin can give the Admin role.',
         ]);
-        unset($data['extra_permissions']);
+        unset($data['extra_permissions'], $data['brands']);
         $data['is_active'] = $request->boolean('is_active');
         // client_id only matters for the Customer role
         if ($data['role'] !== Role::Client->value) {

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Task extends Model
 {
@@ -35,9 +36,16 @@ class Task extends Model
         $load = static::where('status', 'pending')->selectRaw('assigned_to, COUNT(*) as n')
             ->groupBy('assigned_to')->pluck('n', 'assigned_to')->all();
 
+        // Brand team (Admin > Users > Brands): members ticked for this brand, plus members with no brands (they do all brands)
+        $links = DB::table('client_user')->get(['client_id', 'user_id']);
+        $hasBrands = $links->pluck('user_id')->unique();
+        $brandTeam = $links->where('client_id', $calendar->client_id)->pluck('user_id');
+
         $created = [];
         foreach ($calendar->items()->doesntHave('task')->get() as $item) {
-            $member = $creators->filter(fn ($u) => in_array($u->role, $item->assigneeRoles(), true))
+            $roleMembers = $creators->filter(fn ($u) => in_array($u->role, $item->assigneeRoles(), true));
+            $pool = $roleMembers->filter(fn ($u) => $brandTeam->contains($u->id) || ! $hasBrands->contains($u->id));
+            $member = ($pool->isNotEmpty() ? $pool : $roleMembers) // nobody fits: any member of the role rather than no one
                 ->sortBy(fn ($u) => [$load[$u->id] ?? 0, $u->name])->first();
             if (! $member) {
                 continue; // no active member with that role: the SMM assigns it manually

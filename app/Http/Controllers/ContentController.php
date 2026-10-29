@@ -331,9 +331,12 @@ class ContentController extends Controller
     private function defaultApprover(Task $task): ?int
     {
         $approvers = User::withPermission(Permission::ApproveContent);
-        $creatorId = $task->item->calendar->created_by;
+        $calendar = $task->item->calendar;
+        $brandTeam = DB::table('client_user')->where('client_id', $calendar->client_id)->pluck('user_id');
 
-        return $approvers->firstWhere('id', $creatorId)?->id
+        // calendar's creator, then the brand's SMM (Admin > Users > Brands), then any SMM
+        return $approvers->firstWhere('id', $calendar->created_by)?->id
+            ?? $approvers->first(fn ($u) => $u->role === Role::SocialMediaManager && $brandTeam->contains($u->id))?->id
             ?? $approvers->firstWhere('role', Role::SocialMediaManager)?->id
             ?? $approvers->first()?->id;
     }

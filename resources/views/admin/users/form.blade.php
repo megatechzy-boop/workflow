@@ -40,15 +40,33 @@
                         <x-input-error :messages="$errors->get('role')" class="mt-2" />
                     </div>
 
-                    <div>
-                        <x-input-label for="client_id" value="Brand (Customer role only)" />
-                        <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">
-                            <option value="">— None —</option>
-                            @foreach ($clients as $c)
-                                <option value="{{ $c->id }}" @selected((string) old('client_id', $user->client_id) === (string) $c->id)>{{ $c->name }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('client_id')" class="mt-2" />
+                    {{-- Customer: one brand. Team: the brands they work on (tasks and approvals follow these) --}}
+                    @php($teamBrands = array_map('strval', old('brands', $user->exists ? $user->brands->pluck('id')->all() : [])))
+                    <div x-data="{ role: document.getElementById('role')?.value }"
+                         x-init="document.getElementById('role')?.addEventListener('change', (e) => role = e.target.value)">
+                        <div x-show="role === 'client'">
+                            <x-input-label for="client_id" value="Brand" />
+                            <select id="client_id" name="client_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                <option value="">— None —</option>
+                                @foreach ($clients as $c)
+                                    <option value="{{ $c->id }}" @selected((string) old('client_id', $user->client_id) === (string) $c->id)>{{ $c->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('client_id')" class="mt-2" />
+                        </div>
+                        <fieldset x-show="role !== 'client'" x-cloak>
+                            <legend class="block font-medium text-sm text-gray-700">Brands this member works on</legend>
+                            <p class="text-xs text-gray-500 mt-0.5">Auto-assign gives their tasks only to these members; an SMM here becomes the default approver. None ticked = works on all brands.</p>
+                            <div class="mt-2 grid sm:grid-cols-2 gap-2">
+                                @foreach ($clients as $c)
+                                    <label class="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-800 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                                        <input type="checkbox" name="brands[]" value="{{ $c->id }}" class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" @checked(in_array((string) $c->id, $teamBrands, true))>
+                                        <span class="min-w-0 truncate">{{ $c->name }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <x-input-error :messages="$errors->get('brands.*')" class="mt-2" />
+                        </fieldset>
                     </div>
 
                     <div>

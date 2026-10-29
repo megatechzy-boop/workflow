@@ -52,6 +52,7 @@
                                 <td class="px-4 py-3">{{ $user->email }}</td>
                                 <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-brand-50 text-brand-700 text-xs">{{ $user->role->label() }}</span>
                                     @if ($user->client)<span class="text-xs text-gray-500"> · {{ $user->client->name }}</span>@endif
+                                    @if ($user->brands->isNotEmpty())<span class="text-xs text-gray-500"> · {{ $user->brands->pluck('name')->join(', ') }}</span>@endif
                                 </td>
                                 <td class="px-4 py-3">
                                     @if ($user->is_active)
