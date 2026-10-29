@@ -47,5 +47,5 @@ Phone push locally: copy the three `VAPID_*` lines from the server `.env`
    GST later: `BUSINESS_GSTIN` + `BUSINESS_GST_RATE=18`. PDF is made in the browser (html2canvas).
    Next: enquiry form (Leads) and per-client onboarding link inside the app (no passwords).
 4. Small: status badges in dark mode; carousel slide overflows on phone (content page).
-5. Later, only when asked: cron for `tasks:remind`; remove `vendor_old`,
+5. Later, only when asked: remove `vendor_old`,
    `vendor_prev_l12` and the old `workflow.megatechzy.com` folder; real logo file.

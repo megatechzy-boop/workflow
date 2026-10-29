@@ -8,7 +8,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Replies in short, simple Hinglish. App text and code stay in English.
 - Commit and deploy only when the owner says so (they usually batch it: "commit, deploy baad me ek sath").
 - Never put secrets (API keys, VAPID private key, passwords) in chat or in git; the owner pastes them into the server `.env`.
-- Cron job for `tasks:remind`: not added yet, the owner said "abhi nahi". Ask before adding.
+- Cron: one cPanel job runs `php artisan schedule:run` every minute (added 2026-10-30); the 9 am task
+  digest (`tasks:remind`) is scheduled in `routes/console.php`. Ask before adding other cron jobs.
 - Before building, push back on parts that are not needed; keep changes small and tested (`php artisan test`).
 
 ## Product rules (decided with the owner)
