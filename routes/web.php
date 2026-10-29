@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\MailTestController;
+use App\Http\Controllers\Admin\BillingController;
+use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\PackageController;
+use App\Http\Controllers\Admin\SalaryController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetController;
@@ -64,6 +69,9 @@ Route::middleware('auth')->group(function () {
     Route::get('assets/{asset}/download', [AssetController::class, 'download'])->name('assets.download');
     Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
 
+    Route::post('attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.checkIn');
+    Route::post('attendance/check-out', [AttendanceController::class, 'checkOut'])->name('attendance.checkOut');
+
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
 
@@ -98,6 +106,21 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
     Route::put('roles', [RoleController::class, 'update'])->name('roles.update');
     Route::post('mail-test', MailTestController::class)->name('mail.test');
+    Route::resource('packages', PackageController::class)->except('show');
+
+    // Module 7: office (Admin only)
+    Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('attendance', [AttendanceController::class, 'update'])->name('attendance.update');
+    Route::get('salary', [SalaryController::class, 'index'])->name('salary.index');
+    Route::put('salary/{user}', [SalaryController::class, 'setSalary'])->name('salary.set');
+    Route::post('salary/{user}/pay', [SalaryController::class, 'pay'])->name('salary.pay');
+    Route::delete('salary/{user}/pay', [SalaryController::class, 'unpay'])->name('salary.unpay');
+    Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::post('billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
+    Route::post('billing/{invoice}/paid', [BillingController::class, 'togglePaid'])->name('billing.paid');
+    Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+    Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 });
 
 require __DIR__.'/auth.php';

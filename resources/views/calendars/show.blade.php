@@ -23,6 +23,10 @@
                 </div>
             @endif
 
+            @if ($calendar->client->package && auth()->user()->role !== App\Enums\Role::Client)
+                @include('calendars._package', ['package' => $calendar->client->package])
+            @endif
+
             {{-- Actions --}}
             <div class="flex flex-wrap items-center gap-3">
                 @can('update', $calendar)

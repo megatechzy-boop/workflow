@@ -14,6 +14,7 @@ enum Permission: string
     case PublishContent = 'publish_content';
     case ViewAllTasks = 'view_all_tasks';
     case UploadAnyContent = 'upload_any_content';
+    case ViewPrices = 'view_prices';
 
     public function label(): string
     {
@@ -27,6 +28,7 @@ enum Permission: string
             self::PublishContent => 'Mark content Scheduled / Published',
             self::ViewAllTasks => 'View all tasks, approvals and points',
             self::UploadAnyContent => 'Upload content on any task',
+            self::ViewPrices => 'See package prices',
         };
     }
 
@@ -34,7 +36,7 @@ enum Permission: string
     public static function defaults(): array
     {
         return [
-            Role::Manager->value => [self::ManageClients, self::ManageCalendars, self::ApproveCalendar, self::AssignTasks, self::PublishContent, self::ViewAllTasks, self::UploadAnyContent],
+            Role::Manager->value => [self::ManageClients, self::ManageCalendars, self::ApproveCalendar, self::AssignTasks, self::PublishContent, self::ViewAllTasks, self::UploadAnyContent, self::ViewPrices],
             Role::SocialMediaManager->value => [self::ManageCalendars, self::AssignTasks, self::ApproveContent, self::PublishContent, self::ViewAllTasks],
             Role::GraphicDesigner->value => [],
             Role::VideoEditor->value => [],

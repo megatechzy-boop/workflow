@@ -40,7 +40,8 @@ Phone push locally: copy the three `VAPID_*` lines from the server `.env`
    phone + laptop). Check on a real phone after deploy.
 2. Email: cPanel mailbox `notifications@megatechzy.com` (Resend dropped). Put its password in
    server `.env` as `MAIL_PASSWORD`, test with Admin > Users > Send test email.
-3. Module 7: client billing, salary, attendance, expenses.
+3. Packages + module 7 built (see CLAUDE.md). Attendance starts on deploy day, so fix the
+   first month's days in Admin > Attendance before paying salary.
 4. Small: status badges in dark mode; carousel slide overflows on phone (content page).
 5. Later, only when asked: cron for `tasks:remind`; remove `vendor_old`,
    `vendor_prev_l12` and the old `workflow.megatechzy.com` folder; real logo file.

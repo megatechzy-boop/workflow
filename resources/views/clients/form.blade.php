@@ -30,6 +30,26 @@
                         <x-input-error :messages="$errors->get('phone')" class="mt-2" />
                     </div>
 
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="package_id" value="Package" />
+                            <select id="package_id" name="package_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                <option value="">No package</option>
+                                @foreach ($packages as $package)
+                                    <option value="{{ $package->id }}" @selected(old('package_id', $client->package_id) == $package->id)>
+                                        {{ $package->name }}@if (auth()->user()->hasPermission(App\Enums\Permission::ViewPrices)) · {{ $package->priceLabel() }}@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('package_id')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="package_start" value="Package start date" />
+                            <x-text-input id="package_start" name="package_start" type="date" class="mt-1 block w-full" :value="old('package_start', $client->package_start?->format('Y-m-d'))" />
+                            <x-input-error :messages="$errors->get('package_start')" class="mt-2" />
+                        </div>
+                    </div>
+
                     <div>
                         <x-input-label for="notes" value="Notes" />
                         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('notes', $client->notes) }}</textarea>

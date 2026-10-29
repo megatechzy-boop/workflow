@@ -26,6 +26,13 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   gate (`layouts/_push-gate`) until push is allowed on that device.
 - Design: clean light (+ dark mode), logo colours teal `#0A7A6C` and amber `#F5A800`, icons not emojis, phone first (PWA).
 
+- Packages (Admin > Packages, from the PDF): each client has one. Price only for Admin, roles with
+  "See package prices" (Ops Manager by default) and the client's own Customer. Calendar page shows
+  posts vs package quota; Designers/Editors see no services list.
+- Module 7 (Admin only): Attendance (team checks in on Home; Sundays off), Salary = monthly × paid
+  days ÷ working days (half day ½, leave/no check-in 0), Billing (one bill per client per month at
+  package price, due on the 5th), Expenses + month profit.
+
 ## Next up
 
-Module 7 (client billing, salary, attendance, expenses).
+Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls). Invoice PDF if asked.

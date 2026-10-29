@@ -80,7 +80,7 @@ class CalendarController extends Controller
     {
         Gate::authorize('view', $calendar);
 
-        $calendar->load(['client', 'creator', 'items.task.assignee', 'items.assets', 'reviews.user']);
+        $calendar->load(['client.package', 'creator', 'items.task.assignee', 'items.assets', 'reviews.user']);
         $user = request()->user();
 
         return view('calendars.show', [

@@ -44,6 +44,11 @@ class Navigation
         }
         if ($user->isAdmin()) {
             $items[] = ['label' => 'Roles', 'route' => 'admin.roles.index', 'icon' => 'shield', 'active' => 'admin.roles.*'];
+            $items[] = ['label' => 'Packages', 'route' => 'admin.packages.index', 'icon' => 'tag', 'active' => 'admin.packages.*'];
+            $items[] = ['label' => 'Billing', 'route' => 'admin.billing.index', 'icon' => 'report', 'active' => 'admin.billing.*'];
+            $items[] = ['label' => 'Attendance', 'route' => 'admin.attendance.index', 'icon' => 'calendar', 'active' => 'admin.attendance.*'];
+            $items[] = ['label' => 'Salary', 'route' => 'admin.salary.index', 'icon' => 'users', 'active' => 'admin.salary.*'];
+            $items[] = ['label' => 'Expenses', 'route' => 'admin.expenses.index', 'icon' => 'clipboard', 'active' => 'admin.expenses.*'];
         }
 
         return $items;

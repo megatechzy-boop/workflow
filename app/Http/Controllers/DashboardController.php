@@ -6,6 +6,7 @@ use App\Enums\CalendarStatus;
 use App\Enums\ContentStatus;
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Models\Attendance;
 use App\Models\Calendar;
 use App\Models\CalendarItem;
 use App\Models\Content;
@@ -61,6 +62,28 @@ class DashboardController extends Controller
                 route('contents.index', ['status' => ContentStatus::Approved->value])];
         }
 
-        return view('dashboard', ['cards' => $cards]);
+        // Team: today's check-in and this month's attendance
+        $attendance = $user->role === Role::Client ? null : [
+            'today' => Attendance::where('user_id', $user->id)->whereDate('date', today())->first(),
+            'month' => Attendance::where('user_id', $user->id)->whereBetween('date', [now()->startOfMonth(), now()->endOfMonth()])->pluck('status')->countBy(),
+        ];
+
+        return view('dashboard', ['cards' => $cards, 'myPackage' => $this->customerPackage($user), 'attendance' => $attendance]);
+    }
+
+    /** Customer: their package and this month's published posts per format */
+    private function customerPackage($user): ?array
+    {
+        $package = $user->role === Role::Client ? $user->client?->package : null;
+        if (! $package) {
+            return null;
+        }
+        $published = Content::where('status', ContentStatus::Published)
+            ->whereHas('task.item', fn ($q) => $q->whereBetween('post_date', [now()->startOfMonth(), now()->endOfMonth()])
+                ->whereHas('calendar', fn ($q) => $q->where('client_id', $user->client_id)))
+            ->pluck('post_type')
+            ->countBy(fn ($type) => Content::typeOf($type)->value);
+
+        return ['package' => $package, 'since' => $user->client->package_start, 'published' => $published];
     }
 }

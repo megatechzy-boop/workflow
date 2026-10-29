@@ -29,6 +29,7 @@ class User extends Authenticatable
         'role',
         'client_id',
         'is_active',
+        'monthly_salary',
     ];
 
     /**
@@ -65,6 +66,12 @@ class User extends Authenticatable
     }
 
     /** Members who can get tasks: active Designers/Editors (or only the given roles) */
+    /** Active team members (everyone except Customers): attendance and salary */
+    public static function staff()
+    {
+        return self::where('is_active', true)->where('role', '!=', Role::Client)->orderBy('name')->get();
+    }
+
     public static function creators(?array $roles = null)
     {
         return static::whereIn('role', $roles ?? [Role::GraphicDesigner, Role::VideoEditor])

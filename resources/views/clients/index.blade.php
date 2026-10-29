@@ -22,6 +22,7 @@
                     <thead class="bg-gray-50 text-left text-gray-600">
                         <tr>
                             <th class="px-4 py-3">Name</th>
+                            <th class="px-4 py-3">Package</th>
                             <th class="px-4 py-3">Contact</th>
                             <th class="px-4 py-3">Client logins</th>
                             <th class="px-4 py-3">Status</th>
@@ -32,6 +33,16 @@
                         @forelse ($clients as $client)
                             <tr>
                                 <td class="px-4 py-3 font-medium">{{ $client->name }}</td>
+                                <td class="px-4 py-3">
+                                    @if ($client->package)
+                                        <div>{{ $client->package->name }}</div>
+                                        @if (auth()->user()->hasPermission(App\Enums\Permission::ViewPrices))
+                                            <div class="text-gray-500">{{ $client->package->priceLabel() }} / month</div>
+                                        @endif
+                                    @else
+                                        <span class="text-gray-400">None</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <div>{{ $client->contact_email }}</div>
                                     <div class="text-gray-500">{{ $client->phone }}</div>
@@ -53,7 +64,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No clients yet.</td></tr>
+                            <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No clients yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
