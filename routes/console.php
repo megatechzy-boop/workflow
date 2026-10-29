@@ -12,10 +12,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Deadline reminders. On cPanel run once a day via cron: php artisan tasks:remind
+// 9 am task digest. On cPanel run once a day via cron: php artisan tasks:remind
 Artisan::command('tasks:remind', function () {
-    $this->info(Task::sendDeadlineReminders().' reminder(s) sent.');
-})->purpose('Remind members about tasks due tomorrow, today or overdue');
+    $this->info(Task::sendDeadlineReminders().' member(s) got their task list.');
+})->purpose('Email each member one list of tasks overdue, due today or due tomorrow');
 
 Schedule::command('tasks:remind')->dailyAt('09:00');
 

@@ -55,8 +55,8 @@ class Task extends Model
     }
 
     /**
-     * Daily reminders for pending tasks: due tomorrow, due today, or overdue.
-     * At most one reminder per task per day (reminded_on). Returns how many were sent.
+     * Daily 9 am digest: ONE message per member listing their pending tasks that are
+     * overdue, due today or due tomorrow. At most once a day (reminded_on). Returns how many members got one.
      */
     public static function sendDeadlineReminders(): int
     {
@@ -64,21 +64,23 @@ class Task extends Model
             ->where('status', 'pending')
             ->whereDate('deadline', '<=', today()->addDay())
             ->where(fn ($q) => $q->whereNull('reminded_on')->orWhereDate('reminded_on', '<', today()))
+            ->orderBy('deadline')
             ->get();
 
-        foreach ($tasks as $task) {
-            $when = match (true) {
-                $task->deadline->isTomorrow() => 'is due tomorrow',
-                $task->deadline->isToday() => 'is due today',
-                default => 'is overdue since '.$task->deadline->format('d M'),
-            };
-            Notify::send([$task->assignee], 'Deadline reminder',
-                $task->item->calendar->client->name.' · post '.$task->item->post_date->format('d M')." $when.",
-                route('tasks.show', $task));
-            $task->forceFill(['reminded_on' => today()])->save();
+        $byMember = $tasks->groupBy('assigned_to');
+        foreach ($byMember as $memberTasks) {
+            $lines = $memberTasks->map(fn (Task $task) => '• '.$task->item->calendar->client->name
+                .' · post '.$task->item->post_date->format('d M').' · '.match (true) {
+                    $task->deadline->isTomorrow() => 'due tomorrow',
+                    $task->deadline->isToday() => 'due today',
+                    default => 'overdue since '.$task->deadline->format('d M'),
+                });
+            Notify::send([$memberTasks->first()->assignee], 'Your tasks for '.today()->format('d M'),
+                $memberTasks->count().' task(s) need you:'."\n".$lines->implode("\n"), route('tasks.index'));
+            static::whereKey($memberTasks->pluck('id'))->update(['reminded_on' => today()]);
         }
 
-        return $tasks->count();
+        return $byMember->count();
     }
 
     public function notifyAssignee(): void

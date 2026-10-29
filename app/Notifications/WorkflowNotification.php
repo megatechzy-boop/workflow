@@ -30,7 +30,7 @@ class WorkflowNotification extends Notification
         return (new MailMessage)
             ->subject($this->title)
             ->greeting('Hi '.$notifiable->name.',')
-            ->line($this->message)
+            ->lines(explode("\n", $this->message)) // a list stays one item per line in the email
             ->action('Open', $this->url);
     }
 

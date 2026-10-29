@@ -65,11 +65,15 @@ class ProductivityTest extends TestCase
     public function test_deadline_reminders_once_a_day(): void
     {
         $this->taskOn('2026-11-07', '2026-11-05'); // due tomorrow
+        $this->taskOn('2026-11-06', '2026-11-04'); // due today
         $this->taskOn('2026-11-20', '2026-11-18'); // not yet
 
         $this->artisan('tasks:remind')->assertSuccessful();
-        $this->assertSame(1, $this->designer->notifications()->count());
-        $this->assertStringContainsString('due tomorrow', $this->designer->notifications()->first()->data['message']);
+        $this->assertSame(1, $this->designer->notifications()->count()); // one digest, not one per task
+        $message = $this->designer->notifications()->first()->data['message'];
+        $this->assertStringContainsString('2 task(s)', $message);
+        $this->assertStringContainsString('due today', $message);
+        $this->assertStringContainsString('due tomorrow', $message);
 
         $this->artisan('tasks:remind');                 // same day: no duplicate
         $this->assertSame(1, $this->designer->notifications()->count());
