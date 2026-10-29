@@ -22,9 +22,10 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Designers/Editors never see caption, hashtags or approver, and only see formats for their role.
 - Chat groups: All team, per brand Client group and Internal. Customers get no chat push 22:00–09:00.
   "Discuss in chat" adds a post card to a message; SMM/Ops/Admin can also pick a post inside chat.
+- Notifications are required: every role (Admin too), phone and laptop, sees a full-screen
+  gate (`layouts/_push-gate`) until push is allowed on that device.
 - Design: clean light (+ dark mode), logo colours teal `#0A7A6C` and amber `#F5A800`, icons not emojis, phone first (PWA).
 
 ## Next up
 
-Force notifications (app not usable until "Turn on notifications" is done) — decide roles, laptops, Admin exempt.
-Then module 7 (client billing, salary, attendance, expenses).
+Module 7 (client billing, salary, attendance, expenses).

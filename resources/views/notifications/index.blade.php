@@ -11,7 +11,6 @@
 
     <div class="py-8">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            @include('layouts._push-toggle')
             <div class="card divide-y">
                 @forelse ($notifications as $n)
                     <a href="{{ route('notifications.open', $n->id) }}" class="block px-4 py-3 hover:bg-gray-50 {{ $n->read_at ? '' : 'bg-brand-50/60' }}">

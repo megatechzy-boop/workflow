@@ -133,5 +133,7 @@
                 </form>
             </div>
         </div>
+
+        @include('layouts._push-gate')
     </body>
 </html>

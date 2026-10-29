@@ -36,10 +36,10 @@ Phone push locally: copy the three `VAPID_*` lines from the server `.env`
 
 ## Open items
 
-1. Force notifications: app not usable until "Turn on notifications" is done.
-   To decide: which roles, laptops too, Admin exempt?
-2. Resend: domain verifying; then put the API key in server `.env` as `MAIL_PASSWORD`
-   and test with Admin > Users > Send test email.
+1. Force notifications: done on `feature/force-notifications` (all roles incl. Admin,
+   phone + laptop). Check on a real phone after deploy.
+2. Email: cPanel mailbox `notifications@megatechzy.com` (Resend dropped). Put its password in
+   server `.env` as `MAIL_PASSWORD`, test with Admin > Users > Send test email.
 3. Module 7: client billing, salary, attendance, expenses.
 4. Small: status badges in dark mode; carousel slide overflows on phone (content page).
 5. Later, only when asked: cron for `tasks:remind`; remove `vendor_old`,

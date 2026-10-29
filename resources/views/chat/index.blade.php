@@ -7,7 +7,6 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            @include('layouts._push-toggle')
             <div class="md:card md:grid md:grid-cols-[300px_1fr] md:h-[75vh] md:overflow-hidden">
                 {{-- Groups (phone: its own screen until a group is opened) --}}
                 <nav class="{{ $picked ? 'hidden md:flex' : 'flex card md:rounded-none md:border-0 md:shadow-none' }} flex-col md:border-r min-h-0 overflow-hidden" aria-label="Chat groups">
