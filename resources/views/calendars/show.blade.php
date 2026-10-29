@@ -109,7 +109,7 @@
                                         <input type="hidden" name="calendar_item_id" value="{{ $item->id }}">
                                         <label class="inline-block cursor-pointer px-2 py-1 rounded border border-sky-300 text-sky-700 hover:bg-sky-50">
                                             + Upload
-                                            <input type="file" name="files[]" multiple accept="image/*,video/mp4,video/quicktime" class="sr-only" onchange="this.form.submit()">
+                                            <input type="file" name="files[]" multiple accept="image/*,video/mp4,video/quicktime" class="sr-only" onchange="this.form.requestSubmit()">
                                         </label>
                                     </form>
                                 </td>

@@ -52,6 +52,17 @@ class ContentTest extends TestCase
         ]);
     }
 
+    public function test_upload_with_progress_bar_gets_json_redirect_and_keeps_errors(): void
+    {
+        $send = fn (int $slides) => $this->actingAs($this->member)->withHeader('X-Upload-Progress', '1')
+            ->post("/tasks/{$this->task->id}/contents", ['post_type' => 'carousel', 'approver_id' => $this->approver->id, 'images' => $this->images($slides)]);
+
+        // validation error: JSON redirect back, errors still waiting in the session for that page
+        $send(1)->assertOk()->assertJsonStructure(['redirect'])->assertSessionHasErrors('images');
+
+        $send(3)->assertOk()->assertJsonPath('redirect', route('contents.show', Content::firstOrFail()));
+    }
+
     public function test_carousel_needs_2_to_10_images(): void
     {
         $this->uploadCarousel(1)->assertSessionHasErrors('images');

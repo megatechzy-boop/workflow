@@ -486,8 +486,15 @@
                 const fd = new FormData(form);
                 if (voice) { fd.set('file', voice); voice = null; }
                 try {
-                    const res = await fetch(sendUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' }, body: fd });
-                    const data = await res.json();
+                    // XHR (not fetch) so a photo / video / voice note shows its upload %
+                    const hasFile = fd.get('file') instanceof File && fd.get('file').size > 0;
+                    const xhr = await window.sendWithProgress(sendUrl, fd, {
+                        headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+                        onProgress: hasFile ? (l, t) => { err.textContent = 'Uploading ' + Math.round(l / t * 100) + '%'; err.classList.remove('hidden', 'text-red-600'); } : null,
+                    });
+                    err.classList.add('hidden', 'text-red-600');
+                    const res = { ok: xhr.status >= 200 && xhr.status < 300 };
+                    const data = (() => { try { return JSON.parse(xhr.responseText); } catch (e3) { return { message: xhr.status === 413 ? 'File is too big for the server.' : 'Message not sent.' }; } })();
                     if (!res.ok) {
                         err.textContent = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Message not sent.';
                         err.classList.remove('hidden');
