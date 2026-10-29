@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CalendarStatus;
 use App\Enums\Permission;
 use App\Enums\Role;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -141,6 +142,25 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    /** Designer / Editor: calendars and schedule show only the rows whose task is theirs */
+    public function seesOnlyOwnRows(): bool
+    {
+        return $this->role->isCreator() && ! $this->hasPermission(Permission::ViewAllTasks);
+    }
+
+    /** Draft calendars are seen only by their creator, Admin and Ops Manager */
+    public function seesAllDrafts(): bool
+    {
+        return in_array($this->role, [Role::Admin, Role::Manager], true);
+    }
+
+    /** Query filter: hide other people's draft calendars */
+    public static function draftFilter(User $user): \Closure
+    {
+        return fn ($q) => $user->seesAllDrafts() ? $q
+            : $q->where(fn ($w) => $w->where('status', '!=', CalendarStatus::Draft)->orWhere('created_by', $user->id));
     }
 
     public function isAdmin(): bool

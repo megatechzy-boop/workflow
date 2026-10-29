@@ -24,7 +24,10 @@ class ScheduleController extends Controller
 
         $items = CalendarItem::with(['calendar.client', 'task.contents', 'task.assignee'])
             ->whereBetween('post_date', [$month, $month->copy()->endOfMonth()])
+            // Designers/Editors: only their own posts
+            ->when($user->seesOnlyOwnRows(), fn ($q) => $q->whereHas('task', fn ($t) => $t->where('assigned_to', $user->id)))
             ->whereHas('calendar', fn ($q) => $q
+                ->tap(\App\Models\User::draftFilter($user))
                 ->when($clientId, fn ($c) => $c->where('client_id', $clientId))
                 // Customers only see calendars that were sent to them
                 ->when($isCustomer, fn ($c) => $c->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved])))

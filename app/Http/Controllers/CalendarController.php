@@ -33,6 +33,9 @@ class CalendarController extends Controller
             ->when($user->role === Role::Client, fn ($q) => $q
                 ->where('client_id', $user->client_id)
                 ->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved]))
+            ->tap(User::draftFilter($user))
+            // Designers/Editors: only calendars with a post assigned to them
+            ->when($user->seesOnlyOwnRows(), fn ($q) => $q->whereHas('items.task', fn ($t) => $t->where('assigned_to', $user->id)))
             ->when($request->client_id, fn ($q, $id) => $q->where('client_id', $id))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('month')
@@ -77,12 +80,25 @@ class CalendarController extends Controller
         return redirect()->route('calendars.show', $calendar)->with('status', 'Calendar created. Now add posts.');
     }
 
-    public function show(Calendar $calendar): View
+    public function show(Calendar $calendar): View|RedirectResponse
     {
-        Gate::authorize('view', $calendar);
+        // Not allowed: back to the list with a popup that says why (instead of a 403 page)
+        if (Gate::denies('view', $calendar)) {
+            $user = request()->user();
+            $why = match (true) {
+                $calendar->status === CalendarStatus::Draft && $user->role !== Role::Client => 'This calendar is still a draft. Only the person who made it, Admin and Ops Manager can open it.',
+                $user->seesOnlyOwnRows() => 'You have no posts in this calendar. You can open calendars that have a post assigned to you.',
+                default => 'You cannot open this calendar.',
+            };
+
+            return redirect()->route('calendars.index')->with('popup', $why);
+        }
 
         $calendar->load(['client.package', 'creator', 'items.task.assignee', 'items.assets', 'reviews.user']);
         $user = request()->user();
+        if ($user->seesOnlyOwnRows()) {
+            $calendar->setRelation('items', $calendar->items->filter(fn ($i) => $i->task?->assigned_to === $user->id)->values());
+        }
 
         return view('calendars.show', [
             'calendar' => $calendar,

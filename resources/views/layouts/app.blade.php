@@ -80,6 +80,18 @@
             <main class="flex-1 px-4 sm:px-0 pb-28 lg:pb-10">
                 {{ $slot }}
             </main>
+
+            {{-- One-time popup message (session 'popup'), e.g. a calendar you cannot open --}}
+            @if (session('popup'))
+                <div x-data="{ open: true }" x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="popup-msg">
+                    <div class="absolute inset-0 bg-black/40" @click="open = false"></div>
+                    <div class="relative card w-full max-w-sm p-6 text-center space-y-4" @keydown.escape.window="open = false">
+                        <span class="mx-auto w-12 h-12 rounded-full bg-accent-100 text-accent-600 flex items-center justify-center"><x-icon name="lock" class="w-6 h-6" /></span>
+                        <p id="popup-msg" class="text-gray-800">{{ session('popup') }}</p>
+                        <button type="button" @click="open = false" x-init="$el.focus()" class="w-full py-2.5 rounded-xl bg-brand-600 text-white font-semibold">OK</button>
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- Phone tab bar --}}

@@ -58,12 +58,12 @@ class CalendarTest extends TestCase
         $calendar = $this->draftWithItem();
 
         // Customer cannot see drafts
-        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
 
         // SMM submit => with the Ops Manager; Customer cannot see it yet, SMM cannot self-approve
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/submit");
         $this->assertSame(CalendarStatus::Submitted, $calendar->fresh()->status);
-        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertForbidden();
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
         $this->actingAs($this->team)->post("/calendars/{$calendar->id}/review", ['action' => 'approved'])->assertForbidden();
 
         $ops = User::factory()->create(['role' => Role::Manager]);
@@ -133,6 +133,38 @@ class CalendarTest extends TestCase
         $this->assertNotNull($c->fresh()->task);
     }
 
+    public function test_drafts_only_for_creator_admin_and_ops(): void
+    {
+        $draft = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-12-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::Draft]);
+        $otherSmm = User::factory()->create(['role' => Role::SocialMediaManager]);
+        $ops = User::factory()->create(['role' => Role::Manager]);
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $this->actingAs($this->team)->get("/calendars/{$draft->id}")->assertOk();
+        $this->actingAs($ops)->get("/calendars/{$draft->id}")->assertOk();
+        $this->actingAs($admin)->get('/calendars')->assertSee('December 2026');
+        $this->actingAs($otherSmm)->get("/calendars/{$draft->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
+        $this->actingAs($otherSmm)->get('/calendars')->assertDontSee('December 2026');
+        $this->actingAs($this->approver)->get("/calendars/{$draft->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
+    }
+
+    public function test_editor_sees_only_own_rows_in_calendar_and_schedule(): void
+    {
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        $calendar = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-11-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+        $mine = $calendar->items()->create(['post_date' => '2026-11-05', 'post_types' => ['instagram_reel'], 'creative_copy' => 'MY REEL ROW']);
+        $theirs = $calendar->items()->create(['post_date' => '2026-11-06', 'post_types' => ['instagram_post'], 'creative_copy' => 'DESIGNER POST ROW']);
+        $mine->task()->create(['assigned_to' => $editor->id, 'assigned_by' => $this->team->id, 'deadline' => '2026-11-03']);
+        $theirs->task()->create(['assigned_to' => $this->approver->id, 'assigned_by' => $this->team->id, 'deadline' => '2026-11-04']);
+        $empty = Calendar::create(['client_id' => $this->client->id, 'month' => '2026-10-01', 'created_by' => $this->team->id, 'status' => CalendarStatus::ClientApproved]);
+
+        $this->actingAs($editor)->get("/calendars/{$calendar->id}")->assertOk()->assertSee('MY REEL ROW')->assertDontSee('DESIGNER POST ROW');
+        $this->actingAs($editor)->get("/calendars/{$empty->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
+        $this->actingAs($editor)->get('/schedule?month=2026-11')->assertOk()
+            ->assertSee(route('tasks.show', $mine->task), false)->assertDontSee(route('tasks.show', $theirs->task), false);
+        $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('DESIGNER POST ROW'); // SMM sees all
+    }
+
     public function test_admin_sets_team_brands(): void
     {
         $admin = User::factory()->create(['role' => Role::Admin]);
@@ -198,7 +230,7 @@ class CalendarTest extends TestCase
         $calendar->update(['status' => CalendarStatus::ApproverApproved]);
         $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Other'])->id]);
 
-        $this->actingAs($other)->get("/calendars/{$calendar->id}")->assertForbidden();
+        $this->actingAs($other)->get("/calendars/{$calendar->id}")->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
         $this->actingAs($other)->get('/calendars')->assertDontSee('Acme');
     }
 
