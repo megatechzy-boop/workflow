@@ -56,6 +56,9 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                                    @if ($client->onboarded_at)
+                                        <a href="{{ route('clients.brief', $client) }}" class="text-brand-600 hover:underline">Brief</a>
+                                    @endif
                                     <a href="{{ route('clients.edit', $client) }}" class="text-brand-600 hover:underline">Edit</a>
                                     <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Delete this client?')">
                                         @csrf @method('DELETE')

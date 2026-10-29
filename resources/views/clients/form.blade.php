@@ -6,7 +6,38 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @if (session('status'))
+                <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
+            @endif
+
+            @if ($client->exists)
+                {{-- Onboarding: private link for the client; answers become the team's brief --}}
+                <div class="card p-5 space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="font-semibold">Onboarding form</div>
+                        @if ($client->onboarded_at)
+                            <a href="{{ route('clients.brief', $client) }}" class="text-sm text-brand-600 hover:underline">View brief (filled {{ $client->onboarded_at->format('d M') }})</a>
+                        @else
+                            <span class="text-sm text-gray-500">Not filled yet</span>
+                        @endif
+                    </div>
+                    @if ($client->onboarding_token)
+                        @php($link = route('onboarding.form', $client->onboarding_token))
+                        <div class="text-sm break-all text-gray-600">{{ $link }}</div>
+                        <div class="flex flex-wrap gap-2" x-data>
+                            <button type="button" @click="navigator.clipboard.writeText(@js($link)); $el.textContent = 'Copied'" class="px-3 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">Copy link</button>
+                            <a href="https://wa.me/?text={{ rawurlencode("Hi! Please fill this onboarding form so we can get started: $link") }}" target="_blank" rel="noopener" class="px-3 py-2 rounded-xl bg-green-50 text-green-800 text-sm font-semibold">Send on WhatsApp</a>
+                        </div>
+                    @else
+                        <form method="POST" action="{{ route('clients.onboardingLink', $client) }}">
+                            @csrf
+                            <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">Create onboarding link</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
+
             <div class="card p-6">
                 <form method="POST" action="{{ $client->exists ? route('clients.update', $client) : route('clients.store') }}" class="space-y-5">
                     @csrf
@@ -28,6 +59,12 @@
                         <x-input-label for="phone" value="Phone" />
                         <x-text-input id="phone" name="phone" class="mt-1 block w-full" :value="old('phone', $client->phone)" />
                         <x-input-error :messages="$errors->get('phone')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="address" value="Billing address (shown on invoices)" />
+                        <textarea id="address" name="address" rows="3" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('address', $client->address) }}</textarea>
+                        <x-input-error :messages="$errors->get('address')" class="mt-2" />
                     </div>
 
                     <div class="grid sm:grid-cols-2 gap-4">

@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
-    protected $fillable = ['name', 'contact_email', 'phone', 'notes', 'is_active', 'package_id', 'package_start'];
+    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at'];
 
     protected $attributes = ['is_active' => true];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'package_start' => 'date'];
+        return ['is_active' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
     }
 
     public function package(): BelongsTo

@@ -42,6 +42,10 @@ Phone push locally: copy the three `VAPID_*` lines from the server `.env`
    server `.env` as `MAIL_PASSWORD`, test with Admin > Users > Send test email.
 3. Packages + module 7 built (see CLAUDE.md). Attendance starts on deploy day, so fix the
    first month's days in Admin > Attendance before paying salary.
+   Invoices / receipts: bank + UPI only in server `.env` (`BANK_*`, see `.env.example`; the repo
+   is public). `INVOICE_START=324`, `RECEIPT_START=39` continue the old Refrens numbers.
+   GST later: `BUSINESS_GSTIN` + `BUSINESS_GST_RATE=18`. PDF is made in the browser (html2canvas).
+   Next: enquiry form (Leads) and per-client onboarding link inside the app (no passwords).
 4. Small: status badges in dark mode; carousel slide overflows on phone (content page).
 5. Later, only when asked: cron for `tasks:remind`; remove `vendor_old`,
    `vendor_prev_l12` and the old `workflow.megatechzy.com` folder; real logo file.

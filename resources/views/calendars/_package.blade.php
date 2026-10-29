@@ -3,7 +3,12 @@
 <div class="card p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="font-semibold text-gray-900">{{ $package->name }} package</div>
-        <div class="text-sm text-gray-500">{{ $package->platformLabel() }}</div>
+        <div class="text-sm text-gray-500">
+            {{ $package->platformLabel() }}
+            @if ($calendar->client->onboarded_at && (auth()->user()->hasPermission(App\Enums\Permission::ManageClients) || auth()->user()->hasPermission(App\Enums\Permission::ManageCalendars)))
+                · <a href="{{ route('clients.brief', $calendar->client) }}" class="text-brand-600 hover:underline">Client brief</a>
+            @endif
+        </div>
     </div>
     <div class="mt-3 grid grid-cols-3 gap-3 max-w-md">
         @foreach (App\Enums\PostType::cases() as $type)

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
-use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\SalaryPayment;
 use App\Support\Month;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +19,7 @@ class ExpenseController extends Controller
     {
         $month = Month::from($request);
         $expenses = Expense::whereBetween('date', [$month, $month->endOfMonth()])->orderByDesc('date')->orderByDesc('id')->get();
-        $received = (int) Invoice::whereDate('month', $month)->whereNotNull('paid_at')->sum('amount');
+        $received = (int) Payment::whereBetween('date', [$month, $month->endOfMonth()])->sum('amount');
         $salaries = (int) SalaryPayment::whereDate('month', $month)->sum('amount');
 
         return view('office.expenses', [

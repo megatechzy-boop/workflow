@@ -17,8 +17,10 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
@@ -26,6 +28,14 @@ use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
+
+// Public forms (no login): website enquiry, and each client's private onboarding link
+Route::get('enquiry', [LeadController::class, 'form'])->name('enquiry.form');
+Route::post('enquiry', [LeadController::class, 'submit'])->middleware('throttle:5,1')->name('enquiry.submit');
+Route::get('enquiry/thanks', [LeadController::class, 'thanks'])->name('enquiry.thanks');
+Route::get('onboarding/thanks', [OnboardingController::class, 'thanks'])->name('onboarding.thanks');
+Route::get('onboarding/{token}', [OnboardingController::class, 'form'])->name('onboarding.form');
+Route::post('onboarding/{token}', [OnboardingController::class, 'submit'])->middleware('throttle:10,1')->name('onboarding.submit');
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -95,7 +105,14 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'permission:manage_clients'])->group(function () {
     Route::resource('clients', ClientController::class)->except('show');
+    Route::post('clients/{client}/onboarding-link', [OnboardingController::class, 'makeLink'])->name('clients.onboardingLink');
+    Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
+    Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
+    Route::post('leads/{lead}/convert', [LeadController::class, 'convert'])->name('leads.convert');
 });
+
+// Client brief: also for Social Media Managers (checked in the controller)
+Route::get('clients/{client}/brief', [OnboardingController::class, 'brief'])->middleware('auth')->name('clients.brief');
 
 Route::middleware(['auth', 'permission:manage_users'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('users', UserController::class)->except('show');
@@ -117,7 +134,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('salary/{user}/pay', [SalaryController::class, 'unpay'])->name('salary.unpay');
     Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
-    Route::post('billing/{invoice}/paid', [BillingController::class, 'togglePaid'])->name('billing.paid');
+    Route::get('billing/create', [BillingController::class, 'create'])->name('billing.create');
+    Route::post('billing', [BillingController::class, 'store'])->name('billing.store');
+    Route::get('billing/{invoice}', [BillingController::class, 'show'])->name('billing.show');
+    Route::delete('billing/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy');
+    Route::post('billing/{invoice}/payments', [BillingController::class, 'pay'])->name('billing.pay');
+    Route::get('receipts/{payment}', [BillingController::class, 'receipt'])->name('billing.receipt');
+    Route::delete('receipts/{payment}', [BillingController::class, 'destroyPayment'])->name('billing.receipt.destroy');
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');

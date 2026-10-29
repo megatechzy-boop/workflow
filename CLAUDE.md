@@ -31,8 +31,11 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   posts vs package quota; Designers/Editors see no services list.
 - Module 7 (Admin only): Attendance (team checks in on Home; Sundays off), Salary = monthly × paid
   days ÷ working days (half day ½, leave/no check-in 0), Billing (one bill per client per month at
-  package price, due on the 5th), Expenses + month profit.
+  package price, due on the 5th, or one-off invoices), payments give receipts, Expenses + month profit.
+  Invoice/receipt numbers continue the old Refrens series (A00324 / A00039); PDF made in the browser.
+- Public forms (no login): `/enquiry` → Leads (Clients permission; "Won" makes the client);
+  `/onboarding/{token}` per client → client brief (Clients or Calendars permission). Never ask for passwords.
 
 ## Next up
 
-Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls). Invoice PDF if asked.
+Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls).

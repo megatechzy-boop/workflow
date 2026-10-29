@@ -80,14 +80,38 @@ class OfficeTest extends TestCase
         $this->assertSame(15000, $invoice->amount);
         $this->assertSame('2026-11-05', $invoice->due_date->toDateString());
 
-        $this->actingAs($this->admin)->post(route('admin.billing.paid', $invoice));
+        $this->assertSame('A00324', $invoice->number);
+    }
+
+    public function test_part_payments_give_receipts_and_settle_the_invoice(): void
+    {
+        $client = Client::create(['name' => 'Katare Mills', 'address' => 'Akkalkot Road, Solapur']);
+        $this->actingAs($this->admin)->post(route('admin.billing.store'), [
+            'client_id' => $client->id, 'invoice_date' => '2026-10-29', 'due_date' => '2026-11-05',
+            'items' => [['name' => 'Website update yearly', 'detail' => '2026-27', 'qty' => 1, 'rate' => 8000], ['name' => '', 'rate' => '']],
+        ])->assertRedirect();
+        $invoice = Invoice::sole();
+        $this->assertSame(8000, $invoice->amount);
+
+        $pay = fn ($amount) => $this->actingAs($this->admin)->post(route('admin.billing.pay', $invoice), ['amount' => $amount, 'date' => '2026-10-30', 'method' => 'UPI']);
+        $pay(5000);
+        $this->assertNull($invoice->fresh()->paid_at);
+        $pay(9000)->assertSessionHasErrors('amount'); // more than what is due
+        $pay(3000);
         $this->assertNotNull($invoice->fresh()->paid_at);
+        $this->assertSame(['A00039', 'A00040'], $invoice->payments()->pluck('number')->all());
+
+        $this->actingAs($this->admin)->get(route('admin.billing.show', $invoice))
+            ->assertOk()->assertSee('A00324')->assertSee('Akkalkot Road')->assertSee('EIGHT THOUSAND RUPEES ONLY')->assertSee('PAID');
+        $this->actingAs($this->admin)->get(route('admin.billing.receipt', $invoice->payments()->first()))
+            ->assertOk()->assertSee('Payment Receipt')->assertSee('Five Thousand Rupees Only');
     }
 
     public function test_profit_is_received_minus_salaries_minus_expenses(): void
     {
         $client = Client::create(['name' => 'Acme']);
-        Invoice::create(['client_id' => $client->id, 'month' => '2026-10-01', 'package_name' => 'Scale', 'amount' => 35000, 'due_date' => '2026-10-05', 'paid_at' => now()]);
+        $invoice = Invoice::create(['client_id' => $client->id, 'due_date' => '2026-10-05', 'items' => [['name' => 'Scale', 'qty' => 1, 'rate' => 35000]]]);
+        $invoice->payments()->create(['date' => '2026-10-06', 'method' => 'UPI', 'amount' => 35000]);
         SalaryPayment::create(['user_id' => $this->admin->id, 'month' => '2026-10-01', 'amount' => 20000, 'paid_at' => now()]);
         $this->actingAs($this->admin)->post(route('admin.expenses.store'), ['date' => '2026-10-10', 'title' => 'Rent', 'category' => 'rent', 'amount' => 12000]);
 

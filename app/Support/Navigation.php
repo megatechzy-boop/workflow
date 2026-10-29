@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\ChatMessage;
+use App\Models\Lead;
 use App\Models\User;
 
 /** One menu definition for the desktop sidebar, the phone tab bar and the phone "More" sheet */
@@ -38,6 +39,7 @@ class Navigation
         }
         if ($user->hasPermission(Permission::ManageClients)) {
             $items[] = ['label' => 'Clients', 'route' => 'clients.index', 'icon' => 'building', 'active' => 'clients.*'];
+            $items[] = ['label' => 'Leads', 'route' => 'leads.index', 'icon' => 'inbox', 'active' => 'leads.*', 'badge' => Lead::where('status', 'new')->count()];
         }
         if ($user->hasPermission(Permission::ManageUsers)) {
             $items[] = ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'active' => 'admin.users.*'];
