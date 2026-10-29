@@ -48,7 +48,7 @@
 
             <div class="grid lg:grid-cols-5 gap-6">
                 {{-- Media --}}
-                <div class="lg:col-span-3 card p-4 space-y-4">
+                <div class="min-w-0 lg:col-span-3 card p-4 space-y-4">
                     @if ($isReel)
                         @php($video = $version->media->firstWhere('kind', 'video'))
                         @php($cover = $version->media->firstWhere('kind', 'cover'))
@@ -120,7 +120,7 @@
                 </div>
 
                 {{-- Actions + comments --}}
-                <div class="lg:col-span-2 space-y-6">
+                <div class="min-w-0 lg:col-span-2 space-y-6">
                     @can('review', $content)
                         <div class="card p-4">
                             <h3 class="font-semibold text-gray-800 mb-2">Review (V{{ $content->current_version }})</h3>
@@ -200,7 +200,7 @@
                                 <input type="hidden" name="version" value="{{ $version->number }}">
                                 <textarea name="body" rows="2" required placeholder="V{{ $version->number }} — add a comment... (@name to mention)" class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm"></textarea>
                                 @if ($handles->isNotEmpty())
-                                    <p class="text-xs text-gray-400">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
+                                    <p class="text-xs text-gray-400 break-words">Mention: @foreach ($handles as $h)<span class="mr-1">{{ '@'.$h }}</span>@endforeach</p>
                                 @endif
                                 <div class="flex flex-wrap items-center gap-2">
                                     @if ($images->count() > 1)

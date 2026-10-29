@@ -58,7 +58,7 @@
 
             {{-- Items table --}}
             {{-- Spreadsheet look: grid borders, light blue cells, centered text --}}
-            <div class="shadow-sm overflow-x-auto border border-gray-800">
+            <div class="relative shadow-sm overflow-x-auto border border-gray-800">
                 <table class="min-w-full text-sm border-collapse bg-[#eef3fb] text-gray-900 [&_td]:border [&_td]:border-gray-400 [&_th]:border [&_th]:border-gray-800">
                     <thead class="bg-[#dfe8f7] text-center font-bold text-base">
                         <tr>
