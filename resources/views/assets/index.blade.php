@@ -20,7 +20,7 @@
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
 
-            <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" class="card p-4 flex flex-wrap items-end gap-3">
+            <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" data-split-upload class="card p-4 flex flex-wrap items-end gap-3">
                 @csrf
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
                 <div>

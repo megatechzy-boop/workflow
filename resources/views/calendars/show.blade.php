@@ -103,7 +103,7 @@
                                     @if ($item->assets->count() > 3)
                                         <a href="{{ route('assets.index', ['client' => $calendar->client_id, 'item' => $item->id]) }}" class="block mt-1 text-gray-600 hover:underline">View all ({{ $item->assets->count() }})</a>
                                     @endif
-                                    <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" class="mt-2">
+                                    <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" data-split-upload class="mt-2">
                                         @csrf
                                         <input type="hidden" name="client_id" value="{{ $calendar->client_id }}">
                                         <input type="hidden" name="calendar_item_id" value="{{ $item->id }}">

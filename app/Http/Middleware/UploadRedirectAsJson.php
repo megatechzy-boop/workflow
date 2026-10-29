@@ -19,7 +19,8 @@ class UploadRedirectAsJson
         $response = $next($request);
 
         if ($request->hasHeader('X-Upload-Progress') && $response instanceof RedirectResponse) {
-            return response()->json(['redirect' => $response->getTargetUrl()]);
+            // errors: validation failed, so a multi-file upload stops and shows them
+            return response()->json(['redirect' => $response->getTargetUrl(), 'errors' => $request->session()->has('errors')]);
         }
 
         return $response;

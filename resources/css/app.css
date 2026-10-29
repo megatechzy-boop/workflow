@@ -135,3 +135,34 @@ html.dark :is(.bg-\[\#fff4d6\], .bg-\[\#fffaeb\]) { background-color: #33290f; }
 [x-cloak] {
     display: none !important;
 }
+
+/* Dark mode: light status tints (boxes, badges) become dark tints with light text; the white report sheet keeps its colours */
+html.dark .bg-green-50:not(.paper *) { background-color: rgb(34 197 94 / 0.12); }
+html.dark .bg-green-100:not(.paper *) { background-color: rgb(34 197 94 / 0.2); }
+html.dark .border-green-200:not(.paper *), html.dark .border-green-300:not(.paper *) { border-color: rgb(34 197 94 / 0.35); }
+html.dark :is(.text-green-700, .text-green-800, .text-green-900):not(.paper *) { color: rgb(134 239 172); }
+html.dark .bg-red-50:not(.paper *) { background-color: rgb(239 68 68 / 0.12); }
+html.dark .bg-red-100:not(.paper *) { background-color: rgb(239 68 68 / 0.2); }
+html.dark .border-red-200:not(.paper *), html.dark .border-red-300:not(.paper *) { border-color: rgb(239 68 68 / 0.35); }
+html.dark :is(.text-red-700, .text-red-800, .text-red-900):not(.paper *) { color: rgb(252 165 165); }
+html.dark .bg-orange-50:not(.paper *) { background-color: rgb(249 115 22 / 0.12); }
+html.dark .bg-orange-100:not(.paper *) { background-color: rgb(249 115 22 / 0.2); }
+html.dark .border-orange-200:not(.paper *), html.dark .border-orange-300:not(.paper *) { border-color: rgb(249 115 22 / 0.35); }
+html.dark :is(.text-orange-700, .text-orange-800, .text-orange-900):not(.paper *) { color: rgb(253 186 116); }
+html.dark .bg-yellow-50:not(.paper *) { background-color: rgb(234 179 8 / 0.12); }
+html.dark .bg-yellow-100:not(.paper *) { background-color: rgb(234 179 8 / 0.2); }
+html.dark .border-yellow-200:not(.paper *), html.dark .border-yellow-300:not(.paper *) { border-color: rgb(234 179 8 / 0.35); }
+html.dark :is(.text-yellow-700, .text-yellow-800, .text-yellow-900):not(.paper *) { color: rgb(253 224 71); }
+html.dark .bg-purple-50:not(.paper *) { background-color: rgb(168 85 247 / 0.12); }
+html.dark .bg-purple-100:not(.paper *) { background-color: rgb(168 85 247 / 0.2); }
+html.dark .border-purple-200:not(.paper *), html.dark .border-purple-300:not(.paper *) { border-color: rgb(168 85 247 / 0.35); }
+html.dark :is(.text-purple-700, .text-purple-800, .text-purple-900):not(.paper *) { color: rgb(216 180 254); }
+html.dark .bg-blue-50:not(.paper *) { background-color: rgb(59 130 246 / 0.12); }
+html.dark .bg-blue-100:not(.paper *) { background-color: rgb(59 130 246 / 0.2); }
+html.dark .border-blue-200:not(.paper *), html.dark .border-blue-300:not(.paper *) { border-color: rgb(59 130 246 / 0.35); }
+html.dark :is(.text-blue-700, .text-blue-800, .text-blue-900):not(.paper *) { color: rgb(147 197 253); }
+html.dark .bg-sky-50:not(.paper *) { background-color: rgb(14 165 233 / 0.12); }
+html.dark .bg-sky-100:not(.paper *) { background-color: rgb(14 165 233 / 0.2); }
+html.dark .border-sky-200:not(.paper *), html.dark .border-sky-300:not(.paper *) { border-color: rgb(14 165 233 / 0.35); }
+html.dark :is(.text-sky-700, .text-sky-800, .text-sky-900):not(.paper *) { color: rgb(125 211 252); }
+html.dark :is(.bg-purple-50, .bg-green-50, .bg-red-50, .bg-orange-50, .bg-yellow-50, .bg-blue-50, .bg-sky-50):not(.paper *) { color: rgb(var(--gray-900)); }

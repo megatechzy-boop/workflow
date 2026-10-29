@@ -76,11 +76,14 @@ class AssetController extends Controller
             throw $e;
         }
 
-        if ($user->role === Role::Client) {
-            $this->notifyTeam($clientId, $data['calendar_item_id'] ?? null, count($stored));
+        // Several files are sent one per request ("X-Upload-Part: 2/4"): tell the team once, after the last one
+        [$part, $parts] = array_map('intval', explode('/', $request->header('X-Upload-Part', '1/1')) + [1 => 1]);
+        $total = $parts > 1 ? $parts : count($stored);
+        if ($user->role === Role::Client && $part >= $parts) {
+            $this->notifyTeam($clientId, $data['calendar_item_id'] ?? null, $total);
         }
 
-        return back()->with('status', count($stored).' file(s) uploaded.');
+        return back()->with('status', $total.' file(s) uploaded.');
     }
 
     /** Customer uploaded files => tell the row's Designer/Editor + calendar owner (or the planners for the library) */

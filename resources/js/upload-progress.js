@@ -47,7 +47,12 @@ function overlay(fileLabel) {
             q('[data-bar]').style.width = pct + '%';
             q('[data-pct]').textContent = pct + '%';
             q('[data-size]').textContent = mb(loaded) + ' of ' + mb(total);
-            if (pct >= 100) q('[data-title]').textContent = 'Processing…';
+            if (pct >= 100) q('[data-title]').textContent = q('[data-title]').textContent.replace('Uploading', 'Saving');
+        },
+        step(n, total, name) {
+            q('[data-title]').textContent = 'Uploading ' + n + ' of ' + total + '…';
+            q('[data-file]').textContent = name;
+            q('[data-bar]').style.width = '0%';
         },
         fail(message) {
             q('[data-title]').textContent = message;
@@ -59,40 +64,66 @@ function overlay(fileLabel) {
     };
 }
 
-document.addEventListener('submit', (e) => {
+const failMessage = (status) => (status === 413 ? 'File is too big for the server (max 128 MB each).'
+    : status === 419 ? 'Page expired. Reload the page and try again.'
+    : status >= 400 ? 'Upload failed (' + status + '). Please try again.'
+    : 'Uploaded. Reload the page to see it.');
+
+document.addEventListener('submit', async (e) => {
     const form = e.target;
     if (e.defaultPrevented || form.enctype !== 'multipart/form-data' || 'noProgress' in form.dataset) return;
-    const files = [...form.querySelectorAll('input[type=file]')].flatMap((i) => [...i.files]);
-    if (!files.length) return;
-
+    const inputs = [...form.querySelectorAll('input[type=file]')].filter((i) => i.files.length);
+    if (!inputs.length) return;
     e.preventDefault();
-    const label = files.length === 1 ? files[0].name : files.length + ' files';
-    const ui = overlay(label);
+
+    // Forms marked data-split-upload (assets, customer row files): one request per file, so the server's
+    // per-request size limit counts each video alone. Others (a carousel's slides) go in one request.
+    const split = 'splitUpload' in form.dataset && inputs.length === 1 && inputs[0].files.length > 1;
+    const files = split ? [...inputs[0].files] : [null];
+    const base = new FormData(form, e.submitter);
+
+    const allFiles = inputs.flatMap((i) => [...i.files]);
+    const ui = overlay(allFiles.length === 1 ? allFiles[0].name : allFiles.length + ' files');
     const buttons = [...form.querySelectorAll('button, [type=submit]')];
     buttons.forEach((b) => (b.disabled = true));
-    let done = false;
-
-    const request = sendWithProgress(form.action, new FormData(form, e.submitter), {
-        headers: { 'X-Upload-Progress': '1', Accept: 'text/html, application/json' },
-        onProgress: (l, t) => ui.progress(l, t),
-    });
+    let request = null, cancelled = false, finished = false;
     const reset = () => { buttons.forEach((b) => (b.disabled = false)); ui.remove(); };
-    ui.onCancel(() => (done ? reset() : request.abort()));
+    ui.onCancel(() => { if (finished) { reset(); return; } cancelled = true; request?.abort(); });
+    const stop = (message) => { finished = true; buttons.forEach((b) => (b.disabled = false)); ui.fail(message); };
 
-    request.then((xhr) => {
+    let redirect = null;
+    for (const [index, file] of files.entries()) {
+        const data = new FormData();
+        base.forEach((value, key) => { if (!(split && key === inputs[0].name)) data.append(key, value); });
+        if (split) {
+            data.append(inputs[0].name, file);
+            ui.step(index + 1, files.length, file.name);
+        }
+        const headers = { 'X-Upload-Progress': '1', Accept: 'text/html, application/json' };
+        if (split) headers['X-Upload-Part'] = (index + 1) + '/' + files.length;
+
+        let xhr;
+        try {
+            request = sendWithProgress(form.action, data, { headers, onProgress: (l, t) => ui.progress(l, t) });
+            xhr = await request;
+        } catch (err) {
+            if (cancelled) {
+                if (redirect) { window.location.href = redirect; return; } // show the files already sent
+                reset();
+                return;
+            }
+            stop('Network problem. Check the internet and try again.');
+            return;
+        }
+
         let json = null;
         try { json = JSON.parse(xhr.responseText); } catch (err) { /* HTML page */ }
-        if (json?.redirect) { window.location.href = json.redirect; return; }
-        done = true;
-        buttons.forEach((b) => (b.disabled = false));
-        ui.fail(xhr.status === 413 ? 'File is too big for the server.'
-            : xhr.status === 419 ? 'Page expired. Reload the page and try again.'
-            : xhr.status >= 400 ? 'Upload failed (' + xhr.status + '). Please try again.'
-            : 'Uploaded. Reload the page to see it.');
-    }).catch((err) => {
-        if (err.message === 'aborted') { reset(); return; }
-        done = true;
-        buttons.forEach((b) => (b.disabled = false));
-        ui.fail('Network problem. Check the internet and try again.');
-    });
+        if (!json?.redirect) {
+            stop((split ? 'Video ' + (index + 1) + ': ' : '') + failMessage(xhr.status));
+            return;
+        }
+        redirect = json.redirect;
+        if (json.errors) break; // validation message waits on that page
+    }
+    window.location.href = redirect;
 });

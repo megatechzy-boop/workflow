@@ -59,6 +59,27 @@ class AssetChatTest extends TestCase
         $this->actingAs($this->smm)->get('/assets/'.Asset::first()->id.'/download')->assertOk();
     }
 
+    public function test_files_sent_one_by_one_notify_the_team_once(): void
+    {
+        $calendar = Calendar::create(['client_id' => $this->acme->id, 'month' => '2026-11-01', 'created_by' => $this->smm->id, 'status' => CalendarStatus::ApproverApproved]);
+        $item = $calendar->items()->create(['post_date' => '2026-11-05', 'post_types' => ['instagram_reel']]);
+
+        for ($i = 1; $i <= 4; $i++) {
+            $this->actingAs($this->customer)->withHeaders(['X-Upload-Progress' => '1', 'X-Upload-Part' => "$i/4"])
+                ->post('/assets', ['client_id' => $this->acme->id, 'calendar_item_id' => $item->id, 'files' => [UploadedFile::fake()->create("v$i.mp4", 100, 'video/mp4')]])
+                ->assertOk()->assertJsonPath('errors', false);
+        }
+
+        $this->assertSame(4, Asset::count());
+        $this->assertSame(1, $this->smm->notifications()->count());
+        $this->assertStringContainsString('4 file(s)', $this->smm->notifications()->first()->data['message']);
+
+        // a bad file comes back with errors so the browser stops and shows them
+        $this->actingAs($this->customer)->withHeaders(['X-Upload-Progress' => '1', 'X-Upload-Part' => '1/2'])
+            ->post('/assets', ['client_id' => $this->acme->id, 'files' => [UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')]])
+            ->assertOk()->assertJsonPath('errors', true);
+    }
+
     public function test_customer_cannot_touch_other_brand_assets(): void
     {
         $this->actingAs($this->customer)->post('/assets', [
