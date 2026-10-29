@@ -49,6 +49,21 @@ class ProductivityTest extends TestCase
             ->task()->create(['assigned_to' => $this->designer->id, 'assigned_by' => $this->smm->id, 'deadline' => $deadline]);
     }
 
+    public function test_dashboard_todays_work_week_and_brands(): void
+    {
+        $this->taskOn('2026-11-07', '2026-11-05'); // due tomorrow
+        $this->taskOn('2026-11-30', '2026-11-28'); // not soon
+
+        $this->actingAs($this->designer)->get('/dashboard')->assertOk()
+            ->assertSee("Today's work", false)->assertSee('Due tomorrow')->assertDontSee('This week');
+
+        $this->taskOn('2026-11-04', '2026-11-02'); // late
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $this->actingAs($admin)->get('/dashboard')->assertOk()
+            ->assertSee('This week')->assertSee('Brands · November', false)->assertSee('Acme')
+            ->assertSee('Overdue since 02 Nov'); // the team's late tasks
+    }
+
     public function test_customer_row_upload_notifies_designer_and_smm(): void
     {
         $task = $this->taskOn('2026-11-08', '2026-11-06');

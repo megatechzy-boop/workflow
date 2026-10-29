@@ -76,6 +76,28 @@
                 </div>
             @endif
 
+            {{-- 1. Today's work: what needs this person now --}}
+            @if ($todo !== [] || ! auth()->user()->hasRole('client'))
+                <section class="card overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Today's work</h3>
+                        <span class="text-xs text-gray-500">{{ now()->format('D, d M') }}</span>
+                    </div>
+                    @forelse ($todo as [$brand, $detail, $badge, $tone, $url])
+                        <a href="{{ $url }}" class="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-gray-900 truncate">{{ $brand }}</div>
+                                <div class="text-sm text-gray-500 truncate">{{ $detail }}</div>
+                            </div>
+                            <span class="shrink-0 px-2 py-1 rounded-full text-xs font-semibold {{ $tone }}">{{ $badge }}</span>
+                            <x-icon name="chevron-right" class="w-4 h-4 text-gray-400 shrink-0" />
+                        </a>
+                    @empty
+                        <p class="px-4 py-6 text-center text-sm text-gray-500">Nothing due today or tomorrow.</p>
+                    @endforelse
+                </section>
+            @endif
+
             @if ($cards)
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     @foreach ($cards as $card)
@@ -87,6 +109,68 @@
                         </a>
                     @endforeach
                 </div>
+            @endif
+
+            {{-- 2. This week: posts per day, coloured by live status --}}
+            @if ($week)
+                <section class="card overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">This week</h3>
+                        <a href="{{ route('schedule') }}" class="text-sm text-brand-600 hover:underline">Full schedule</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <div class="grid grid-cols-7 min-w-[700px] divide-x divide-gray-100">
+                            @foreach ($week as ['day' => $day, 'items' => $items])
+                                <div class="p-2 min-h-[120px] {{ $day->isToday() ? 'bg-brand-50' : '' }}">
+                                    <div class="text-xs font-semibold {{ $day->isToday() ? 'text-brand-700' : 'text-gray-500' }}">{{ $day->format('D d') }}</div>
+                                    <div class="mt-2 space-y-1">
+                                        @foreach ($items as $item)
+                                            @php([$label, $color] = App\Http\Controllers\ScheduleController::status($item))
+                                            <a href="{{ route('calendars.show', $item->calendar) }}" title="{{ $label }}" class="block rounded-md px-1.5 py-1 text-[11px] leading-tight {{ $color }}">
+                                                <span class="font-semibold block truncate">{{ $item->calendar->client->name }}</span>
+                                                <span class="block truncate">{{ collect($item->formats())->map->label()->implode(', ') }} · {{ $label }}</span>
+                                            </a>
+                                        @endforeach
+                                        @if ($items->isEmpty())
+                                            <div class="text-[11px] text-gray-400">—</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </section>
+            @endif
+
+            {{-- 3. Brands this month: live vs planned (and the package quota) --}}
+            @if ($brands)
+                <section class="card overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Brands · {{ now()->format('F') }}</h3>
+                        <span class="flex items-center gap-3 text-xs text-gray-500">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-brand-600"></span>Live</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400"></span>Ready</span>
+                        </span>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        @foreach ($brands as $b)
+                            @php($total = max($b['planned'], 1))
+                            <a href="{{ $b['url'] }}" class="block px-4 py-3 hover:bg-gray-50">
+                                <div class="flex items-baseline justify-between gap-3">
+                                    <span class="font-medium text-gray-900 truncate">{{ $b['name'] }}</span>
+                                    <span class="text-sm text-gray-600 tabular-nums shrink-0">
+                                        <strong class="text-gray-900">{{ $b['live'] }}</strong> / {{ $b['planned'] }} live
+                                        @if ($b['quota'])<span class="text-gray-400"> · package {{ $b['quota'] }}</span>@endif
+                                    </span>
+                                </div>
+                                <div class="mt-2 flex h-2 rounded-full overflow-hidden bg-gray-100">
+                                    <div class="bg-brand-600" style="width: {{ $b['live'] / $total * 100 }}%"></div>
+                                    <div class="bg-green-400" style="width: {{ $b['ready'] / $total * 100 }}%"></div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
             @endif
         </div>
     </div>

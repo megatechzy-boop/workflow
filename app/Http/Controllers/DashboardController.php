@@ -68,7 +68,79 @@ class DashboardController extends Controller
             'month' => Attendance::where('user_id', $user->id)->whereBetween('date', [now()->startOfMonth(), now()->endOfMonth()])->pluck('status')->countBy(),
         ];
 
-        return view('dashboard', ['cards' => $cards, 'myPackage' => $this->customerPackage($user), 'attendance' => $attendance]);
+        $planner = $user->hasPermission(Permission::ViewAllTasks) || $user->hasPermission(Permission::ApproveContent);
+
+        return view('dashboard', [
+            'cards' => $cards, 'myPackage' => $this->customerPackage($user), 'attendance' => $attendance,
+            'todo' => $user->role === Role::Client ? [] : $this->todaysWork($user),
+            'week' => $planner ? $this->week($user) : null,
+            'brands' => $planner ? $this->brandProgress($user) : [],
+        ]);
+    }
+
+    /** "Today's work": [label, detail, badge, badge colour, url] — own tasks, content to review, team's late tasks */
+    private function todaysWork($user): array
+    {
+        $rows = [];
+        if ($user->role->isCreator()) {
+            foreach (Task::with('item.calendar.client')->where('assigned_to', $user->id)->dueSoon()->limit(8)->get() as $t) {
+                $formats = collect($t->item->formats())->map(fn ($f) => $f->label())->implode(' + ');
+                $rows[] = [$t->item->calendar->client->name, $formats.' · post '.$t->item->post_date->format('d M'), $t->dueLabel(),
+                    $t->deadline->isPast() && ! $t->deadline->isToday() ? 'bg-red-100 text-red-800' : 'bg-accent-100 text-accent-600', route('tasks.show', $t)];
+            }
+        }
+        if ($user->hasPermission(Permission::ApproveContent)) {
+            $review = Content::with('task.item.calendar.client')->whereIn('status', [ContentStatus::Submitted, ContentStatus::Resubmitted])
+                ->when(! $user->hasPermission(Permission::ViewAllTasks), fn ($q) => $q->where('approver_id', $user->id))
+                ->oldest('updated_at')->limit(8)->get();
+            foreach ($review as $c) {
+                $rows[] = [$c->task->item->calendar->client->name, $c->typeLabel().' · V'.$c->current_version, 'Review', 'bg-purple-100 text-purple-800', route('contents.show', $c)];
+            }
+        }
+        if ($user->hasPermission(Permission::ViewAllTasks)) {
+            $late = Task::with('item.calendar.client', 'assignee')->where('status', 'pending')->whereDate('deadline', '<', today())->orderBy('deadline')->limit(5)->get();
+            foreach ($late as $t) {
+                $rows[] = [$t->item->calendar->client->name, $t->assignee->name.' · post '.$t->item->post_date->format('d M'), $t->dueLabel(), 'bg-red-100 text-red-800', route('tasks.show', $t)];
+            }
+        }
+
+        return array_slice($rows, 0, 10);
+    }
+
+    /** This week (Mon–Sun): posts per day with their live status; other people's drafts stay hidden */
+    private function week($user): array
+    {
+        $start = now()->startOfWeek();
+        $items = CalendarItem::with(['calendar.client', 'task.contents'])
+            ->whereBetween('post_date', [$start, $start->copy()->endOfWeek()])
+            ->whereHas('calendar', \App\Models\User::draftFilter($user))
+            ->orderBy('post_date')->get()->groupBy(fn ($i) => $i->post_date->toDateString());
+
+        return collect(range(0, 6))->map(fn ($d) => ['day' => $start->copy()->addDays($d), 'items' => $items[$start->copy()->addDays($d)->toDateString()] ?? collect()])->all();
+    }
+
+    /** This month per brand: posts planned / live, and the package quota */
+    private function brandProgress($user): array
+    {
+        $items = CalendarItem::with(['calendar.client.package', 'task.contents'])
+            ->whereBetween('post_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->whereHas('calendar', fn ($q) => $q->where('status', '!=', CalendarStatus::Draft))
+            ->get();
+
+        return $items->groupBy('calendar.client_id')->map(function ($rows) {
+            $client = $rows->first()->calendar->client;
+            $statuses = $rows->map(fn ($i) => $i->task?->contents->first()?->status);
+            $quota = $client->package ? collect(\App\Enums\PostType::cases())->sum(fn ($t) => $client->package->quota($t)) : null;
+
+            return [
+                'name' => $client->name,
+                'planned' => $rows->count(),
+                'live' => $statuses->filter(fn ($s) => $s === ContentStatus::Published)->count(),
+                'ready' => $statuses->filter(fn ($s) => in_array($s, [ContentStatus::Approved, ContentStatus::Scheduled], true))->count(),
+                'quota' => $quota ?: null,
+                'url' => route('calendars.show', $rows->first()->calendar),
+            ];
+        })->sortByDesc('planned')->values()->all();
     }
 
     /** Customer: their package and this month's published posts per format */

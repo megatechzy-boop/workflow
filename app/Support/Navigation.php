@@ -18,14 +18,12 @@ class Navigation
         $seesTasks = $user->role->isCreator() || $user->hasPermission(Permission::ViewAllTasks);
         $seesApprovals = $isCustomer || $user->hasPermission(Permission::ApproveContent) || $user->hasPermission(Permission::ViewAllTasks);
 
-        $items = [
-            ['label' => 'Home', 'route' => 'dashboard', 'icon' => 'home', 'active' => 'dashboard'],
-            ['label' => 'Calendars', 'route' => 'calendars.index', 'icon' => 'calendar', 'active' => 'calendars.*'],
-            ['label' => 'Schedule', 'route' => 'schedule', 'icon' => 'grid', 'active' => 'schedule'],
-        ];
-        if ($seesTasks) {
+        $items = [['label' => 'Home', 'route' => 'dashboard', 'icon' => 'home', 'active' => 'dashboard']];
+        if ($seesTasks) { // second in the menu: the team's daily work
             $items[] = ['label' => $user->hasPermission(Permission::ViewAllTasks) ? 'Tasks' : 'My Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'active' => 'tasks.*'];
         }
+        $items[] = ['label' => 'Calendars', 'route' => 'calendars.index', 'icon' => 'calendar', 'active' => 'calendars.*'];
+        $items[] = ['label' => 'Schedule', 'route' => 'schedule', 'icon' => 'grid', 'active' => 'schedule'];
         if ($seesApprovals) {
             $items[] = ['label' => 'Approvals', 'route' => 'contents.index', 'icon' => 'inbox', 'active' => 'contents.*'];
         }

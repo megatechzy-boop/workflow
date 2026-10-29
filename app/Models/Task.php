@@ -69,26 +69,37 @@ class Task extends Model
     public static function sendDeadlineReminders(): int
     {
         $tasks = static::with(['assignee', 'item.calendar.client'])
-            ->where('status', 'pending')
-            ->whereDate('deadline', '<=', today()->addDay())
+            ->dueSoon()
             ->where(fn ($q) => $q->whereNull('reminded_on')->orWhereDate('reminded_on', '<', today()))
-            ->orderBy('deadline')
             ->get();
 
         $byMember = $tasks->groupBy('assigned_to');
         foreach ($byMember as $memberTasks) {
             $lines = $memberTasks->map(fn (Task $task) => '• '.$task->item->calendar->client->name
-                .' · post '.$task->item->post_date->format('d M').' · '.match (true) {
-                    $task->deadline->isTomorrow() => 'due tomorrow',
-                    $task->deadline->isToday() => 'due today',
-                    default => 'overdue since '.$task->deadline->format('d M'),
-                });
+                .' · post '.$task->item->post_date->format('d M').' · '.lcfirst($task->dueLabel()));
             Notify::send([$memberTasks->first()->assignee], 'Your tasks for '.today()->format('d M'),
                 $memberTasks->count().' task(s) need you:'."\n".$lines->implode("\n"), route('tasks.index'));
             static::whereKey($memberTasks->pluck('id'))->update(['reminded_on' => today()]);
         }
 
         return $byMember->count();
+    }
+
+    /** Pending tasks overdue, due today or due tomorrow (9 am digest + dashboard "Today's work") */
+    public function scopeDueSoon($query)
+    {
+        return $query->where('status', 'pending')->whereDate('deadline', '<=', today()->addDay())->orderBy('deadline');
+    }
+
+    /** "Overdue since 03 Nov" / "Due today" / "Due tomorrow" */
+    public function dueLabel(): string
+    {
+        return match (true) {
+            $this->deadline->isTomorrow() => 'Due tomorrow',
+            $this->deadline->isToday() => 'Due today',
+            $this->deadline->isPast() => 'Overdue since '.$this->deadline->format('d M'),
+            default => 'Due '.$this->deadline->format('d M'),
+        };
     }
 
     public function notifyAssignee(): void
