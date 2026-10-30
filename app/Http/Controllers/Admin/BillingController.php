@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Support\Month;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,7 @@ class BillingController extends Controller
         $invoices = Invoice::with(['client', 'payments'])
             ->whereBetween('invoice_date', [$month, $month->endOfMonth()])
             ->orderByDesc('number')->get();
-        $missing = Client::where('is_active', true)->whereNotNull('package_id')
+        $missing = $this->billable($month)
             ->whereNotIn('id', Invoice::whereDate('month', $month)->pluck('client_id'))->count();
 
         return view('office.billing', compact('month', 'invoices', 'missing'));
@@ -32,7 +33,7 @@ class BillingController extends Controller
     {
         $month = Month::from($request);
         $made = 0;
-        Client::with('package')->where('is_active', true)->whereNotNull('package_id')->get()
+        $this->billable($month)->with('package')->get()
             ->each(function (Client $client) use ($month, &$made) {
                 if (Invoice::where('client_id', $client->id)->whereDate('month', $month)->exists()) {
                     return;
@@ -46,6 +47,13 @@ class BillingController extends Controller
             });
 
         return back()->with('status', "{$made} bill(s) created.");
+    }
+
+    /** Active clients with a package that has started by the end of this month (no start date = already running) */
+    private function billable(CarbonImmutable $month)
+    {
+        return Client::where('is_active', true)->whereNotNull('package_id')
+            ->where(fn ($q) => $q->whereNull('package_start')->orWhereDate('package_start', '<=', $month->endOfMonth()));
     }
 
     public function create(): View

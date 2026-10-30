@@ -72,6 +72,8 @@ class OfficeTest extends TestCase
     {
         Client::create(['name' => 'Acme', 'package_id' => Package::firstWhere('name', 'Growth')->id]);
         Client::create(['name' => 'No package']);
+        // Starts in December: no November bill
+        Client::create(['name' => 'Later', 'package_id' => Package::firstWhere('name', 'Starter')->id, 'package_start' => '2026-12-01']);
 
         $this->actingAs($this->admin)->post(route('admin.billing.generate', ['month' => '2026-11']));
         $this->actingAs($this->admin)->post(route('admin.billing.generate', ['month' => '2026-11']));
