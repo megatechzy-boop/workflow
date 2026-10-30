@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Platform;
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\Package;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,9 +38,30 @@ class PackageController extends Controller
 
     public function update(Request $request, Package $package): RedirectResponse
     {
+        $oldName = $package->name;
         $package->update($this->validated($request));
+        $changed = $this->refreshUnpaidBills($package, $oldName);
 
-        return redirect()->route('admin.packages.index')->with('status', 'Package updated.');
+        return redirect()->route('admin.packages.index')
+            ->with('status', 'Package updated.'.($changed ? " {$changed} unpaid bill(s) now use the new price." : ''));
+    }
+
+    /** Monthly bills of this package with no payment yet follow the current name and price */
+    private function refreshUnpaidBills(Package $package, string $oldName): int
+    {
+        $bills = Invoice::whereNotNull('month')->whereNull('paid_at')->doesntHave('payments')
+            ->whereIn('package_name', [$oldName, $package->name])
+            ->whereHas('client', fn ($q) => $q->where('package_id', $package->id))
+            ->get();
+
+        foreach ($bills as $bill) {
+            $bill->items = [['name' => $package->name.' package', 'detail' => $bill->month->format('F Y'), 'qty' => 1, 'rate' => $package->price]];
+            $bill->package_name = $package->name;
+            $bill->amount = $bill->subtotal() + $bill->gstAmount();
+            $bill->save();
+        }
+
+        return $bills->count();
     }
 
     public function destroy(Package $package): RedirectResponse

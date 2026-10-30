@@ -81,6 +81,14 @@ class OfficeTest extends TestCase
         $this->assertSame('2026-11-05', $invoice->due_date->toDateString());
 
         $this->assertSame('A00324', $invoice->number);
+
+        // Changing the package price updates the unpaid bill
+        $growth = Package::firstWhere('name', 'Growth');
+        $this->actingAs($this->admin)->put(route('admin.packages.update', $growth), [
+            'name' => 'Growth', 'price' => 18000, 'platforms' => $growth->platforms, 'static_posts' => 6,
+            'carousel_posts' => 6, 'reels' => 6, 'services' => implode("\n", $growth->services), 'is_active' => 1,
+        ])->assertSessionHas('status', 'Package updated. 1 unpaid bill(s) now use the new price.');
+        $this->assertSame(18000, $invoice->fresh()->amount);
     }
 
     public function test_part_payments_give_receipts_and_settle_the_invoice(): void
