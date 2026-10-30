@@ -138,6 +138,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('billing', [BillingController::class, 'store'])->name('billing.store');
     Route::get('billing/{invoice}', [BillingController::class, 'show'])->name('billing.show');
     Route::delete('billing/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy');
+    Route::put('billing/{invoice}/amount', [BillingController::class, 'amount'])->name('billing.amount');
     Route::post('billing/{invoice}/payments', [BillingController::class, 'pay'])->name('billing.pay');
     Route::get('receipts/{payment}', [BillingController::class, 'receipt'])->name('billing.receipt');
     Route::delete('receipts/{payment}', [BillingController::class, 'destroyPayment'])->name('billing.receipt.destroy');

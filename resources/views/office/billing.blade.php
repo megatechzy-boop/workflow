@@ -33,7 +33,7 @@
             <div class="card divide-y">
                 @forelse ($invoices as $invoice)
                     @php($state = $invoice->state())
-                    <div class="p-4" x-data="{ pay: false }">
+                    <div class="p-4" x-data="{ pay: false, edit: false }">
                         <div class="flex flex-wrap items-center gap-3">
                             <a href="{{ route('admin.billing.show', $invoice) }}" class="font-mono text-sm text-brand-600 hover:underline">{{ $invoice->number }}</a>
                             <div class="flex-1 min-w-[10rem]">
@@ -49,6 +49,28 @@
                             @unless ($invoice->paid_at)
                                 <button type="button" @click="pay = !pay" class="px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700">Record payment</button>
                             @endunless
+                            <button type="button" @click="edit = !edit" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-100">Edit</button>
+                        </div>
+
+                        {{-- Fix a bill: change its amount (single-item bills) or delete it (no payments yet) --}}
+                        <div x-show="edit" x-cloak class="mt-3 flex flex-wrap items-end gap-3">
+                            @if (count($invoice->items) === 1)
+                                <form method="POST" action="{{ route('admin.billing.amount', $invoice) }}" class="flex items-end gap-2">
+                                    @csrf @method('PUT')
+                                    <label class="text-xs text-gray-600">Bill amount (₹)
+                                        <input type="number" name="rate" min="{{ max(1, $invoice->received()) }}" value="{{ $invoice->items[0]['rate'] }}" class="mt-1 block w-32 border-gray-300 rounded-xl text-sm" required>
+                                    </label>
+                                    <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">Save</button>
+                                </form>
+                            @endif
+                            @if ($invoice->payments->isEmpty())
+                                <form method="POST" action="{{ route('admin.billing.destroy', $invoice) }}" onsubmit="return confirm('Delete bill {{ $invoice->number }}?')">
+                                    @csrf @method('DELETE')
+                                    <button class="px-4 py-2 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50">Delete bill</button>
+                                </form>
+                            @else
+                                <span class="text-xs text-gray-500">To delete this bill, remove its receipts first.</span>
+                            @endif
                         </div>
 
                         @foreach ($invoice->payments as $payment)
@@ -56,6 +78,10 @@
                                 <x-icon name="tick" class="w-4 h-4 text-green-600" />
                                 ₹{{ number_format($payment->amount) }} · {{ $payment->method }} · {{ $payment->date->format('d M') }}
                                 <a href="{{ route('admin.billing.receipt', $payment) }}" class="text-brand-600 hover:underline">Receipt {{ $payment->number }}</a>
+                                <form x-show="edit" x-cloak method="POST" action="{{ route('admin.billing.receipt.destroy', $payment) }}" onsubmit="return confirm('Remove receipt {{ $payment->number }}?')">
+                                    @csrf @method('DELETE')
+                                    <button class="text-red-600 hover:underline">Remove</button>
+                                </form>
                             </div>
                         @endforeach
 

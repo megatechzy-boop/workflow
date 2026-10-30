@@ -96,7 +96,21 @@ class BillingController extends Controller
         abort_if($invoice->payments()->exists(), 422, 'Remove its payments first.');
         $invoice->delete();
 
-        return redirect()->route('admin.billing.index')->with('status', "Invoice {$invoice->number} deleted.");
+        return back()->with('status', "Invoice {$invoice->number} deleted.");
+    }
+
+    /** Fix the amount of a one-item bill (e.g. an old client on a lower price); never below what was already received */
+    public function amount(Request $request, Invoice $invoice): RedirectResponse
+    {
+        abort_unless(count($invoice->items) === 1, 422);
+        $rate = (int) $request->validate(['rate' => ['required', 'integer', 'min:'.max(1, $invoice->load('payments')->received()), 'max:100000000']])['rate'];
+
+        $invoice->items = [['rate' => $rate, 'qty' => 1] + $invoice->items[0]];
+        $invoice->amount = $invoice->subtotal() + $invoice->gstAmount();
+        $invoice->save();
+        $invoice->syncPaid();
+
+        return back()->with('status', "Invoice {$invoice->number} is now ₹".number_format($invoice->amount).'.');
     }
 
     public function pay(Request $request, Invoice $invoice): RedirectResponse

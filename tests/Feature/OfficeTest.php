@@ -107,6 +107,15 @@ class OfficeTest extends TestCase
         $pay(5000);
         $this->assertNull($invoice->fresh()->paid_at);
         $pay(9000)->assertSessionHasErrors('amount'); // more than what is due
+
+        // Lowering the bill to what was paid settles it; going below that is refused
+        $setAmount = fn ($rate) => $this->actingAs($this->admin)->put(route('admin.billing.amount', $invoice), ['rate' => $rate]);
+        $setAmount(4000)->assertSessionHasErrors('rate');
+        $setAmount(5000);
+        $this->assertNotNull($invoice->fresh()->paid_at);
+        $setAmount(8000);
+        $this->assertNull($invoice->fresh()->paid_at);
+        $this->assertSame('Website update yearly', $invoice->fresh()->items[0]['name']);
         $pay(3000);
         $this->assertNotNull($invoice->fresh()->paid_at);
         $this->assertSame(['A00039', 'A00040'], $invoice->payments()->pluck('number')->all());
