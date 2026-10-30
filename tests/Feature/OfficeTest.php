@@ -136,4 +136,20 @@ class OfficeTest extends TestCase
 
         $this->actingAs($this->admin)->get(route('admin.expenses.index', ['month' => '2026-10']))->assertSee('Rent')->assertSee('₹3,000');
     }
+
+    public function test_customer_sees_own_bills_and_receipts_only(): void
+    {
+        $acme = Client::create(['name' => 'Acme']);
+        $other = Client::create(['name' => 'Other']);
+        $invoice = Invoice::create(['client_id' => $acme->id, 'due_date' => '2026-11-05', 'items' => [['name' => 'Growth package', 'qty' => 1, 'rate' => 15000]]]);
+        $payment = $invoice->payments()->create(['date' => '2026-10-30', 'method' => 'UPI', 'amount' => 5000]);
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $acme->id]);
+        $stranger = User::factory()->create(['role' => Role::Client, 'client_id' => $other->id]);
+
+        $this->actingAs($customer)->get(route('dashboard'))->assertSee('Your bills')->assertSee('₹10,000 pending')->assertSee('Receipt '.$payment->number);
+        $this->actingAs($customer)->get(route('my.invoice', $invoice))->assertOk()->assertSee($invoice->number);
+        $this->actingAs($customer)->get(route('my.receipt', $payment))->assertOk()->assertSee('Payment Receipt');
+        $this->actingAs($stranger)->get(route('my.invoice', $invoice))->assertForbidden();
+        $this->actingAs($this->admin)->get(route('my.receipt', $payment))->assertForbidden();
+    }
 }

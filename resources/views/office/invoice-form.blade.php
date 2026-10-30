@@ -31,6 +31,12 @@
 
                 <div class="space-y-3">
                     <div class="text-sm font-semibold text-gray-700">Items</div>
+                    {{-- Common one-off items: a click fills the next empty line --}}
+                    <div class="flex flex-wrap gap-2" id="item-chips">
+                        @foreach (['Website renewal (yearly)', 'Domain + Hosting', 'Extra reel', 'Extra post', 'Ad management'] as $chip)
+                            <button type="button" data-item="{{ $chip }}" class="px-3 py-1 rounded-full border border-gray-300 text-xs text-gray-700 hover:bg-gray-50">+ {{ $chip }}</button>
+                        @endforeach
+                    </div>
                     @for ($i = 0; $i < 4; $i++)
                         <div class="grid grid-cols-[minmax(0,1fr)_4rem_6.5rem] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem_8rem] gap-2">
                             <input type="text" name="items[{{ $i }}][name]" value="{{ old("items.$i.name") }}" placeholder="{{ $i === 0 ? 'Website update yearly' : 'Item' }}" class="min-w-0 w-full border-gray-300 rounded-xl text-sm" aria-label="Item {{ $i + 1 }} name">
@@ -52,4 +58,34 @@
             </form>
         </div>
     </div>
+
+    <script>
+        (() => {
+            const packages = @js($packages);
+            const field = (i, key) => document.querySelector(`[name="items[${i}][${key}]"]`);
+            const client = document.getElementById('client_id');
+            const date = document.getElementById('invoice_date');
+            let autoFilled = false;
+
+            // Client with a package: first line = "<Package> package · <Month Year> · current price"
+            client.addEventListener('change', () => {
+                const p = packages[client.value];
+                if (!p || (field(0, 'name').value && !autoFilled)) return;
+                const month = new Date((date.value || new Date().toISOString().slice(0, 10)) + 'T00:00:00')
+                    .toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+                field(0, 'name').value = p.name + ' package';
+                field(0, 'detail').value = month;
+                field(0, 'qty').value = 1;
+                field(0, 'rate').value = p.price;
+                autoFilled = true;
+            });
+
+            document.querySelectorAll('#item-chips [data-item]').forEach((chip) => chip.addEventListener('click', () => {
+                const i = [0, 1, 2, 3].find((n) => !field(n, 'name').value);
+                if (i === undefined) return;
+                field(i, 'name').value = chip.dataset.item;
+                field(i, 'rate').focus();
+            }));
+        })();
+    </script>
 </x-app-layout>

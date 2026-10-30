@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\Calendar;
 use App\Models\CalendarItem;
 use App\Models\Content;
+use App\Models\Invoice;
 use App\Models\PointEntry;
 use App\Models\Task;
 use Illuminate\Http\Request;
@@ -72,6 +73,10 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'cards' => $cards, 'myPackage' => $this->customerPackage($user), 'attendance' => $attendance,
+            // Customer: their bills, newest first
+            'myBills' => $user->role === Role::Client && $user->client_id
+                ? Invoice::with('payments')->where('client_id', $user->client_id)->orderByDesc('invoice_date')->orderByDesc('id')->limit(12)->get()
+                : collect(),
             'todo' => $user->role === Role::Client ? [] : $this->todaysWork($user),
             'week' => $planner ? $this->week($user) : null,
             'brands' => $planner ? $this->brandProgress($user) : [],

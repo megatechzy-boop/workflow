@@ -31,7 +31,7 @@
 </head>
 <body>
     <div class="bar">
-        <a href="{{ route('admin.billing.index', ['month' => ($backMonth ?? now())->format('Y-m')]) }}">Back</a>
+        <a href="{{ $backUrl ?? route('admin.billing.index', ['month' => ($backMonth ?? now())->format('Y-m')]) }}">Back</a>
         <button type="button" class="primary" onclick="this.disabled = true; downloadDocPdf(document.getElementById('doc'), @js($filename)).finally(() => this.disabled = false)">Download PDF</button>
         <button type="button" onclick="print()">Print</button>
     </div>

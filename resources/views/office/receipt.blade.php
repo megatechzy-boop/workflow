@@ -4,6 +4,7 @@
 @extends('office.doc-layout', [
     'filename' => 'paymentreceipt-'.$payment->number.'-'.Str::slug($client->name).'.pdf',
     'backMonth' => $invoice->invoice_date,
+    'backUrl' => $backUrl ?? null,
 ])
 @section('title', 'Payment receipt '.$payment->number)
 

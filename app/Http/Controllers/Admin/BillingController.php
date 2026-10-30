@@ -58,7 +58,13 @@ class BillingController extends Controller
 
     public function create(): View
     {
-        return view('office.invoice-form', ['clients' => Client::orderBy('name')->get()]);
+        $clients = Client::with('package')->orderBy('name')->get();
+
+        return view('office.invoice-form', [
+            'clients' => $clients,
+            // Choosing a client fills the first line from its package (current price)
+            'packages' => $clients->filter->package->mapWithKeys(fn ($c) => [$c->id => ['name' => $c->package->name, 'price' => $c->package->price]]),
+        ]);
     }
 
     /** One-off invoice (website work, yearly renewals …) */

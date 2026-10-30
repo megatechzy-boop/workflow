@@ -46,6 +46,42 @@
                 </div>
             @endif
 
+            @if ($myBills->isNotEmpty())
+                @php($pending = $myBills->sum(fn ($b) => $b->due()))
+                <div class="card p-5 max-w-md">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <div class="font-semibold text-gray-900">Your bills</div>
+                        @if ($pending > 0)
+                            <div class="text-sm font-semibold text-accent-600">₹{{ number_format($pending) }} pending</div>
+                        @else
+                            <div class="text-sm text-green-700">All paid</div>
+                        @endif
+                    </div>
+                    <div class="mt-3 divide-y divide-gray-100">
+                        @foreach ($myBills as $bill)
+                            @php($state = $bill->state())
+                            <div class="py-2.5">
+                                <div class="flex items-center justify-between gap-3 text-sm">
+                                    <a href="{{ route('my.invoice', $bill) }}" class="min-w-0 hover:text-brand-600">
+                                        <span class="font-medium">{{ $bill->number }}</span>
+                                        <span class="text-gray-500">· {{ ($bill->month ?? $bill->invoice_date)->format('M Y') }}</span>
+                                    </a>
+                                    <span class="whitespace-nowrap">
+                                        ₹{{ number_format($bill->amount) }}
+                                        <span class="ms-1 px-2 py-0.5 rounded-full text-xs {{ ['paid' => 'bg-green-100 text-green-800', 'partly' => 'bg-accent-50 text-accent-600', 'due' => 'bg-gray-100 text-gray-700', 'overdue' => 'bg-red-100 text-red-700'][$state] }}">
+                                            {{ ['paid' => 'Paid', 'partly' => '₹'.number_format($bill->due()).' due', 'due' => 'Due '.$bill->due_date->format('d M'), 'overdue' => 'Overdue'][$state] }}
+                                        </span>
+                                    </span>
+                                </div>
+                                @foreach ($bill->payments as $payment)
+                                    <a href="{{ route('my.receipt', $payment) }}" class="block text-xs text-brand-600 hover:underline mt-0.5">Receipt {{ $payment->number }} · ₹{{ number_format($payment->amount) }} · {{ $payment->date->format('d M') }}</a>
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             @if ($myPackage)
                 @php($package = $myPackage['package'])
                 <div class="card p-5 max-w-md">

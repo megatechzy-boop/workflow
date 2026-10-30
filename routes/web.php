@@ -16,6 +16,7 @@ use App\Http\Controllers\CalendarItemController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\CustomerBillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
@@ -96,6 +97,9 @@ Route::middleware('auth')->group(function () {
     Route::post('chat/{room}/mute', [ChatController::class, 'mute'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.mute');
     Route::get('chat/{room}/posts', [ChatController::class, 'posts'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.posts');
     Route::get('chat/{room}/media', [ChatController::class, 'media'])->where('room', '[a-z]+(:[0-9]+)?')->name('chat.media');
+
+    Route::get('my-bills/{invoice}', [CustomerBillController::class, 'invoice'])->name('my.invoice');
+    Route::get('my-receipts/{payment}', [CustomerBillController::class, 'receipt'])->name('my.receipt');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');

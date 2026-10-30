@@ -3,6 +3,7 @@
 @extends('office.doc-layout', [
     'filename' => 'invoice-'.$invoice->number.'-'.Str::slug($client->name).'.pdf',
     'backMonth' => $invoice->invoice_date,
+    'backUrl' => $backUrl ?? null,
 ])
 @section('title', 'Invoice '.$invoice->number)
 
