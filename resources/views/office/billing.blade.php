@@ -49,6 +49,7 @@
                             @unless ($invoice->paid_at)
                                 <button type="button" @click="pay = !pay" class="px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700">Record payment</button>
                             @endunless
+                            <a href="{{ route('admin.billing.show', $invoice) }}" class="px-3 py-1.5 rounded-xl bg-brand-50 text-brand-700 text-xs font-semibold">View invoice</a>
                             <button type="button" @click="edit = !edit" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-100">Edit</button>
                         </div>
 
