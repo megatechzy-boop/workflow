@@ -13,56 +13,70 @@ use App\Models\User;
 /** One menu definition for the desktop sidebar, the phone tab bar and the phone "More" sheet */
 class Navigation
 {
-    /** @return array<int, array{label: string, route: string, icon: string, active: string, badge?: int}> */
+    /** @return array<int, array{label: string, route: string, icon: string, active: string|string[], group: string, badge?: int}> */
     public static function items(User $user): array
     {
         $isCustomer = $user->role === Role::Client;
         $seesTasks = $user->role->isCreator() || $user->hasPermission(Permission::ViewAllTasks);
         $seesApprovals = $isCustomer || $user->hasPermission(Permission::ApproveContent) || $user->hasPermission(Permission::ViewAllTasks);
+        $publishes = $user->hasPermission(Permission::PublishContent);
+        $items = [];
+        $add = function (string $group, string $label, string $route, string $icon, string|array $active, ?int $badge = null) use (&$items) {
+            $items[] = ['label' => $label, 'route' => $route, 'icon' => $icon, 'active' => $active, 'group' => $group] + ($badge === null ? [] : ['badge' => $badge]);
+        };
 
-        $items = [['label' => 'Home', 'route' => 'dashboard', 'icon' => 'home', 'active' => 'dashboard']];
-        if ($seesTasks) { // second in the menu: the team's daily work
-            $items[] = ['label' => $user->hasPermission(Permission::ViewAllTasks) ? 'Tasks' : 'My Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'active' => 'tasks.*'];
+        $add('', 'Home', 'dashboard', 'home', 'dashboard');
+        $add('', 'Chat', 'chat.index', 'chat', 'chat.*', array_sum(ChatMessage::unreadCounts($user)));
+
+        $add('Content', 'Calendars', 'calendars.index', 'calendar', 'calendars.*');
+        if ($seesTasks) {
+            $add('Content', $user->hasPermission(Permission::ViewAllTasks) ? 'Tasks' : 'My Tasks', 'tasks.index', 'check', 'tasks.*');
         }
-        $items[] = ['label' => 'Calendars', 'route' => 'calendars.index', 'icon' => 'calendar', 'active' => 'calendars.*'];
-        $items[] = ['label' => 'Schedule', 'route' => 'schedule', 'icon' => 'grid', 'active' => 'schedule'];
         if ($seesApprovals) {
-            $items[] = ['label' => 'Approvals', 'route' => 'contents.index', 'icon' => 'inbox', 'active' => 'contents.*'];
+            $add('Content', 'Approvals', 'contents.index', 'inbox', 'contents.*');
         }
-        $items[] = ['label' => 'Chat', 'route' => 'chat.index', 'icon' => 'chat', 'active' => 'chat.*', 'badge' => array_sum(ChatMessage::unreadCounts($user))];
-        if ($user->hasPermission(Permission::PublishContent)) {
-            $items[] = ['label' => 'Ads', 'route' => 'ads.index', 'icon' => 'play', 'active' => 'ads.*'];
-            $items[] = ['label' => 'Comments', 'route' => 'meta.comments', 'icon' => 'chat', 'active' => 'meta.comments*',
-                'badge' => MetaComment::whereNull('replied_at')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count()];
+        $add('Content', 'Schedule', 'schedule', 'grid', 'schedule');
+        $add('Content', 'Assets', 'assets.index', 'photo', 'assets.*');
+
+        if ($publishes) {
+            $add('Social media', 'Comments', 'meta.comments', 'chat', 'meta.comments*',
+                MetaComment::whereNull('replied_at')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
         }
-        if ($isCustomer || $user->hasPermission(Permission::PublishContent) || $user->hasPermission(Permission::ManageClients)) {
-            $items[] = ['label' => 'Meta leads', 'route' => 'meta.leads', 'icon' => 'users', 'active' => 'meta.leads*',
-                'badge' => MetaLead::where('status', 'new')
-                    ->when($isCustomer, fn ($q) => $q->where('client_id', $user->client_id ?? 0))
-                    ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count()];
+        if ($isCustomer || $publishes || $user->hasPermission(Permission::ManageClients)) {
+            $add('Social media', 'Meta leads', 'meta.leads', 'users', 'meta.leads*', MetaLead::where('status', 'new')
+                ->when($isCustomer, fn ($q) => $q->where('client_id', $user->client_id ?? 0))
+                ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
         }
-        $items[] = ['label' => 'Assets', 'route' => 'assets.index', 'icon' => 'photo', 'active' => 'assets.*'];
-        if ($isCustomer || $user->hasPermission(Permission::ViewAllTasks)) {
-            $items[] = ['label' => 'Reports', 'route' => 'reports.monthly', 'icon' => 'report', 'active' => 'reports.*'];
+        if ($publishes) {
+            $add('Meta ads', 'Ads', 'ads.index', 'play', ['ads.index', 'ads.create']);
+            $add('Meta ads', 'Audiences', 'ads.audiences', 'users', 'ads.audiences*');
+            $add('Meta ads', 'Pixel', 'ads.pixel', 'search', 'ads.pixel*');
         }
-        if (! $isCustomer) {
-            $items[] = ['label' => 'Leaderboard', 'route' => 'leaderboard', 'icon' => 'trophy', 'active' => 'leaderboard'];
-        }
+
         if ($user->hasPermission(Permission::ManageClients)) {
-            $items[] = ['label' => 'Clients', 'route' => 'clients.index', 'icon' => 'building', 'active' => 'clients.*'];
-            $items[] = ['label' => 'Leads', 'route' => 'leads.index', 'icon' => 'inbox', 'active' => 'leads.*', 'badge' => Lead::where('status', 'new')->count()];
+            $add('Clients', 'Clients', 'clients.index', 'building', 'clients.*');
+            $add('Clients', 'Leads', 'leads.index', 'inbox', 'leads.*', Lead::where('status', 'new')->count());
         }
-        if ($user->hasPermission(Permission::ManageUsers)) {
-            $items[] = ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'active' => 'admin.users.*'];
+        if ($isCustomer || $user->hasPermission(Permission::ViewAllTasks)) {
+            $add($isCustomer ? '' : 'Clients', 'Reports', 'reports.monthly', 'report', 'reports.*');
+        }
+
+        if (! $isCustomer) {
+            $add('Team', 'Leaderboard', 'leaderboard', 'trophy', 'leaderboard');
         }
         if ($user->isAdmin()) {
-            $items[] = ['label' => 'Roles', 'route' => 'admin.roles.index', 'icon' => 'shield', 'active' => 'admin.roles.*'];
-            $items[] = ['label' => 'Packages', 'route' => 'admin.packages.index', 'icon' => 'tag', 'active' => 'admin.packages.*'];
-            $items[] = ['label' => 'Facebook / IG', 'route' => 'admin.meta.index', 'icon' => 'send', 'active' => 'admin.meta.*'];
-            $items[] = ['label' => 'Billing', 'route' => 'admin.billing.index', 'icon' => 'report', 'active' => 'admin.billing.*'];
-            $items[] = ['label' => 'Attendance', 'route' => 'admin.attendance.index', 'icon' => 'calendar', 'active' => 'admin.attendance.*'];
-            $items[] = ['label' => 'Salary', 'route' => 'admin.salary.index', 'icon' => 'users', 'active' => 'admin.salary.*'];
-            $items[] = ['label' => 'Expenses', 'route' => 'admin.expenses.index', 'icon' => 'clipboard', 'active' => 'admin.expenses.*'];
+            $add('Team', 'Attendance', 'admin.attendance.index', 'calendar', 'admin.attendance.*');
+        }
+        if ($user->hasPermission(Permission::ManageUsers)) {
+            $add('Team', 'Users', 'admin.users.index', 'users', 'admin.users.*');
+        }
+        if ($user->isAdmin()) {
+            $add('Team', 'Roles', 'admin.roles.index', 'shield', 'admin.roles.*');
+            $add('Accounts', 'Billing', 'admin.billing.index', 'report', 'admin.billing.*');
+            $add('Accounts', 'Packages', 'admin.packages.index', 'tag', 'admin.packages.*');
+            $add('Accounts', 'Salary', 'admin.salary.index', 'users', 'admin.salary.*');
+            $add('Accounts', 'Expenses', 'admin.expenses.index', 'clipboard', 'admin.expenses.*');
+            $add('Settings', 'Facebook / IG', 'admin.meta.index', 'send', 'admin.meta.*');
         }
 
         return $items;

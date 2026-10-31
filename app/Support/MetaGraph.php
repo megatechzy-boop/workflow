@@ -15,7 +15,8 @@ class MetaGraph
     /** Pages + Instagram publishing; works in Standard access for people with a role on the Meta app */
     public const SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management',
         'instagram_basic', 'instagram_content_publish', 'ads_management', 'ads_read',
-        'pages_read_user_content', 'pages_manage_engagement', 'instagram_manage_comments', 'leads_retrieval', 'pages_manage_ads'];
+        'pages_read_user_content', 'pages_manage_engagement', 'instagram_manage_comments', 'leads_retrieval', 'pages_manage_ads',
+        'read_insights', 'instagram_manage_insights'];
 
     public static function loginUrl(string $state): string
     {
@@ -205,6 +206,11 @@ class MetaGraph
     public static function post(string $path, array $data): array
     {
         return self::check(Http::asForm()->timeout(120)->post(config('services.meta.graph').$path, $data));
+    }
+
+    public static function delete(string $path, string $token): array
+    {
+        return self::check(Http::timeout(30)->delete(config('services.meta.graph').$path.'?'.http_build_query(['access_token' => $token])));
     }
 
     private static function check($response): array

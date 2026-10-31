@@ -20,6 +20,28 @@
                             <div class="text-xs text-gray-500">{{ $ad->client->name }} · {{ App\Models\MetaAd::GOALS[$ad->goal] }} · ₹{{ number_format($ad->daily_budget) }}/day · {{ $ad->start_on->format('d M') }}–{{ $ad->end_on->format('d M') }}</div>
                             <div class="text-xs text-gray-500">{{ $ad->audienceLabel() }}</div>
                             @if ($ad->error)<div class="text-xs text-red-600 mt-1">{{ $ad->error }}</div>@endif
+                            @if ($ad->isAbTest())
+                                @php($versions = $ab[$ad->id] ?? collect())
+                                @php($cost = fn ($s) => ($s['results'] ?? 0) > 0 ? $s['spend'] / $s['results'] : null)
+                                {{-- Winner: lower cost per result once both versions have results; "leading" until the end date --}}
+                                @php($winner = $versions->filter(fn ($s) => $cost($s) !== null)->count() === 2 ? $versions->sortBy(fn ($s) => $cost($s))->keys()->first() : null)
+                                <div class="mt-2 grid grid-cols-2 gap-2 max-w-md text-xs">
+                                    @foreach (['A', 'B'] as $v)
+                                        @php($s = $versions[$v] ?? null)
+                                        <div class="rounded-lg border p-2 {{ $winner === $v ? 'border-brand-600 bg-brand-50' : 'border-gray-200' }}">
+                                            <div class="font-semibold">Version {{ $v }}
+                                                @if ($winner === $v)<span class="text-brand-700">· {{ $ad->end_on->isPast() ? 'Winner' : 'Leading' }}</span>@endif
+                                            </div>
+                                            @if ($s && $s['spend'] !== null)
+                                                ₹{{ number_format($s['spend']) }} · {{ number_format($s['results']) }} results
+                                                · {{ $cost($s) !== null ? '₹'.number_format($cost($s), 2).' each' : '—' }}
+                                            @else
+                                                <span class="text-gray-500">No results yet</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-xs {{ ['active' => 'bg-green-100 text-green-800', 'paused' => 'bg-gray-100 text-gray-700', 'failed' => 'bg-red-100 text-red-700'][$ad->status] }}">{{ ucfirst($ad->status) }}</span>
                         @if ($ad->ad_id)

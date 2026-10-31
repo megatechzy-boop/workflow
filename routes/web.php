@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AdController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AudienceController;
+use App\Http\Controllers\PixelController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarImportController;
@@ -78,6 +80,12 @@ Route::middleware('auth')->group(function () {
     Route::get('ads/create', [AdController::class, 'create'])->name('ads.create');
     Route::post('ads', [AdController::class, 'store'])->name('ads.store');
     Route::post('ads/{ad}/status', [AdController::class, 'status'])->name('ads.status');
+    Route::get('audiences', [AudienceController::class, 'index'])->name('ads.audiences');
+    Route::post('audiences', [AudienceController::class, 'store'])->name('ads.audiences.store');
+    Route::delete('audiences/{audience}', [AudienceController::class, 'destroy'])->name('ads.audiences.destroy');
+    Route::get('pixel', [PixelController::class, 'index'])->name('ads.pixel');
+    Route::post('pixel/{client}', [PixelController::class, 'store'])->name('ads.pixel.store');
+    Route::post('pixel/{client}/conversions', [PixelController::class, 'conversion'])->name('ads.pixel.conversion');
     Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
     Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
@@ -88,6 +96,9 @@ Route::middleware('auth')->group(function () {
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule');
     Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
+    Route::get('reports/posting', [ReportController::class, 'posting'])->name('reports.posting');
+    Route::get('reports/ads', [ReportController::class, 'ads'])->name('reports.ads');
+    Route::get('reports/leads', [ReportController::class, 'leads'])->name('reports.leads');
     Route::get('calendars/{calendar}/import', [CalendarImportController::class, 'create'])->name('calendars.import');
     Route::post('calendars/{calendar}/import', [CalendarImportController::class, 'store'])->name('calendars.import.store');
 

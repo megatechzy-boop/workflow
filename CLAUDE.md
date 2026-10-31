@@ -48,7 +48,11 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   gets "Publish to Facebook + Instagram"; `meta:publish` (every minute) posts it and marks it Published.
 - `meta:sync` (every 10 min): comments on our posts → Comments inbox (SMM replies as the page); lead-form
   leads → Meta leads (grouped by client; the Customer sees only their own). Needs META_CONFIG_ID with
-  comment + lead permissions (config "Workflow full").
+  comment, lead and insights permissions (config "Workflow full + insights").
+- Reports (Monthly, Posting, Ads, Leads) per brand + month; numbers from Meta are cached 3 hours (`MetaInsights`).
+- Sidebar is grouped (Content, Social media, Meta ads, Clients, Team, Accounts, Settings) in `Navigation::items`.
+- Meta ads: Ads (optional saved audience; optional A/B test = 2 ad sets at half budget + Meta split test), Audiences
+  (Page/IG engagers, website visitors, customer list hashed SHA-256, lookalike), Pixel (one per client, website code, custom conversions).
 
 ## Next up
 

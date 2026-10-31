@@ -14,6 +14,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     @php($nav = App\Support\Navigation::items(auth()->user()))
+    @php($navGroups = collect($nav)->groupBy('group')->all())
     @php($tabs = App\Support\Navigation::primary(auth()->user()))
     <body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ more: false }">
         {{-- Desktop sidebar --}}
@@ -22,18 +23,33 @@
                 <x-application-logo class="w-9 h-auto" />
                 <span class="font-bold text-lg tracking-tight">Mega<span class="text-brand-600">Techzy</span></span>
             </a>
-            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Main">
-                @foreach ($nav as $item)
-                    @php($on = request()->routeIs($item['active']))
-                    <a href="{{ route($item['route']) }}"
-                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $on ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}"
-                       @if ($on) aria-current="page" @endif>
-                        <x-icon :name="$item['icon']" class="w-5 h-5 {{ $on ? 'text-brand-600' : 'text-gray-400' }}" />
-                        <span class="flex-1">{{ $item['label'] }}</span>
-                        @if (($item['badge'] ?? 0) > 0)
-                            <span class="min-w-[20px] px-1.5 rounded-full bg-accent-500 text-white text-xs text-center">{{ $item['badge'] }}</span>
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-3" aria-label="Main">
+                @foreach ($navGroups as $group => $items)
+                    @php($groupOn = collect($items)->contains(fn ($i) => request()->routeIs(...(array) $i['active'])))
+                    {{-- Headings fold away; the choice is kept per browser, the group of the open page always shows --}}
+                    <div class="space-y-1" x-data="{ open: {{ $groupOn || $group === '' ? 'true' : "(() => { try { return localStorage.getItem('nav:".Str::slug($group)."') !== 'closed' } catch (e) { return true } })()" }} }">
+                        @if ($group !== '')
+                            <button type="button" class="w-full flex items-center justify-between px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 hover:text-gray-600"
+                                    @click="open = !open; try { localStorage.setItem(@js('nav:'.Str::slug($group)), open ? 'open' : 'closed') } catch (e) {}" :aria-expanded="open">
+                                {{ $group }}
+                                <x-icon name="chevron-right" class="w-3.5 h-3.5 transition" ::class="open && 'rotate-90'" />
+                            </button>
                         @endif
-                    </a>
+                        <div x-show="open" class="space-y-1">
+                            @foreach ($items as $item)
+                                @php($on = request()->routeIs(...(array) $item['active']))
+                                <a href="{{ route($item['route']) }}"
+                                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition {{ $on ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}"
+                                   @if ($on) aria-current="page" @endif>
+                                    <x-icon :name="$item['icon']" class="w-5 h-5 {{ $on ? 'text-brand-600' : 'text-gray-400' }}" />
+                                    <span class="flex-1">{{ $item['label'] }}</span>
+                                    @if (($item['badge'] ?? 0) > 0)
+                                        <span class="min-w-[20px] px-1.5 rounded-full bg-accent-500 text-white text-xs text-center">{{ $item['badge'] }}</span>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 @endforeach
             </nav>
             <div class="border-t border-gray-100 p-3">
@@ -98,7 +114,7 @@
         <nav class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-gray-200 pb-safe" aria-label="Tabs">
             <div class="grid grid-cols-5">
                 @foreach ($tabs as $item)
-                    @php($on = request()->routeIs($item['active']))
+                    @php($on = request()->routeIs(...(array) $item['active']))
                     <a href="{{ route($item['route']) }}" class="relative flex flex-col items-center gap-0.5 pt-2 pb-1 text-[11px] font-medium {{ $on ? 'text-brand-600' : 'text-gray-500' }}" @if ($on) aria-current="page" @endif>
                         <x-icon :name="$item['icon']" class="w-6 h-6" />
                         {{ $item['label'] }}
@@ -127,16 +143,30 @@
                     </div>
                     <button type="button" @click="more = false" class="p-2 rounded-full hover:bg-gray-100" aria-label="Close"><x-icon name="x" class="w-5 h-5" /></button>
                 </div>
-                <div class="grid grid-cols-4 gap-2">
-                    @foreach ($nav as $item)
-                        <a href="{{ route($item['route']) }}" class="flex flex-col items-center gap-1.5 p-3 rounded-2xl text-xs font-medium {{ request()->routeIs($item['active']) ? 'bg-brand-50 text-brand-700' : 'text-gray-700 hover:bg-gray-50' }}">
-                            <x-icon :name="$item['icon']" class="w-6 h-6" />
-                            <span class="text-center leading-tight">{{ $item['label'] }}</span>
-                        </a>
+                <div class="max-h-[60vh] overflow-y-auto space-y-3">
+                    @foreach ($navGroups as $group => $items)
+                        <div>
+                            @if ($group !== '')
+                                <div class="px-1 mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{{ $group }}</div>
+                            @endif
+                            <div class="grid grid-cols-4 gap-2">
+                                @foreach ($items as $item)
+                                    <a href="{{ route($item['route']) }}" class="relative flex flex-col items-center gap-1.5 p-3 rounded-2xl text-xs font-medium {{ request()->routeIs(...(array) $item['active']) ? 'bg-brand-50 text-brand-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                                        <x-icon :name="$item['icon']" class="w-6 h-6" />
+                                        <span class="text-center leading-tight">{{ $item['label'] }}</span>
+                                        @if (($item['badge'] ?? 0) > 0)
+                                            <span class="absolute top-1.5 right-2 min-w-[18px] px-1 rounded-full bg-accent-500 text-white text-[10px] text-center">{{ $item['badge'] }}</span>
+                                        @endif
+                                    </a>
+                                @endforeach
+                                @if ($group === '')
+                                    <a href="{{ route('profile.edit') }}" class="flex flex-col items-center gap-1.5 p-3 rounded-2xl text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                        <x-icon name="user" class="w-6 h-6" /> Profile
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
                     @endforeach
-                    <a href="{{ route('profile.edit') }}" class="flex flex-col items-center gap-1.5 p-3 rounded-2xl text-xs font-medium text-gray-700 hover:bg-gray-50">
-                        <x-icon name="user" class="w-6 h-6" /> Profile
-                    </a>
                 </div>
                 <div class="mt-3">@include('layouts._theme-toggle')</div>
                 <form method="POST" action="{{ route('logout') }}" class="mt-3">

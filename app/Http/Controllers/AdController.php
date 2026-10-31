@@ -19,14 +19,26 @@ class AdController extends Controller
     {
         $user = $this->authorizeUser($request);
 
-        return view('ads.index', ['ads' => MetaAd::with('client', 'adAccount')
+        $ads = MetaAd::with('client', 'adAccount', 'audience')
             ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))
-            ->latest()->paginate(30)]);
+            ->latest()->paginate(30);
+
+        // A/B tests: results of both versions so far (cached 3 hours)
+        $token = \App\Models\MetaConnection::token();
+        $ab = $token ? $ads->filter(fn (MetaAd $ad) => $ad->ad_b_id)->mapWithKeys(fn (MetaAd $ad) => [$ad->id => collect([
+            'A' => \App\Support\MetaInsights::ad($token, $ad->ad_id, $ad->goal, $ad->start_on, $ad->end_on->min(today())),
+            'B' => \App\Support\MetaInsights::ad($token, $ad->ad_b_id, $ad->goal, $ad->start_on, $ad->end_on->min(today())),
+        ])]) : collect();
+
+        return view('ads.index', ['ads' => $ads, 'ab' => $ab]);
     }
 
     public function create(Request $request): View
     {
-        return view('ads.create', ['clients' => $this->clients($this->authorizeUser($request))]);
+        $clients = $this->clients($this->authorizeUser($request));
+
+        return view('ads.create', ['clients' => $clients,
+            'audiences' => \App\Models\MetaAudience::whereIn('client_id', $clients->pluck('id'))->where('status', 'ready')->orderBy('name')->get()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -50,12 +62,27 @@ class AdController extends Controller
             'url' => ['nullable', 'required_if:goal,website', 'url:https,http', 'max:500'],
             'phone' => ['nullable', 'required_if:goal,calls', 'regex:/^\+?[0-9 ]{10,15}$/'],
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:20480'],
+            'meta_audience_id' => ['nullable', Rule::exists('meta_audiences', 'id')->where('client_id', $request->client_id)->where('status', 'ready')],
+            // A/B test: version B changes the image and/or the text; both versions get half the budget
+            'ab_test' => ['nullable', 'boolean'],
+            'image_b' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:20480'],
+            'primary_text_b' => ['nullable', 'string', 'max:2000'],
+            'headline_b' => ['nullable', 'string', 'max:100'],
         ], ['phone.regex' => 'Enter the phone with country code, e.g. +91 98765 43210.']);
+        $ab = $request->boolean('ab_test');
+        if ($ab && ! $request->hasFile('image_b') && blank($data['primary_text_b'] ?? null)) {
+            return back()->withInput()->withErrors(['image_b' => 'For an A/B test give version B a different image or text.']);
+        }
+        if ($ab && $data['daily_budget'] < 200) {
+            return back()->withInput()->withErrors(['daily_budget' => 'An A/B test needs at least ₹200 per day (₹100 for each version).']);
+        }
 
         $client = Client::findOrFail($data['client_id']);
         $ad = MetaAd::create(['image_path' => $request->file('image')->store('ads', 'local'), 'meta_ad_account_id' => $client->meta_ad_account_id,
-            'phone' => isset($data['phone']) ? preg_replace('/\s+/', '', $data['phone']) : null, 'created_by' => $user->id]
-            + collect($data)->except('image', 'phone')->all());
+            'phone' => isset($data['phone']) ? preg_replace('/\s+/', '', $data['phone']) : null, 'created_by' => $user->id,
+            'image_b_path' => $ab && $request->hasFile('image_b') ? $request->file('image_b')->store('ads', 'local') : null,
+            'primary_text_b' => $ab ? ($data['primary_text_b'] ?: null) : null, 'headline_b' => $ab ? ($data['headline_b'] ?? null) : null]
+            + collect($data)->except('image', 'phone', 'ab_test', 'image_b', 'primary_text_b', 'headline_b')->all());
 
         try {
             MetaAds::create($ad);
@@ -92,10 +119,8 @@ class AdController extends Controller
         return $user;
     }
 
-    /** Clients ready for ads: a Page and an ad account, within the user's brands */
     private function clients($user)
     {
-        return Client::where('is_active', true)->whereNotNull('meta_page_id')->whereNotNull('meta_ad_account_id')
-            ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->orderBy('name')->get();
+        return Client::readyForAds($user);
     }
 }

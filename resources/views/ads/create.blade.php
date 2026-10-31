@@ -79,6 +79,20 @@
                                 <x-input-label for="interests" value="Interests (comma separated, optional)" />
                                 <x-text-input id="interests" name="interests" class="mt-1 block w-full" :value="old('interests')" placeholder="Yoga, Fitness" />
                             </div>
+                            <div class="sm:col-span-4">
+                                <x-input-label for="meta_audience_id" value="Saved audience (optional)" />
+                                <select id="meta_audience_id" name="meta_audience_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                                    <option value="">None: city, age and interests above</option>
+                                    @foreach ($audiences->groupBy('client_id') as $clientId => $list)
+                                        <optgroup label="{{ $clients->firstWhere('id', $clientId)?->name }}">
+                                            @foreach ($list as $a)
+                                                <option value="{{ $a->id }}" @selected(old('meta_audience_id') == $a->id)>{{ $a->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Only people in this audience who also match the city / age above see the ad. <a href="{{ route('ads.audiences') }}" class="text-brand-600 hover:underline">Make an audience</a></p>
+                            </div>
                         </div>
                     </section>
 
@@ -113,6 +127,27 @@
                         <div>
                             <x-input-label for="headline" value="Headline (optional)" />
                             <x-text-input id="headline" name="headline" class="mt-1 block w-full" :value="old('headline')" />
+                        </div>
+                    </section>
+
+                    <section class="card p-5 space-y-4" x-data="{ ab: @js((bool) old('ab_test')) }">
+                        <label class="flex items-center gap-2 font-semibold text-gray-900">
+                            <input type="checkbox" name="ab_test" value="1" x-model="ab" class="rounded border-gray-300"> 5. A/B test (optional)
+                        </label>
+                        <p class="text-xs text-gray-500">Meta shows version A to half the people and version B to the other half, with half the budget each, and tells you which one wins.</p>
+                        <div x-show="ab" x-cloak class="space-y-4">
+                            <div>
+                                <x-input-label for="image_b" value="Version B image (empty = same image)" />
+                                <input id="image_b" name="image_b" type="file" accept="image/jpeg,image/png" class="mt-1 block w-full text-sm">
+                            </div>
+                            <div>
+                                <x-input-label for="primary_text_b" value="Version B text (empty = same text)" />
+                                <textarea id="primary_text_b" name="primary_text_b" rows="3" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">{{ old('primary_text_b') }}</textarea>
+                            </div>
+                            <div>
+                                <x-input-label for="headline_b" value="Version B headline (optional)" />
+                                <x-text-input id="headline_b" name="headline_b" class="mt-1 block w-full" :value="old('headline_b')" />
+                            </div>
                         </div>
                     </section>
 

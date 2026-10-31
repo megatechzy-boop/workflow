@@ -18,7 +18,7 @@ class MetaAd extends Model
 
     protected $fillable = ['client_id', 'meta_ad_account_id', 'name', 'goal', 'daily_budget', 'start_on', 'end_on', 'city', 'radius_km',
         'age_min', 'age_max', 'gender', 'interests', 'primary_text', 'headline', 'url', 'phone', 'image_path', 'status',
-        'campaign_id', 'adset_id', 'ad_id', 'error', 'created_by'];
+        'campaign_id', 'adset_id', 'ad_id', 'error', 'created_by', 'meta_audience_id', 'image_b_path', 'primary_text_b', 'headline_b', 'adset_b_id', 'ad_b_id', 'study_id'];
 
     protected function casts(): array
     {
@@ -35,9 +35,19 @@ class MetaAd extends Model
         return $this->belongsTo(MetaAdAccount::class, 'meta_ad_account_id');
     }
 
+    public function audience(): BelongsTo
+    {
+        return $this->belongsTo(MetaAudience::class, 'meta_audience_id');
+    }
+
+    public function isAbTest(): bool
+    {
+        return $this->image_b_path !== null || $this->primary_text_b !== null;
+    }
+
     public function audienceLabel(): string
     {
-        return ($this->city ? $this->city.' +'.$this->radius_km.' km' : 'India').' · '.$this->age_min.'–'.$this->age_max
+        return ($this->audience ? $this->audience->name.' · ' : '').($this->city ? $this->city.' +'.$this->radius_km.' km' : 'India').' · '.$this->age_min.'–'.$this->age_max
             .($this->gender !== 'all' ? ' · '.$this->gender : '').($this->interests ? ' · '.$this->interests : '');
     }
 
