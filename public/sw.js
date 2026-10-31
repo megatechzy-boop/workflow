@@ -39,9 +39,14 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(req.url);
     if (url.origin !== self.location.origin) return;
 
-    // Page navigations: network only, offline page as fallback (never cache private pages)
+    // Page navigations: network only, offline page as fallback (never cache private pages).
+    // A dropped connection is retried twice first, so a short network blip does not show "offline".
     if (req.mode === 'navigate') {
-        event.respondWith(fetch(req).catch(() => caches.match(OFFLINE)));
+        const retry = (left) => fetch(req).catch((err) => {
+            if (left === 0) throw err;
+            return new Promise((r) => setTimeout(r, 1500)).then(() => retry(left - 1));
+        });
+        event.respondWith(retry(2).catch(() => caches.match(OFFLINE)));
         return;
     }
 
