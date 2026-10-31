@@ -41,6 +41,10 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Public forms (no login): `/enquiry` → Leads (Clients permission; "Won" makes the client);
   `/onboarding/{token}` per client → client brief (Clients or Calendars permission). Never ask for passwords.
 
+- Facebook / Instagram (Admin > Facebook / IG): Admin connects Facebook once (Meta app 1652918339673007,
+  Standard access = only people with a role on the app); each client is linked to a Page. Approved content
+  gets "Publish to Facebook + Instagram"; `meta:publish` (every minute) posts it and marks it Published.
+
 ## Next up
 
 Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls).

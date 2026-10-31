@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Foundation\Inspiring;
+use App\Models\MetaPost;
 use App\Models\Task;
+use App\Support\MetaPublisher;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
@@ -18,6 +20,14 @@ Artisan::command('tasks:remind', function () {
 })->purpose('Email each member one list of tasks overdue, due today or due tomorrow');
 
 Schedule::command('tasks:remind')->dailyAt('09:00');
+
+// Facebook / Instagram posts queued from approved content (Instagram videos need a few checks)
+Artisan::command('meta:publish', function () {
+    $posts = MetaPost::whereIn('status', ['queued', 'processing'])->with('content', 'page')->orderBy('id')->limit(10)->get();
+    $posts->each(fn ($post) => MetaPublisher::process($post));
+    $this->info($posts->count().' post(s) processed.');
+})->purpose('Send queued Facebook / Instagram posts');
+Schedule::command('meta:publish')->everyMinute()->withoutOverlapping();
 
 // One-time clean-up before go-live: removes test work data, keeps users, roles, permissions and clients.
 // No SSH on cPanel, so it runs from a one-time cron; the marker file stops a left-over cron from wiping real data.

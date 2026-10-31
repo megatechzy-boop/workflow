@@ -160,6 +160,31 @@
                         </form>
                     @endcan
 
+                    {{-- Facebook / Instagram: queue the approved post; meta:publish sends it within a minute --}}
+                    @php($metaPosts = App\Models\MetaPost::where('content_id', $content->id)->get())
+                    @if ($metaPosts->isNotEmpty() || (auth()->user()->can('markStatus', $content) && App\Support\MetaPublisher::platforms($content)))
+                        <div class="card p-4 space-y-2">
+                            <div class="font-semibold text-gray-900">Facebook / Instagram</div>
+                            @foreach ($metaPosts as $metaPost)
+                                <div class="text-sm">
+                                    {{ ucfirst($metaPost->platform) }}:
+                                    <span class="{{ ['done' => 'text-green-700', 'failed' => 'text-red-600'][$metaPost->status] ?? 'text-gray-600' }}">
+                                        {{ ['queued' => 'Waiting to post…', 'processing' => 'Instagram is processing…', 'done' => 'Posted', 'failed' => 'Failed'][$metaPost->status] }}
+                                    </span>
+                                    @if ($metaPost->error)<div class="text-xs text-red-600">{{ $metaPost->error }}</div>@endif
+                                </div>
+                            @endforeach
+                            @can('markStatus', $content)
+                                @if ($metaPosts->isEmpty() || $metaPosts->contains('status', 'failed'))
+                                    <form method="POST" action="{{ route('contents.meta', $content) }}">
+                                        @csrf
+                                        <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">{{ $metaPosts->contains('status', 'failed') ? 'Try again' : 'Publish to '.collect(App\Support\MetaPublisher::platforms($content))->map(fn ($p) => ucfirst($p))->implode(' + ') }}</button>
+                                    </form>
+                                @endif
+                            @endcan
+                        </div>
+                    @endif
+
                     @can('replace', $content)
                         <details class="card p-4 border border-gray-200">
                             <summary class="cursor-pointer font-semibold text-gray-800">Wrong file? Replace V{{ $content->current_version }}</summary>

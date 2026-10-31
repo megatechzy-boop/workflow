@@ -24,6 +24,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Facebook Pages + Instagram posting (App ID / secret only in the server .env)
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'graph' => 'https://graph.facebook.com/v21.0',
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

@@ -9,13 +9,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
-    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at'];
+    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id'];
 
     protected $attributes = ['is_active' => true];
 
     protected function casts(): array
     {
         return ['is_active' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
+    }
+
+    /** Facebook Page (and its Instagram) where approved posts are published */
+    public function metaPage(): BelongsTo
+    {
+        return $this->belongsTo(MetaPage::class);
     }
 
     public function package(): BelongsTo

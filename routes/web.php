@@ -20,6 +20,7 @@ use App\Http\Controllers\CustomerBillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\MetaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -31,6 +32,8 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/dashboard');
 
 // Public forms (no login): website enquiry, and each client's private onboarding link
+// Meta fetches post media from short-lived signed links (no login)
+Route::get('meta/media/{media}', [MetaController::class, 'media'])->middleware('signed')->name('meta.media');
 Route::get('enquiry', [LeadController::class, 'form'])->name('enquiry.form');
 Route::post('enquiry', [LeadController::class, 'submit'])->middleware('throttle:5,1')->name('enquiry.submit');
 Route::get('enquiry/thanks', [LeadController::class, 'thanks'])->name('enquiry.thanks');
@@ -64,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/caption', [ContentController::class, 'updateCaption'])->name('contents.caption');
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
+    Route::post('contents/{content}/meta', [MetaController::class, 'publish'])->name('contents.meta');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
@@ -128,6 +132,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::put('roles', [RoleController::class, 'update'])->name('roles.update');
     Route::post('mail-test', MailTestController::class)->name('mail.test');
     Route::resource('packages', PackageController::class)->except('show');
+    Route::get('meta', [MetaController::class, 'index'])->name('meta.index');
+    Route::get('meta/connect', [MetaController::class, 'connect'])->name('meta.connect');
+    Route::get('meta/callback', [MetaController::class, 'callback'])->name('meta.callback');
 
     // Module 7: office (Admin only)
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');

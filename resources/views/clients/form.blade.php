@@ -87,6 +87,19 @@
                         </div>
                     </div>
 
+                    @if ($metaPages->isNotEmpty())
+                        <div>
+                            <x-input-label for="meta_page_id" value="Facebook Page (approved posts publish here and on its Instagram)" />
+                            <select id="meta_page_id" name="meta_page_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                                <option value="">Not linked</option>
+                                @foreach ($metaPages as $metaPage)
+                                    <option value="{{ $metaPage->id }}" @selected(old('meta_page_id', $client->meta_page_id) == $metaPage->id)>{{ $metaPage->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('meta_page_id')" class="mt-2" />
+                        </div>
+                    @endif
+
                     <div>
                         <x-input-label for="notes" value="Notes" />
                         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('notes', $client->notes) }}</textarea>
