@@ -60,6 +60,23 @@ class Invoice extends Model
         return max(0, $this->amount - $this->received());
     }
 
+    /** UPI payment link for the amount still due (shown as a QR on the invoice); null when paid or no UPI ID */
+    public function upiLink(): ?string
+    {
+        $upi = config('business.bank.upi');
+        if (! $upi || $this->due() <= 0) {
+            return null;
+        }
+
+        return 'upi://pay?'.http_build_query([
+            'pa' => $upi,
+            'pn' => config('business.bank.account_name') ?: config('business.name'),
+            'am' => number_format($this->due(), 2, '.', ''),
+            'cu' => 'INR',
+            'tn' => 'Invoice '.$this->number,
+        ], '', '&', PHP_QUERY_RFC3986);
+    }
+
     public function syncPaid(): void
     {
         $this->load('payments');

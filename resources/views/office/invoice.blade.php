@@ -75,11 +75,23 @@
     </div>
 
     @if ($biz['bank']['account_number'] || $biz['bank']['upi'])
-        <div class="box" style="margin-top:20px">
-            <b>Bank Details</b>
-            @foreach (['account_name' => 'Account Name', 'account_number' => 'Account Number', 'ifsc' => 'IFSC', 'account_type' => 'Account Type', 'bank' => 'Bank', 'upi' => 'UPI'] as $key => $label)
-                @if ($biz['bank'][$key])<div><span class="muted" style="display:inline-block;width:110px">{{ $label }}</span> {{ $biz['bank'][$key] }}</div>@endif
-            @endforeach
+        @php($upiLink = $invoice->upiLink())
+        <div class="box" style="margin-top:20px;display:flex;gap:16px;align-items:center;justify-content:space-between">
+            <div>
+                <b>Bank Details</b>
+                @foreach (['account_name' => 'Account Name', 'account_number' => 'Account Number', 'ifsc' => 'IFSC', 'account_type' => 'Account Type', 'bank' => 'Bank', 'upi' => 'UPI'] as $key => $label)
+                    @if ($biz['bank'][$key])<div><span class="muted" style="display:inline-block;width:110px">{{ $label }}</span> {{ $biz['bank'][$key] }}</div>@endif
+                @endforeach
+            </div>
+            @if ($upiLink)
+                {{-- Scan with any UPI app (GPay, PhonePe, Paytm): amount due and invoice number are filled in --}}
+                <div style="text-align:center;flex-shrink:0">
+                    <img id="upi-qr" alt="UPI QR code to pay ₹ {{ number_format($invoice->due(), 2) }}" width="130" height="130" style="display:block;margin:0 auto">
+                    <div style="font-weight:600;margin-top:4px">Scan to pay ₹ {{ number_format($invoice->due(), 2) }}</div>
+                    <div class="muted">Any UPI app</div>
+                </div>
+                <script>document.addEventListener('DOMContentLoaded', () => renderQr(document.getElementById('upi-qr'), @js($upiLink)));</script>
+            @endif
         </div>
     @endif
 

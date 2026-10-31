@@ -137,6 +137,23 @@ class OfficeTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.expenses.index', ['month' => '2026-10']))->assertSee('Rent')->assertSee('₹3,000');
     }
 
+    public function test_invoice_upi_qr_asks_for_the_amount_still_due(): void
+    {
+        config(['business.bank.upi' => 'megatechzy@okaxis', 'business.bank.account_name' => 'Mega Techzy']);
+        $acme = Client::create(['name' => 'Acme']);
+        $invoice = Invoice::create(['client_id' => $acme->id, 'due_date' => '2026-11-05', 'items' => [['name' => 'Growth package', 'qty' => 1, 'rate' => 15000]]]);
+        $invoice->payments()->create(['date' => '2026-10-30', 'method' => 'UPI', 'amount' => 5000]);
+
+        $link = $invoice->fresh()->upiLink();
+        $this->assertStringStartsWith('upi://pay?pa=megatechzy%40okaxis&pn=Mega%20Techzy&am=10000.00&cu=INR&tn=Invoice%20', $link);
+        $this->actingAs($this->admin)->get(route('admin.billing.show', $invoice))->assertOk()->assertSee('Scan to pay ₹ 10,000.00', false);
+
+        $invoice->payments()->create(['date' => '2026-10-31', 'method' => 'UPI', 'amount' => 10000]);
+        $this->assertNull($invoice->fresh()->upiLink()); // fully paid: no QR
+        config(['business.bank.upi' => null]);
+        $this->assertNull(Invoice::create(['client_id' => $acme->id, 'due_date' => '2026-11-05', 'items' => [['name' => 'X', 'qty' => 1, 'rate' => 100]]])->upiLink());
+    }
+
     public function test_customer_sees_own_bills_and_receipts_only(): void
     {
         $acme = Client::create(['name' => 'Acme']);
