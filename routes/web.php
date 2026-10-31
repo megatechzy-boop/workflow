@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/dashboard');
 
 // Public forms (no login): website enquiry, and each client's private onboarding link
+Route::view('privacy', 'legal.privacy')->name('privacy');
+
 // Meta fetches post media from short-lived signed links (no login)
 Route::get('meta/media/{media}', [MetaController::class, 'media'])->middleware('signed')->name('meta.media');
 Route::get('enquiry', [LeadController::class, 'form'])->name('enquiry.form');
