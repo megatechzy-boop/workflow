@@ -6,6 +6,8 @@ use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\ChatMessage;
 use App\Models\Lead;
+use App\Models\MetaComment;
+use App\Models\MetaLead;
 use App\Models\User;
 
 /** One menu definition for the desktop sidebar, the phone tab bar and the phone "More" sheet */
@@ -30,6 +32,14 @@ class Navigation
         $items[] = ['label' => 'Chat', 'route' => 'chat.index', 'icon' => 'chat', 'active' => 'chat.*', 'badge' => array_sum(ChatMessage::unreadCounts($user))];
         if ($user->hasPermission(Permission::PublishContent)) {
             $items[] = ['label' => 'Ads', 'route' => 'ads.index', 'icon' => 'play', 'active' => 'ads.*'];
+            $items[] = ['label' => 'Comments', 'route' => 'meta.comments', 'icon' => 'chat', 'active' => 'meta.comments*',
+                'badge' => MetaComment::whereNull('replied_at')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count()];
+        }
+        if ($isCustomer || $user->hasPermission(Permission::PublishContent) || $user->hasPermission(Permission::ManageClients)) {
+            $items[] = ['label' => 'Meta leads', 'route' => 'meta.leads', 'icon' => 'users', 'active' => 'meta.leads*',
+                'badge' => MetaLead::where('status', 'new')
+                    ->when($isCustomer, fn ($q) => $q->where('client_id', $user->client_id ?? 0))
+                    ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count()];
         }
         $items[] = ['label' => 'Assets', 'route' => 'assets.index', 'icon' => 'photo', 'active' => 'assets.*'];
         if ($isCustomer || $user->hasPermission(Permission::ViewAllTasks)) {

@@ -22,6 +22,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\MetaController;
+use App\Http\Controllers\MetaInboxController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -77,6 +78,10 @@ Route::middleware('auth')->group(function () {
     Route::get('ads/create', [AdController::class, 'create'])->name('ads.create');
     Route::post('ads', [AdController::class, 'store'])->name('ads.store');
     Route::post('ads/{ad}/status', [AdController::class, 'status'])->name('ads.status');
+    Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
+    Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
+    Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
+    Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');

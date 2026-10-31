@@ -14,7 +14,8 @@ class MetaGraph
 {
     /** Pages + Instagram publishing; works in Standard access for people with a role on the Meta app */
     public const SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management',
-        'instagram_basic', 'instagram_content_publish', 'ads_management', 'ads_read'];
+        'instagram_basic', 'instagram_content_publish', 'ads_management', 'ads_read',
+        'pages_read_user_content', 'pages_manage_engagement', 'instagram_manage_comments', 'leads_retrieval', 'pages_manage_ads'];
 
     public static function loginUrl(string $state): string
     {
@@ -152,6 +153,48 @@ class MetaGraph
         ])['id'];
 
         return ['campaign_id' => $campaign, 'adset_id' => $adset, 'ad_id' => $ad];
+    }
+
+    /**
+     * Latest comments on a published post (newest 100).
+     *
+     * @return array<int, array{id: string, author: ?string, author_id: ?string, message: string, time: ?string}>
+     */
+    public static function comments(MetaPage $page, string $platform, string $postId): array
+    {
+        $token = ['access_token' => $page->access_token, 'limit' => 100];
+        if ($platform === 'instagram') {
+            $data = self::get("/$postId/comments", $token + ['fields' => 'id,username,text,timestamp'])['data'] ?? [];
+
+            return array_map(fn ($c) => ['id' => $c['id'], 'author' => $c['username'] ?? null, 'author_id' => $c['username'] ?? null,
+                'message' => $c['text'] ?? '', 'time' => $c['timestamp'] ?? null], $data);
+        }
+        $data = self::get("/$postId/comments", $token + ['fields' => 'id,from{id,name},message,created_time', 'order' => 'reverse_chronological'])['data'] ?? [];
+
+        return array_map(fn ($c) => ['id' => $c['id'], 'author' => $c['from']['name'] ?? null, 'author_id' => $c['from']['id'] ?? null,
+            'message' => $c['message'] ?? '', 'time' => $c['created_time'] ?? null], $data);
+    }
+
+    /** Reply as the Page / Instagram account. Returns the reply id. */
+    public static function replyToComment(MetaPage $page, string $platform, string $commentId, string $message): string
+    {
+        $edge = $platform === 'instagram' ? 'replies' : 'comments';
+
+        return self::post("/$commentId/$edge", ['message' => $message, 'access_token' => $page->access_token])['id'];
+    }
+
+    /** @return array<int, array{id: string, name: string}> lead forms of a Page */
+    public static function leadForms(MetaPage $page): array
+    {
+        return self::get("/{$page->page_id}/leadgen_forms", ['access_token' => $page->access_token, 'fields' => 'id,name', 'limit' => 100])['data'] ?? [];
+    }
+
+    /** @return array<int, array{id: string, created_time: string, field_data: array}> leads of one form created after $since */
+    public static function leads(MetaPage $page, string $formId, \DateTimeInterface $since): array
+    {
+        return self::get("/$formId/leads", ['access_token' => $page->access_token, 'fields' => 'id,created_time,field_data', 'limit' => 100,
+            'filtering' => json_encode([['field' => 'time_created', 'operator' => 'GREATER_THAN', 'value' => $since->getTimestamp()]]),
+        ])['data'] ?? [];
     }
 
     public static function get(string $path, array $query): array

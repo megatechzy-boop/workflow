@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use App\Models\MetaPost;
 use App\Models\Task;
+use App\Support\MetaInbox;
 use App\Support\MetaPublisher;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,12 @@ Artisan::command('meta:publish', function () {
     $this->info($posts->count().' post(s) processed.');
 })->purpose('Send queued Facebook / Instagram posts');
 Schedule::call(fn () => Artisan::call('meta:publish'))->name('meta-publish')->everyMinute()->withoutOverlapping();
+
+// New comments on our posts + new lead-form leads
+Artisan::command('meta:sync', function () {
+    $this->info(MetaInbox::syncComments().' comment(s), '.MetaInbox::syncLeads().' lead(s) added.');
+})->purpose('Fetch new Facebook / Instagram comments and leads');
+Schedule::call(fn () => Artisan::call('meta:sync'))->name('meta-sync')->everyTenMinutes()->withoutOverlapping();
 
 // One-time clean-up before go-live: removes test work data, keeps users, roles, permissions and clients.
 // No SSH on cPanel, so it runs from a one-time cron; the marker file stops a left-over cron from wiping real data.
