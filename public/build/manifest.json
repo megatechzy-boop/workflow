@@ -11,8 +11,8 @@
       "__commonjsHelpers-Cpj98o6Y.js"
     ]
   },
-  "_jspdf.es.min-DZGq6Tlk.js": {
-    "file": "assets/jspdf.es.min-DZGq6Tlk.js",
+  "_jspdf.es.min-BoFzegQe.js": {
+    "file": "assets/jspdf.es.min-BoFzegQe.js",
     "name": "jspdf.es.min",
     "imports": [
       "resources/js/app.js"
@@ -24,13 +24,13 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-D2Fid7WB.js",
+    "file": "assets/index.es-DGAP0gxE.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "__commonjsHelpers-Cpj98o6Y.js",
-      "_jspdf.es.min-DZGq6Tlk.js",
+      "_jspdf.es.min-BoFzegQe.js",
       "resources/js/app.js"
     ]
   },
@@ -52,7 +52,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-xGuUbjH8.js",
+    "file": "assets/app-DC7xSRf0.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -63,22 +63,22 @@
     ]
   },
   "resources/js/carousel-pdf.js": {
-    "file": "assets/carousel-pdf-9-Ml1CS2.js",
+    "file": "assets/carousel-pdf-jknkjQra.js",
     "name": "carousel-pdf",
     "src": "resources/js/carousel-pdf.js",
     "isDynamicEntry": true,
     "imports": [
-      "_jspdf.es.min-DZGq6Tlk.js",
+      "_jspdf.es.min-BoFzegQe.js",
       "resources/js/app.js"
     ]
   },
   "resources/js/doc-pdf.js": {
-    "file": "assets/doc-pdf-m6S9gya6.js",
+    "file": "assets/doc-pdf-G7xyp1GW.js",
     "name": "doc-pdf",
     "src": "resources/js/doc-pdf.js",
     "isDynamicEntry": true,
     "imports": [
-      "_jspdf.es.min-DZGq6Tlk.js",
+      "_jspdf.es.min-BoFzegQe.js",
       "node_modules/html2canvas/dist/html2canvas.esm.js",
       "resources/js/app.js"
     ]

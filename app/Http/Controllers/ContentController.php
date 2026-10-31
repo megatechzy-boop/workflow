@@ -172,6 +172,13 @@ class ContentController extends Controller
     /** Customer final review: Approve or Revision (comment required) */
     public function customerReview(Request $request, Content $content): RedirectResponse
     {
+        // Already reviewed (double tap, or an old tab) on their own brand: a popup instead of a 403 page.
+        // After a Revision the post is hidden from the Customer, so they go to the list, not the post.
+        $user = $request->user();
+        if ($content->status !== ContentStatus::ClientReview && $user->role === Role::Client
+            && $user->client_id === $content->task->item->calendar->client_id) {
+            return redirect()->route('contents.index')->with('popup', 'This post was already reviewed. Your answer is saved.');
+        }
         Gate::authorize('customerReview', $content);
 
         $data = $request->validate([

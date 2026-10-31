@@ -199,8 +199,11 @@ class CalendarTest extends TestCase
         $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
 
         // Row 2 approved => all rows checked => there was a revision, back to the SMM
-        $this->actingAs($this->clientUser)->post($url($row2), ['action' => 'approved']);
+        $this->actingAs($this->clientUser)->post($url($row2), ['action' => 'approved'])
+            ->assertRedirect(route('calendars.index'))->assertSessionHas('popup'); // not back to a calendar they can no longer open
         $this->assertSame(CalendarStatus::Draft, $calendar->fresh()->status);
+        // a second tap on the old page: popup, no 403
+        $this->actingAs($this->clientUser)->post($url($row2), ['action' => 'approved'])->assertRedirect(route('calendars.index'))->assertSessionHas('popup');
         $this->actingAs($this->team)->get("/calendars/{$calendar->id}")->assertSee('Change the date');
 
         // SMM edits row 1 => only it needs a re-check; row 2 stays approved

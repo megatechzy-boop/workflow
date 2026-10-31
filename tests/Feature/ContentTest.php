@@ -140,6 +140,12 @@ class ContentTest extends TestCase
         $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'approved']);
         $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
 
+        // a second tap (or an old tab): back to the list with a popup, nothing changes, no 403 page
+        $this->actingAs($customer)->post("/contents/{$content->id}/customer-review", ['action' => 'revision', 'body' => 'again'])
+            ->assertRedirect(route('contents.index'))->assertSessionHas('popup');
+        $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
+        $this->actingAs($other)->post("/contents/{$content->id}/customer-review", ['action' => 'approved'])->assertForbidden(); // other brand: still 403
+
         // no resubmit after approval
         $this->actingAs($this->member)->post("/contents/{$content->id}/resubmit", ['images' => $this->images(2)])->assertForbidden();
     }

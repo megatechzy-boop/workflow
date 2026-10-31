@@ -177,6 +177,11 @@ class CalendarController extends Controller
      */
     public function reviewItem(Request $request, Calendar $calendar, CalendarItem $item): RedirectResponse
     {
+        // Calendar already moved on (double tap, or an old tab): back to the list with a popup instead of a 403 page
+        $user = $request->user();
+        if ($calendar->status !== CalendarStatus::ApproverApproved && $user->role === Role::Client && $user->client_id === $calendar->client_id) {
+            return redirect()->route('calendars.index')->with('popup', 'This calendar was already reviewed. Your answers are saved; the team will send it again if anything changes.');
+        }
         Gate::authorize('reviewItems', $calendar);
 
         $data = $request->validate([
@@ -201,7 +206,8 @@ class CalendarController extends Controller
         $summary = $revisions->map(fn ($i) => $i->post_date->format('d M').': '.$i->client_comment)->implode("\n");
         $this->transition($request, $calendar, CalendarStatus::Draft, 'revision', $summary);
 
-        return back()->with('status', $revisions->count().' row(s) need revision. Calendar sent back to the SMM.');
+        // The calendar is a draft again, hidden from the Customer: send them to the list, not back to it
+        return redirect()->route('calendars.index')->with('popup', 'Thank you! '.$revisions->count().' row(s) were sent back for changes. You will get the calendar again to check.');
     }
 
     /** Change status + history + (on approval) auto-assign + notifications */
