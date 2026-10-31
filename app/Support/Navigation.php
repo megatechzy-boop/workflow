@@ -28,6 +28,9 @@ class Navigation
             $items[] = ['label' => 'Approvals', 'route' => 'contents.index', 'icon' => 'inbox', 'active' => 'contents.*'];
         }
         $items[] = ['label' => 'Chat', 'route' => 'chat.index', 'icon' => 'chat', 'active' => 'chat.*', 'badge' => array_sum(ChatMessage::unreadCounts($user))];
+        if ($user->hasPermission(Permission::PublishContent)) {
+            $items[] = ['label' => 'Ads', 'route' => 'ads.index', 'icon' => 'play', 'active' => 'ads.*'];
+        }
         $items[] = ['label' => 'Assets', 'route' => 'assets.index', 'icon' => 'photo', 'active' => 'assets.*'];
         if ($isCustomer || $user->hasPermission(Permission::ViewAllTasks)) {
             $items[] = ['label' => 'Reports', 'route' => 'reports.monthly', 'icon' => 'report', 'active' => 'reports.*'];

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SalaryController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AdController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\CalendarController;
@@ -72,6 +73,10 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/meta', [MetaController::class, 'publish'])->name('contents.meta');
     Route::delete('contents/{content}/meta', [MetaController::class, 'unschedule'])->name('contents.meta.unschedule');
     Route::post('meta-posts/{metaPost}/boost', [MetaController::class, 'boost'])->name('contents.boost');
+    Route::get('ads', [AdController::class, 'index'])->name('ads.index');
+    Route::get('ads/create', [AdController::class, 'create'])->name('ads.create');
+    Route::post('ads', [AdController::class, 'store'])->name('ads.store');
+    Route::post('ads/{ad}/status', [AdController::class, 'status'])->name('ads.status');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');

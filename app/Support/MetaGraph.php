@@ -154,12 +154,12 @@ class MetaGraph
         return ['campaign_id' => $campaign, 'adset_id' => $adset, 'ad_id' => $ad];
     }
 
-    private static function get(string $path, array $query): array
+    public static function get(string $path, array $query): array
     {
         return self::check(Http::timeout(30)->get(config('services.meta.graph').$path, $query));
     }
 
-    private static function post(string $path, array $data): array
+    public static function post(string $path, array $data): array
     {
         return self::check(Http::asForm()->timeout(120)->post(config('services.meta.graph').$path, $data));
     }
