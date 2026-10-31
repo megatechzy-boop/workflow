@@ -18,12 +18,16 @@ class MetaGraph
 
     public static function loginUrl(string $state): string
     {
+        // "Facebook Login for Business" apps take the permissions from a configuration (META_CONFIG_ID), not from scope
+        $permissions = config('services.meta.config_id')
+            ? ['config_id' => config('services.meta.config_id')]
+            : ['scope' => implode(',', self::SCOPES)];
+
         return 'https://www.facebook.com/v21.0/dialog/oauth?'.http_build_query([
             'client_id' => config('services.meta.app_id'),
             'redirect_uri' => route('admin.meta.callback'),
             'state' => $state,
-            'scope' => implode(',', self::SCOPES),
-        ]);
+        ] + $permissions);
     }
 
     /** OAuth code → long-lived user token (page tokens made from it do not expire) */
