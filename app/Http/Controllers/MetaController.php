@@ -138,6 +138,24 @@ class MetaController extends Controller
     /** Meta downloads the image / video from this short-lived signed link (no login) */
     public function media(ContentMedia $media): BinaryFileResponse
     {
-        return response()->file(Storage::disk('local')->path($media->path));
+        $disk = Storage::disk('local');
+        $path = $disk->path($media->path);
+        // Instagram takes only JPEG photos: PNG / WebP are converted once (transparent parts become white)
+        if ($media->kind !== 'video' && $disk->mimeType($media->path) !== 'image/jpeg' && function_exists('imagecreatefromstring')) {
+            $jpeg = $media->path.'.jpg';
+            if (! $disk->exists($jpeg) && ($source = @imagecreatefromstring($disk->get($media->path)))) {
+                $canvas = imagecreatetruecolor(imagesx($source), imagesy($source));
+                imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
+                imagecopy($canvas, $source, 0, 0, 0, 0, imagesx($source), imagesy($source));
+                ob_start();
+                imagejpeg($canvas, null, 92);
+                $disk->put($jpeg, ob_get_clean());
+            }
+            if ($disk->exists($jpeg)) {
+                return response()->file($disk->path($jpeg), ['Content-Type' => 'image/jpeg']);
+            }
+        }
+
+        return response()->file($path);
     }
 }

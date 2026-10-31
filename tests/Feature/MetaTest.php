@@ -185,4 +185,16 @@ class MetaTest extends TestCase
         $this->assertSame('111_fb1', MetaPost::sole()->post_id);
         $this->assertSame(ContentStatus::Published, $content->fresh()->status);
     }
+
+    public function test_png_is_sent_to_meta_as_jpeg(): void
+    {
+        $content = $this->approvedPost();
+        $png = \Illuminate\Http\UploadedFile::fake()->image('a.png', 20, 20);
+        Storage::disk('local')->put('contents/1/v1/a.png', file_get_contents($png->getPathname()));
+        $media = $content->versions()->first()->media()->create(['kind' => 'image', 'path' => 'contents/1/v1/a.png', 'original_name' => 'a.png', 'sort_order' => 2]);
+
+        $response = $this->get(\URL::temporarySignedRoute('meta.media', now()->addHour(), ['media' => $media->id]))->assertOk();
+        $this->assertSame('image/jpeg', $response->headers->get('Content-Type'));
+        $this->assertSame('image/jpeg', getimagesize($response->getFile()->getPathname())['mime']);
+    }
 }
