@@ -37,7 +37,8 @@ class MetaPublisher
     }
 
     /** @return int how many platform posts were queued */
-    public static function queue(Content $content, User $by): int
+    /** $at: post at this time (meta:publish waits), null = right away */
+    public static function queue(Content $content, User $by, ?\DateTimeInterface $at = null): int
     {
         $page = $content->task->item->calendar->client->metaPage;
         $made = 0;
@@ -46,7 +47,7 @@ class MetaPublisher
             if ($post->exists && $post->status !== 'failed') {
                 continue; // already queued or posted
             }
-            $post->fill(['meta_page_id' => $page->id, 'status' => 'queued', 'container_id' => null, 'error' => null, 'attempts' => 0, 'queued_by' => $by->id])->save();
+            $post->fill(['meta_page_id' => $page->id, 'status' => 'queued', 'publish_at' => $at, 'container_id' => null, 'error' => null, 'attempts' => 0, 'queued_by' => $by->id])->save();
             $made++;
         }
 

@@ -160,4 +160,29 @@ class MetaTest extends TestCase
         $designer = User::factory()->create(['role' => Role::GraphicDesigner]);
         $this->actingAs($designer)->post(route('contents.boost', $post), ['daily_budget' => 300, 'days' => 7, 'age_min' => 25, 'age_max' => 50])->assertForbidden();
     }
+
+    public function test_scheduled_post_waits_for_its_time_and_can_be_cancelled(): void
+    {
+        $this->travelTo('2026-11-01 09:00:00');
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token']);
+        $content = $this->approvedPost(['facebook_post'], $page);
+        Http::fake(['*/111/photos' => Http::response(['id' => 'photo1', 'post_id' => '111_fb1'])]);
+
+        $this->actingAs($this->admin)->post(route('contents.meta', $content), ['publish_at' => '2026-11-01T08:00'])->assertSessionHasErrors('publish_at');
+        $this->actingAs($this->admin)->post(route('contents.meta', $content), ['publish_at' => '2026-11-03T10:00'])
+            ->assertSessionHas('status', 'Scheduled for 03 Nov, 10:00 AM.');
+        $this->assertSame(ContentStatus::Scheduled, $content->fresh()->status);
+
+        $this->artisan('meta:publish');
+        Http::assertNothingSent();
+
+        // Cancel and schedule again, then the time comes
+        $this->actingAs($this->admin)->delete(route('contents.meta.unschedule', $content))->assertSessionHas('status', 'Schedule cancelled.');
+        $this->assertSame(0, MetaPost::count());
+        $this->actingAs($this->admin)->post(route('contents.meta', $content->fresh()), ['publish_at' => '2026-11-03T10:00']);
+        $this->travelTo('2026-11-03 10:01:00');
+        $this->artisan('meta:publish');
+        $this->assertSame('111_fb1', MetaPost::sole()->post_id);
+        $this->assertSame(ContentStatus::Published, $content->fresh()->status);
+    }
 }

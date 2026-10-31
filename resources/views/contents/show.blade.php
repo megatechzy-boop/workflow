@@ -169,7 +169,11 @@
                                 <div class="text-sm">
                                     {{ ucfirst($metaPost->platform) }}:
                                     <span class="{{ ['done' => 'text-green-700', 'failed' => 'text-red-600'][$metaPost->status] ?? 'text-gray-600' }}">
-                                        {{ ['queued' => 'Waiting to post…', 'processing' => 'Instagram is processing…', 'done' => 'Posted', 'failed' => 'Failed'][$metaPost->status] }}
+                                        @if ($metaPost->status === 'queued' && $metaPost->publish_at?->isFuture())
+                                            Scheduled for {{ $metaPost->publish_at->format('d M, h:i A') }}
+                                        @else
+                                            {{ ['queued' => 'Waiting to post…', 'processing' => 'Instagram is processing…', 'done' => 'Posted', 'failed' => 'Failed'][$metaPost->status] }}
+                                        @endif
                                     </span>
                                     @if ($metaPost->error)<div class="text-xs text-red-600">{{ $metaPost->error }}</div>@endif
                                 </div>
@@ -199,9 +203,20 @@
                             @endforeach
                             @can('markStatus', $content)
                                 @if ($metaPosts->isEmpty() || $metaPosts->contains('status', 'failed'))
-                                    <form method="POST" action="{{ route('contents.meta', $content) }}">
+                                    <form method="POST" action="{{ route('contents.meta', $content) }}" class="space-y-2">
                                         @csrf
+                                        <label class="block text-xs text-gray-600">Post at (empty = now)
+                                            <input type="datetime-local" name="publish_at" min="{{ now()->format('Y-m-d\TH:i') }}"
+                                                value="{{ $content->task->item->post_date && $content->task->item->post_date->isFuture() ? $content->task->item->post_date->format('Y-m-d').'T10:00' : '' }}"
+                                                class="mt-1 block w-full border-gray-300 rounded-xl text-sm">
+                                        </label>
+                                        <x-input-error :messages="$errors->get('publish_at')" />
                                         <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">{{ $metaPosts->contains('status', 'failed') ? 'Try again' : 'Publish to '.collect(App\Support\MetaPublisher::platforms($content))->map(fn ($p) => ucfirst($p))->implode(' + ') }}</button>
+                                    </form>
+                                @elseif ($metaPosts->contains(fn ($p) => $p->status === 'queued' && $p->publish_at?->isFuture()))
+                                    <form method="POST" action="{{ route('contents.meta.unschedule', $content) }}">
+                                        @csrf @method('DELETE')
+                                        <button class="text-sm text-red-600 hover:underline">Cancel schedule</button>
                                     </form>
                                 @endif
                             @endcan

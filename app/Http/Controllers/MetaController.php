@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ContentStatus;
 use App\Enums\Permission;
 use App\Models\Content;
 use App\Models\ContentMedia;
@@ -108,9 +109,30 @@ class MetaController extends Controller
         if ($blocker = MetaPublisher::blocker($content)) {
             return back()->with('status', $blocker);
         }
-        $made = MetaPublisher::queue($content, $request->user());
+        $at = $request->validate(['publish_at' => ['nullable', 'date', 'after:now']])['publish_at'] ?? null;
+        $at = $at ? \Illuminate\Support\Carbon::parse($at) : null;
+        $made = MetaPublisher::queue($content, $request->user(), $at);
+        if ($made && $at && $content->status === ContentStatus::Approved) {
+            $content->update(['status' => ContentStatus::Scheduled]);
+        }
 
-        return back()->with('status', $made ? 'Queued. It will be posted within a minute or two.' : 'Already queued or posted.');
+        return back()->with('status', match (true) {
+            ! $made => 'Already queued or posted.',
+            (bool) $at => 'Scheduled for '.$at->format('d M, h:i A').'.',
+            default => 'Queued. It will be posted within a minute or two.',
+        });
+    }
+
+    /** Take back a scheduled post that hasn't gone out yet */
+    public function unschedule(Content $content): RedirectResponse
+    {
+        Gate::authorize('markStatus', $content);
+        MetaPost::where('content_id', $content->id)->where('status', 'queued')->where('publish_at', '>', now())->delete();
+        if ($content->status === ContentStatus::Scheduled) {
+            $content->update(['status' => ContentStatus::Approved]);
+        }
+
+        return back()->with('status', 'Schedule cancelled.');
     }
 
     /** Meta downloads the image / video from this short-lived signed link (no login) */

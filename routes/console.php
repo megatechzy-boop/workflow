@@ -23,7 +23,9 @@ Schedule::command('tasks:remind')->dailyAt('09:00');
 
 // Facebook / Instagram posts queued from approved content (Instagram videos need a few checks)
 Artisan::command('meta:publish', function () {
-    $posts = MetaPost::whereIn('status', ['queued', 'processing'])->with('content', 'page')->orderBy('id')->limit(10)->get();
+    $posts = MetaPost::whereIn('status', ['queued', 'processing'])
+        ->where(fn ($q) => $q->whereNull('publish_at')->orWhere('publish_at', '<=', now()))
+        ->with('content', 'page')->orderBy('id')->limit(10)->get();
     $posts->each(fn ($post) => MetaPublisher::process($post));
     $this->info($posts->count().' post(s) processed.');
 })->purpose('Send queued Facebook / Instagram posts');
