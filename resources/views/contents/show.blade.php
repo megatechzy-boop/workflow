@@ -162,7 +162,7 @@
 
                     {{-- Facebook / Instagram: queue the approved post; meta:publish sends it within a minute --}}
                     @php($metaPosts = App\Models\MetaPost::where('content_id', $content->id)->get())
-                    @if ($metaPosts->isNotEmpty() || (auth()->user()->can('markStatus', $content) && App\Support\MetaPublisher::platforms($content)))
+                    @if ($metaPosts->isNotEmpty() || (auth()->user()->can('publishMeta', $content) && App\Support\MetaPublisher::platforms($content)))
                         <div class="card p-4 space-y-2">
                             <div class="font-semibold text-gray-900">Facebook / Instagram</div>
                             @foreach ($metaPosts as $metaPost)
@@ -201,7 +201,7 @@
                                     </details>
                                 @endif
                             @endforeach
-                            @can('markStatus', $content)
+                            @can('publishMeta', $content)
                                 @if ($metaPosts->isEmpty() || $metaPosts->contains('status', 'failed'))
                                     <form method="POST" action="{{ route('contents.meta', $content) }}" class="space-y-2">
                                         @csrf

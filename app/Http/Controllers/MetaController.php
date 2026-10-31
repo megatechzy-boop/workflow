@@ -105,7 +105,7 @@ class MetaController extends Controller
 
     public function publish(Request $request, Content $content): RedirectResponse
     {
-        Gate::authorize('markStatus', $content);
+        Gate::authorize('publishMeta', $content);
         if ($blocker = MetaPublisher::blocker($content)) {
             return back()->with('status', $blocker);
         }

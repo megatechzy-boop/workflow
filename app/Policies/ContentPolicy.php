@@ -71,4 +71,12 @@ class ContentPolicy
         return $user->hasPermission(Permission::PublishContent)
             && in_array($content->status, [ContentStatus::Approved, ContentStatus::Scheduled], true);
     }
+
+    /** Publish to Facebook / Instagram; a Published post can still retry a platform that failed */
+    public function publishMeta(User $user, Content $content): bool
+    {
+        return $this->markStatus($user, $content)
+            || ($content->status === ContentStatus::Published && $user->hasPermission(Permission::PublishContent) && $this->view($user, $content)
+                && \App\Models\MetaPost::where('content_id', $content->id)->where('status', 'failed')->exists());
+    }
 }

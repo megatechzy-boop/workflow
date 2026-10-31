@@ -186,6 +186,22 @@ class MetaTest extends TestCase
         $this->assertSame(ContentStatus::Published, $content->fresh()->status);
     }
 
+    public function test_published_post_can_retry_a_failed_platform(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999']);
+        $content = $this->approvedPost(page: $page);
+        $content->update(['status' => ContentStatus::Published]);
+        MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'facebook', 'status' => 'done', 'post_id' => '111_1']);
+        $ig = MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'instagram', 'status' => 'failed', 'error' => 'Only photo or video']);
+
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertSee('Try again');
+        $this->actingAs($this->admin)->post(route('contents.meta', $content));
+        $this->assertSame('queued', $ig->fresh()->status);
+        $this->assertSame('done', MetaPost::where('platform', 'facebook')->value('status')); // Facebook not posted twice
+
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertDontSee('Try again');
+    }
+
     public function test_png_is_sent_to_meta_as_jpeg(): void
     {
         $content = $this->approvedPost();
