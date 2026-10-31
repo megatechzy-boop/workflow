@@ -40,6 +40,7 @@ class ContentController extends Controller
                 ->whereHas('task.item.calendar', fn ($c) => $c->where('client_id', $user->client_id))
                 ->whereIn('status', array_filter(ContentStatus::cases(), fn ($s) => $s->visibleToCustomer())))
             ->when(! $isCustomer && ! $user->hasPermission(Permission::ViewAllTasks), fn ($q) => $q->where('approver_id', $user->id))
+            ->when($user->brandLimit(), fn ($q, $ids) => $q->whereHas('task.item.calendar', fn ($c) => $c->whereIn('client_id', $ids)))
             ->when($request->status ?? 'pending', fn ($q, $s) => match ($s) {
                 'all' => $q,
                 'pending' => $q->whereIn('status', $isCustomer ? [ContentStatus::ClientReview] : [ContentStatus::Submitted, ContentStatus::Resubmitted]),
@@ -149,7 +150,8 @@ class ContentController extends Controller
 
         DB::transaction(function () use ($request, $content, $data) {
             $content->update(['status' => match ($data['action']) {
-                'approved' => ContentStatus::ClientReview, // after the SMM, the Customer gives final approval
+                // after the SMM the Customer gives final approval; internal brands have no Customer step
+                'approved' => $content->task->item->calendar->client->is_internal ? ContentStatus::Approved : ContentStatus::ClientReview,
                 'revision' => ContentStatus::RevisionRequired,
                 'rejected' => ContentStatus::Rejected,
             }]);
@@ -160,7 +162,7 @@ class ContentController extends Controller
         $label = ['approved' => 'Approved by SMM, now with the Customer', 'revision' => 'Revision required', 'rejected' => 'Rejected'][$data['action']];
         Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
         Notify::send(Notify::mentioned($data['body'] ?? null), 'You were mentioned', $request->user()->name.': '.$data['body'], $url);
-        if ($data['action'] === 'approved') {
+        if ($data['action'] === 'approved' && ! $content->task->item->calendar->client->is_internal) {
             Notify::send($this->customers($content), 'Content ready for your approval', $this->title($content).' is ready for your approval.', $url);
         }
 

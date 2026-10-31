@@ -29,6 +29,7 @@ class ScheduleController extends Controller
             ->whereHas('calendar', fn ($q) => $q
                 ->tap(\App\Models\User::draftFilter($user))
                 ->when($clientId, fn ($c) => $c->where('client_id', $clientId))
+                ->when($user->brandLimit(), fn ($c, $ids) => $c->whereIn('client_id', $ids))
                 // Customers only see calendars that were sent to them
                 ->when($isCustomer, fn ($c) => $c->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved])))
             ->orderBy('post_date')->orderBy('id')
@@ -37,7 +38,7 @@ class ScheduleController extends Controller
         return view('schedule.index', [
             'month' => $month,
             'byDay' => $items->groupBy(fn ($i) => $i->post_date->day),
-            'brands' => $isCustomer ? collect() : Client::orderBy('name')->get(['id', 'name']),
+            'brands' => $isCustomer ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(['id', 'name']),
             'clientId' => $clientId,
         ]);
     }

@@ -22,6 +22,9 @@ class CalendarPolicy
             return $user->client_id === $calendar->client_id
                 && in_array($calendar->status, [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved], true);
         }
+        if (! $user->canSeeBrand($calendar->client_id)) {
+            return false; // Social Media Manager: only their brands
+        }
         // Drafts: only the creator, Admin and Ops Manager
         if ($calendar->status === CalendarStatus::Draft && ! $user->seesAllDrafts() && $calendar->created_by !== $user->id) {
             return false;

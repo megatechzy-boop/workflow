@@ -34,6 +34,8 @@ class CalendarController extends Controller
                 ->where('client_id', $user->client_id)
                 ->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved]))
             ->tap(User::draftFilter($user))
+            // Social Media Manager with brands: only those brands
+            ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))
             // Designers/Editors: only calendars with a post assigned to them
             ->when($user->seesOnlyOwnRows(), fn ($q) => $q->whereHas('items.task', fn ($t) => $t->where('assigned_to', $user->id)))
             ->when($request->client_id, fn ($q, $id) => $q->where('client_id', $id))
@@ -44,7 +46,7 @@ class CalendarController extends Controller
 
         return view('calendars.index', [
             'calendars' => $calendars,
-            'clients' => $user->role === Role::Client ? collect() : Client::orderBy('name')->get(),
+            'clients' => $user->role === Role::Client ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(),
             'statuses' => CalendarStatus::cases(),
         ]);
     }
@@ -53,7 +55,9 @@ class CalendarController extends Controller
     {
         Gate::authorize('create', Calendar::class);
 
-        return view('calendars.create', ['clients' => Client::where('is_active', true)->orderBy('name')->get()]);
+        $user = request()->user();
+
+        return view('calendars.create', ['clients' => Client::where('is_active', true)->orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -61,7 +65,7 @@ class CalendarController extends Controller
         Gate::authorize('create', Calendar::class);
 
         $data = $request->validate([
-            'client_id' => ['required', 'exists:clients,id'],
+            'client_id' => ['required', 'exists:clients,id', Rule::in($request->user()->brandLimit() ?? Client::pluck('id')->all())],
             'month' => ['required', 'date_format:Y-m'],
         ]);
         $month = Carbon::createFromFormat('Y-m-d', $data['month'].'-01')->startOfDay();
@@ -151,9 +155,20 @@ class CalendarController extends Controller
         ], ['comment.required_if' => 'A comment is required for a revision.']);
 
         $approved = $data['action'] === 'approved';
-        $this->transition($request, $calendar, $approved ? CalendarStatus::ApproverApproved : CalendarStatus::Draft, $data['action'], $data['comment'] ?? null);
+        // Internal brand (no Customer): the Ops Manager's approval is final, tasks get assigned right away
+        $internal = $calendar->client->is_internal;
+        $next = match (true) {
+            ! $approved => CalendarStatus::Draft,
+            $internal => CalendarStatus::ClientApproved,
+            default => CalendarStatus::ApproverApproved,
+        };
+        $this->transition($request, $calendar, $next, $data['action'], $data['comment'] ?? null);
 
-        return back()->with('status', $approved ? 'Calendar sent to the Customer.' : 'Sent back for revision.');
+        return back()->with('status', match (true) {
+            ! $approved => 'Sent back for revision.',
+            $internal => 'Calendar approved (internal brand). Tasks assigned.',
+            default => 'Calendar sent to the Customer.',
+        });
     }
 
     /**

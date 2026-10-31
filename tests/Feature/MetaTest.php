@@ -50,6 +50,7 @@ class MetaTest extends TestCase
     {
         Http::fake([
             '*/oauth/access_token*' => Http::response(['access_token' => 'user-token']),
+            '*/me/adaccounts*' => Http::response(['data' => [['id' => 'act_55', 'name' => 'Acme Ads', 'currency' => 'INR', 'account_status' => 1], ['id' => 'act_66', 'name' => 'Closed', 'account_status' => 2]]]),
             '*/me/accounts*' => Http::response(['data' => [
                 ['id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'instagram_business_account' => ['id' => '999', 'username' => 'acmeyoga']],
             ]]),
@@ -60,7 +61,7 @@ class MetaTest extends TestCase
         parse_str(parse_url($redirect, PHP_URL_QUERY), $query);
 
         $this->actingAs($this->admin)->get(route('admin.meta.callback', ['code' => 'abc', 'state' => $query['state']]))
-            ->assertSessionHas('status', '1 Page(s) connected. Now link each client to its Page (Clients > Edit).');
+            ->assertSessionHas('status', '1 Page(s) and 1 ad account(s) connected. Now link each client to its Page and ad account (Clients > Edit).');
 
         $page = MetaPage::sole();
         $this->assertSame('acmeyoga', $page->ig_username);
@@ -127,5 +128,36 @@ class MetaTest extends TestCase
 
         $this->get(route('meta.media', $media))->assertForbidden();
         $this->get(\URL::temporarySignedRoute('meta.media', now()->addHour(), ['media' => $media->id]))->assertOk();
+    }
+
+    public function test_boost_a_published_facebook_post_on_the_clients_ad_account(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token']);
+        $content = $this->approvedPost(['facebook_post'], $page);
+        $account = \App\Models\MetaAdAccount::create(['account_id' => 'act_55', 'name' => 'Acme Ads', 'currency' => 'INR']);
+        $content->task->item->calendar->client->update(['meta_ad_account_id' => $account->id]);
+        \App\Models\MetaConnection::create(['user_token' => 'user-token']);
+        $post = MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'facebook', 'status' => 'done', 'post_id' => '111_fb1']);
+        $content->update(['status' => ContentStatus::Published]);
+        Http::fake([
+            '*/search*' => Http::response(['data' => [['key' => '1035921', 'name' => 'Solapur']]]),
+            '*/act_55/campaigns' => Http::response(['id' => 'c1']),
+            '*/act_55/adsets' => Http::response(['id' => 's1']),
+            '*/act_55/adcreatives' => Http::response(['id' => 'cr1']),
+            '*/act_55/ads' => Http::response(['id' => 'ad1']),
+        ]);
+
+        $this->actingAs($this->admin)->post(route('contents.boost', $post), ['daily_budget' => 300, 'days' => 7, 'city' => 'Solapur', 'radius_km' => 15, 'age_min' => 25, 'age_max' => 50])
+            ->assertSessionHas('status', 'Boost is live: ₹300/day for 7 day(s).');
+
+        $boost = \App\Models\MetaBoost::sole();
+        $this->assertSame(['active', 'c1', 's1', 'ad1'], [$boost->status, $boost->campaign_id, $boost->adset_id, $boost->ad_id]);
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/act_55/adsets') && $r['daily_budget'] === 30000
+            && json_decode($r['targeting'], true)['geo_locations']['cities'][0] === ['key' => '1035921', 'radius' => 15, 'distance_unit' => 'kilometer']);
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/act_55/adcreatives') && $r['object_story_id'] === '111_fb1');
+
+        // Designers can't boost
+        $designer = User::factory()->create(['role' => Role::GraphicDesigner]);
+        $this->actingAs($designer)->post(route('contents.boost', $post), ['daily_budget' => 300, 'days' => 7, 'age_min' => 25, 'age_max' => 50])->assertForbidden();
     }
 }

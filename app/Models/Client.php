@@ -9,16 +9,22 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
-    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id'];
+    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id', 'meta_ad_account_id', 'is_internal'];
 
     protected $attributes = ['is_active' => true];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
+        return ['is_active' => 'boolean', 'is_internal' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
     }
 
     /** Facebook Page (and its Instagram) where approved posts are published */
+    /** Ad account boosts are charged to (the client's own) */
+    public function metaAdAccount(): BelongsTo
+    {
+        return $this->belongsTo(MetaAdAccount::class);
+    }
+
     public function metaPage(): BelongsTo
     {
         return $this->belongsTo(MetaPage::class);

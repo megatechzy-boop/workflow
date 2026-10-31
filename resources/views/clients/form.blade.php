@@ -100,6 +100,19 @@
                         </div>
                     @endif
 
+                    @if ($adAccounts->isNotEmpty())
+                        <div>
+                            <x-input-label for="meta_ad_account_id" value="Ad account (boosts are charged here: the client's own account)" />
+                            <select id="meta_ad_account_id" name="meta_ad_account_id" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                                <option value="">Not linked</option>
+                                @foreach ($adAccounts as $adAccount)
+                                    <option value="{{ $adAccount->id }}" @selected(old('meta_ad_account_id', $client->meta_ad_account_id) == $adAccount->id)>{{ $adAccount->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('meta_ad_account_id')" class="mt-2" />
+                        </div>
+                    @endif
+
                     <div>
                         <x-input-label for="notes" value="Notes" />
                         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500">{{ old('notes', $client->notes) }}</textarea>
@@ -109,6 +122,11 @@
                     <label class="flex items-center gap-2">
                         <input type="checkbox" name="is_active" value="1" class="rounded border-gray-300" @checked(old('is_active', $client->is_active))>
                         <span class="text-sm text-gray-700">Active</span>
+                    </label>
+
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="is_internal" value="1" class="rounded border-gray-300" @checked(old('is_internal', $client->is_internal))>
+                        <span class="text-sm text-gray-700">Internal brand (our own, e.g. Mega Techzy): no Customer approval step</span>
                     </label>
 
                     <div class="flex items-center gap-3">

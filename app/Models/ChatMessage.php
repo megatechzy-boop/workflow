@@ -41,7 +41,7 @@ class ChatMessage extends Model
         }
 
         $rooms = ['team' => 'All team (internal)'];
-        foreach (Client::where('is_active', true)->orderBy('name')->get(['id', 'name']) as $c) {
+        foreach (Client::where('is_active', true)->orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(['id', 'name']) as $c) {
             $rooms['client:'.$c->id] = $c->name.' · Client group';
             $rooms['internal:'.$c->id] = $c->name.' · Internal';
         }
@@ -55,7 +55,7 @@ class ChatMessage extends Model
             return $room === 'client:'.$user->client_id && $user->client_id !== null;
         }
 
-        return $room === 'team' || preg_match('/^(client|internal):\d+$/', $room) === 1;
+        return $room === 'team' || (preg_match('/^(client|internal):(\d+)$/', $room, $m) === 1 && $user->canSeeBrand((int) $m[2]));
     }
 
     /** Members of a room (for mentions / notifications) */

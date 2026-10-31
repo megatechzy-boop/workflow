@@ -24,7 +24,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Designers/Editors never see caption, hashtags or approver, and only see formats for their role.
   In Calendars and Schedule they see only the rows whose task is assigned to them.
 - Draft calendars are visible only to their creator, Admin and Ops Manager.
-- Admin > Users: team members get "Brands"; auto-assign and the default approver follow them.
+- Admin > Users: team members get "Brands"; auto-assign and the default approver follow them. A Social
+  Media Manager with brands sees only those brands (calendars, approvals, schedule, chat, assets, reports).
+- Internal brand (Clients > Edit, e.g. Mega Techzy): no Customer step; Ops approval assigns tasks, SMM approval = Approved.
 - Chat groups: All team, per brand Client group and Internal. Customers get no chat push 22:00–09:00.
   "Discuss in chat" adds a post card to a message; SMM/Ops/Admin can also pick a post inside chat.
 - Notifications are required: every role (Admin too), phone and laptop, sees a full-screen

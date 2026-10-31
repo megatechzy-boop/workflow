@@ -19,7 +19,7 @@ class ContentPolicy
                 && $content->status->visibleToCustomer();
         }
 
-        return true;
+        return $user->canSeeBrand($content->task->item->calendar->client_id);
     }
 
     /** Upload: the assigned Designer/Editor, or users with the upload-any permission */

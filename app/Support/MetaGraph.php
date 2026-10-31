@@ -14,7 +14,7 @@ class MetaGraph
 {
     /** Pages + Instagram publishing; works in Standard access for people with a role on the Meta app */
     public const SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'business_management',
-        'instagram_basic', 'instagram_content_publish'];
+        'instagram_basic', 'instagram_content_publish', 'ads_management', 'ads_read'];
 
     public static function loginUrl(string $state): string
     {
@@ -106,6 +106,52 @@ class MetaGraph
     public static function publishInstagram(MetaPage $page, string $containerId): string
     {
         return self::post("/{$page->ig_user_id}/media_publish", ['creation_id' => $containerId, 'access_token' => $page->access_token])['id'];
+    }
+
+    /** @return array<int, array{account_id: string, name: string, currency: ?string}> active ad accounts of the login */
+    public static function adAccounts(string $userToken): array
+    {
+        $data = self::get('/me/adaccounts', ['access_token' => $userToken, 'limit' => 100, 'fields' => 'id,name,currency,account_status'])['data'] ?? [];
+
+        return array_values(array_map(fn ($a) => ['account_id' => $a['id'], 'name' => $a['name'] ?? $a['id'], 'currency' => $a['currency'] ?? null],
+            array_filter($data, fn ($a) => ($a['account_status'] ?? 1) === 1)));
+    }
+
+    /**
+     * Boost a published Facebook post: engagement campaign + ad set (budget, dates, place, age) + ad using the post.
+     * Amounts are in rupees; Meta wants the smallest unit (paise).
+     *
+     * @return array{campaign_id: string, adset_id: string, ad_id: string}
+     */
+    public static function boost(string $userToken, string $adAccount, string $postId, string $name, int $dailyBudget, int $days,
+        ?string $city, int $radiusKm, int $ageMin, int $ageMax): array
+    {
+        $token = ['access_token' => $userToken];
+        $geo = ['countries' => ['IN']];
+        if ($city) {
+            $key = self::get('/search', $token + ['type' => 'adgeolocation', 'location_types' => '["city"]', 'q' => $city, 'country_code' => 'IN'])['data'][0]['key'] ?? null;
+            if (! $key) {
+                throw new RuntimeException("City \"$city\" was not found.");
+            }
+            $geo = ['cities' => [['key' => $key, 'radius' => $radiusKm, 'distance_unit' => 'kilometer']]];
+        }
+
+        $campaign = self::post("/$adAccount/campaigns", $token + [
+            'name' => "Boost · $name", 'objective' => 'OUTCOME_ENGAGEMENT', 'status' => 'ACTIVE', 'special_ad_categories' => '[]',
+        ])['id'];
+        $adset = self::post("/$adAccount/adsets", $token + [
+            'name' => "Boost · $name", 'campaign_id' => $campaign, 'status' => 'ACTIVE',
+            'daily_budget' => $dailyBudget * 100, 'billing_event' => 'IMPRESSIONS', 'optimization_goal' => 'POST_ENGAGEMENT',
+            'destination_type' => 'ON_POST', 'bid_strategy' => 'LOWEST_COST_WITHOUT_CAP',
+            'start_time' => now()->toIso8601String(), 'end_time' => now()->addDays($days)->toIso8601String(),
+            'targeting' => json_encode(['geo_locations' => $geo, 'age_min' => $ageMin, 'age_max' => $ageMax, 'targeting_automation' => ['advantage_audience' => 0]]),
+        ])['id'];
+        $creative = self::post("/$adAccount/adcreatives", $token + ['name' => "Boost · $name", 'object_story_id' => $postId])['id'];
+        $ad = self::post("/$adAccount/ads", $token + [
+            'name' => "Boost · $name", 'adset_id' => $adset, 'creative' => json_encode(['creative_id' => $creative]), 'status' => 'ACTIVE',
+        ])['id'];
+
+        return ['campaign_id' => $campaign, 'adset_id' => $adset, 'ad_id' => $ad];
     }
 
     private static function get(string $path, array $query): array

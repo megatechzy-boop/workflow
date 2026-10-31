@@ -20,7 +20,7 @@ class ReportController extends Controller
         $isCustomer = $user->role === Role::Client;
         abort_unless($isCustomer || $user->hasPermission(Permission::ViewAllTasks), 403);
 
-        $brands = $isCustomer ? Client::whereKey($user->client_id)->get() : Client::orderBy('name')->get();
+        $brands = $isCustomer ? Client::whereKey($user->client_id)->get() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get();
         $client = $isCustomer ? $brands->first() : ($brands->firstWhere('id', (int) $request->client) ?? $brands->first());
         abort_unless($client, 404, 'No brand found.');
 

@@ -33,6 +33,18 @@
                     <div class="px-4 py-6 text-center text-gray-500">No Pages connected yet.</div>
                 @endforelse
             </div>
+
+            <h3 class="font-semibold text-gray-900 pt-2">Ad accounts (for boosting posts)</h3>
+            <div class="card divide-y">
+                @forelse ($adAccounts as $adAccount)
+                    <div class="px-4 py-3 flex items-center justify-between gap-3 text-sm">
+                        <div class="font-medium">{{ $adAccount->name }}</div>
+                        <div class="text-gray-500">{{ $adAccount->account_id }} · {{ $adAccount->currency }}</div>
+                    </div>
+                @empty
+                    <div class="px-4 py-6 text-center text-gray-500">No ad accounts yet. Reconnect Facebook and allow ads access; clients share their ad account with Mega Techzy as a partner.</div>
+                @endforelse
+            </div>
         </div>
     </div>
 </x-app-layout>

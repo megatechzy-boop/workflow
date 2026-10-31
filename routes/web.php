@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
     Route::post('contents/{content}/meta', [MetaController::class, 'publish'])->name('contents.meta');
+    Route::post('meta-posts/{metaPost}/boost', [MetaController::class, 'boost'])->name('contents.boost');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');

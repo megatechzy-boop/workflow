@@ -144,6 +144,26 @@ class User extends Authenticatable
         return false;
     }
 
+    private ?array $brandLimitCache = null;
+
+    /** Social Media Manager with brands ticked (Admin > Users) works only on those brands; null = all brands */
+    public function brandLimit(): ?array
+    {
+        if ($this->role !== Role::SocialMediaManager) {
+            return null;
+        }
+        $this->brandLimitCache ??= [$this->brands()->pluck('clients.id')->all()];
+
+        return $this->brandLimitCache[0] ?: null;
+    }
+
+    public function canSeeBrand(?int $clientId): bool
+    {
+        $limit = $this->brandLimit();
+
+        return $limit === null || in_array($clientId, $limit, true);
+    }
+
     /** Designer / Editor: calendars and schedule show only the rows whose task is theirs */
     public function seesOnlyOwnRows(): bool
     {

@@ -173,6 +173,29 @@
                                     </span>
                                     @if ($metaPost->error)<div class="text-xs text-red-600">{{ $metaPost->error }}</div>@endif
                                 </div>
+                                {{-- Boost: a live Facebook post becomes an ad on the client's ad account --}}
+                                @if ($metaPost->platform === 'facebook' && $metaPost->status === 'done' && auth()->user()->hasPermission(App\Enums\Permission::PublishContent))
+                                    @foreach (App\Models\MetaBoost::where('meta_post_id', $metaPost->id)->latest()->get() as $boost)
+                                        <div class="text-xs ms-2 {{ $boost->status === 'failed' ? 'text-red-600' : 'text-gray-600' }}">
+                                            Boost {{ $boost->created_at->format('d M') }}: ₹{{ number_format($boost->daily_budget) }}/day × {{ $boost->days }} days · {{ $boost->audienceLabel() }}
+                                            · {{ $boost->status === 'failed' ? 'Failed: '.$boost->error : 'Live' }}
+                                        </div>
+                                    @endforeach
+                                    <details class="ms-2">
+                                        <summary class="cursor-pointer text-sm text-brand-600">Boost this post</summary>
+                                        <form method="POST" action="{{ route('contents.boost', $metaPost) }}" class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600"
+                                            onsubmit="return confirm('Start a paid ad on the client\'s ad account?')">
+                                            @csrf
+                                            <label>Budget ₹/day<input type="number" name="daily_budget" min="100" value="300" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
+                                            <label>Days<input type="number" name="days" min="1" max="30" value="7" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
+                                            <label>City (empty = all India)<input type="text" name="city" placeholder="Solapur" class="mt-1 block w-full border-gray-300 rounded-xl text-sm"></label>
+                                            <label>Radius km<input type="number" name="radius_km" min="1" max="80" value="10" class="mt-1 block w-full border-gray-300 rounded-xl text-sm"></label>
+                                            <label>Age from<input type="number" name="age_min" min="18" max="65" value="18" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
+                                            <label>Age to<input type="number" name="age_max" min="18" max="65" value="55" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
+                                            <button class="col-span-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">Start boost</button>
+                                        </form>
+                                    </details>
+                                @endif
                             @endforeach
                             @can('markStatus', $content)
                                 @if ($metaPosts->isEmpty() || $metaPosts->contains('status', 'failed'))

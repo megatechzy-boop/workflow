@@ -14,7 +14,7 @@ class Asset extends Model
     /** Customers: own brand only; team: all brands */
     public static function canAccessBrand(User $user, int $clientId): bool
     {
-        return $user->role !== Role::Client || $user->client_id === $clientId;
+        return $user->role === Role::Client ? $user->client_id === $clientId : $user->canSeeBrand($clientId);
     }
 
     public function isImage(): bool
