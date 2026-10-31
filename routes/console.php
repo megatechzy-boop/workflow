@@ -19,7 +19,8 @@ Artisan::command('tasks:remind', function () {
     $this->info(Task::sendDeadlineReminders().' member(s) got their task list.');
 })->purpose('Email each member one list of tasks overdue, due today or due tomorrow');
 
-Schedule::command('tasks:remind')->dailyAt('09:00');
+// Scheduled as callbacks (in the same PHP process): the host disables proc_open, which Schedule::command needs
+Schedule::call(fn () => Artisan::call('tasks:remind'))->name('tasks-remind')->dailyAt('09:00');
 
 // Facebook / Instagram posts queued from approved content (Instagram videos need a few checks)
 Artisan::command('meta:publish', function () {
@@ -29,7 +30,7 @@ Artisan::command('meta:publish', function () {
     $posts->each(fn ($post) => MetaPublisher::process($post));
     $this->info($posts->count().' post(s) processed.');
 })->purpose('Send queued Facebook / Instagram posts');
-Schedule::command('meta:publish')->everyMinute()->withoutOverlapping();
+Schedule::call(fn () => Artisan::call('meta:publish'))->name('meta-publish')->everyMinute()->withoutOverlapping();
 
 // One-time clean-up before go-live: removes test work data, keeps users, roles, permissions and clients.
 // No SSH on cPanel, so it runs from a one-time cron; the marker file stops a left-over cron from wiping real data.
