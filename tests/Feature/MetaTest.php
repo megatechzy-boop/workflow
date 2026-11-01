@@ -202,6 +202,21 @@ class MetaTest extends TestCase
         $this->actingAs($this->admin)->get(route('contents.show', $content))->assertDontSee('Try again');
     }
 
+    public function test_post_marked_published_by_hand_can_still_be_sent(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999']);
+        $content = $this->approvedPost(page: $page);
+        $content->update(['status' => ContentStatus::Published]); // "Mark Published" clicked, nothing sent
+
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertSee('Publish to');
+        $this->actingAs($this->admin)->post(route('contents.meta', $content));
+        $this->assertSame(2, MetaPost::where('content_id', $content->id)->where('status', 'queued')->count());
+
+        // once sent (nothing failed) the button goes away: no double posting
+        MetaPost::where('content_id', $content->id)->update(['status' => 'done']);
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertDontSee('Publish to');
+    }
+
     public function test_png_is_sent_to_meta_as_jpeg(): void
     {
         $content = $this->approvedPost();
