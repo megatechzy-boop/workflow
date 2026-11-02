@@ -217,6 +217,28 @@ class MetaTest extends TestCase
         $this->actingAs($this->admin)->get(route('contents.show', $content))->assertDontSee('Publish to');
     }
 
+    public function test_instagram_uses_facebooks_copy_of_the_photo(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999']);
+        $content = $this->approvedPost(page: $page);
+        $fb = MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'facebook', 'status' => 'queued']);
+        $ig = MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'instagram', 'status' => 'queued']);
+        Http::fake([
+            '*/111_222?*' => Http::response(['attachments' => ['data' => [['target' => ['id' => '333']]]]]),
+            '*/333?*' => Http::response(['images' => [['source' => 'https://scontent.fbcdn.net/big.jpg'], ['source' => 'https://scontent.fbcdn.net/small.jpg']]]),
+            '*/999/media' => Http::response(['id' => 'cont1']),
+            '*/cont1?*' => Http::response(['status_code' => 'IN_PROGRESS']),
+        ]);
+
+        \App\Support\MetaPublisher::process($ig->fresh());
+        $this->assertSame([0, 'queued'], [$ig->fresh()->attempts, $ig->fresh()->status]); // waits for Facebook
+
+        $fb->update(['status' => 'done', 'post_id' => '111_222']);
+        \App\Support\MetaPublisher::process($ig->fresh());
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['image_url'] === 'https://scontent.fbcdn.net/big.jpg');
+        $this->assertSame('cont1', $ig->fresh()->container_id);
+    }
+
     public function test_png_is_sent_to_meta_as_jpeg(): void
     {
         $content = $this->approvedPost();

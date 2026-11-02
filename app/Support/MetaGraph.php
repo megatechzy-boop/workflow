@@ -98,6 +98,19 @@ class MetaGraph
         return self::post($ig, $token + ['media_type' => 'CAROUSEL', 'children' => implode(',', $children), 'caption' => $caption])['id'];
     }
 
+    /** Full-size CDN links of the photos in a Facebook post, in post order (one for a photo, several for a carousel) */
+    public static function facebookPhotoUrls(MetaPage $page, string $postId): array
+    {
+        $token = ['access_token' => $page->access_token];
+        $attachment = self::get("/$postId", $token + ['fields' => 'attachments{target{id},subattachments.limit(20){target{id}}}'])['attachments']['data'][0] ?? [];
+        $photoIds = isset($attachment['subattachments'])
+            ? array_column(array_column($attachment['subattachments']['data'], 'target'), 'id')
+            : array_filter([$attachment['target']['id'] ?? null]);
+
+        // "images" lists sizes largest first
+        return array_values(array_filter(array_map(fn ($id) => self::get("/$id", $token + ['fields' => 'images'])['images'][0]['source'] ?? null, $photoIds)));
+    }
+
     /** FINISHED | IN_PROGRESS | ERROR | EXPIRED */
     public static function containerStatus(MetaPage $page, string $containerId): string
     {

@@ -66,11 +66,27 @@ class MetaPublisher
         $cover = $media->firstWhere('kind', 'cover');
         $caption = trim(($version->caption ?? '')."\n\n".($version->hashtags ?? ''));
 
+        // Instagram photos are taken from Facebook's copy once the Facebook post is out: Meta reads its own CDN
+        // reliably, while our server is sometimes unreachable for Meta (DNS / firewall on the host)
+        $facebook = $post->platform === 'instagram' && $format !== 'reel'
+            ? MetaPost::where('content_id', $content->id)->where('platform', 'facebook')->first() : null;
+        if ($facebook && ! $post->container_id && in_array($facebook->status, ['queued', 'processing'], true)) {
+            return; // wait for the Facebook post (next run)
+        }
+
         try {
             $post->increment('attempts');
             if ($post->platform === 'facebook') {
                 $post->update(['status' => 'done', 'post_id' => MetaGraph::postToFacebook($page, $format, $urls, $caption)]);
             } else {
+                if (! $post->container_id && $facebook?->status === 'done') {
+                    try {
+                        $copies = MetaGraph::facebookPhotoUrls($page, $facebook->post_id);
+                        $urls = count($copies) === count($urls) ? $copies : $urls;
+                    } catch (Throwable $e) {
+                        report($e); // fall back to our own links
+                    }
+                }
                 if (! $post->container_id) {
                     $post->update(['status' => 'processing', 'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover ? $url($cover) : null)]);
                 }
