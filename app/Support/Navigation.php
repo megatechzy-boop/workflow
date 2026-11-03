@@ -77,6 +77,7 @@ class Navigation
             $add('Accounts', 'Salary', 'admin.salary.index', 'users', 'admin.salary.*');
             $add('Accounts', 'Expenses', 'admin.expenses.index', 'clipboard', 'admin.expenses.*');
             $add('Settings', 'Facebook / IG', 'admin.meta.index', 'send', 'admin.meta.*');
+            $add('Settings', 'Google Business', 'admin.google.index', 'building', 'admin.google.*');
         }
 
         return $items;

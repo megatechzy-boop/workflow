@@ -32,6 +32,12 @@ return [
         'graph' => 'https://graph.facebook.com/v21.0',
     ],
 
+    // Google Business Profile (OAuth client of Cloud project megatechzy-workflow; secret only in the server .env)
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],

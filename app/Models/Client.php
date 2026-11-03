@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -28,6 +29,12 @@ class Client extends Model
     public function metaPage(): BelongsTo
     {
         return $this->belongsTo(MetaPage::class);
+    }
+
+    /** Google Business Profile location (reviews and GBP posts) */
+    public function gbpLocation(): HasOne
+    {
+        return $this->hasOne(GbpLocation::class);
     }
 
     public function package(): BelongsTo

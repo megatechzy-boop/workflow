@@ -21,6 +21,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\CustomerBillController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\MetaController;
@@ -161,6 +162,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('meta', [MetaController::class, 'index'])->name('meta.index');
     Route::get('meta/connect', [MetaController::class, 'connect'])->name('meta.connect');
     Route::get('meta/callback', [MetaController::class, 'callback'])->name('meta.callback');
+    Route::get('google', [GoogleController::class, 'index'])->name('google.index');
+    Route::get('google/connect', [GoogleController::class, 'connect'])->name('google.connect');
+    Route::post('google/refresh', [GoogleController::class, 'refresh'])->name('google.refresh');
+    Route::put('google/locations/{location}', [GoogleController::class, 'link'])->name('google.link');
 
     // Module 7: office (Admin only)
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
@@ -183,5 +188,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 });
+
+// Google OAuth comes back here (this exact URL is set in Google Cloud: /google/callback)
+Route::get('google/callback', [GoogleController::class, 'callback'])->middleware(['auth', 'role:admin'])->name('google.callback');
 
 require __DIR__.'/auth.php';
