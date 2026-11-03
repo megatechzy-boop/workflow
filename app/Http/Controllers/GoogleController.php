@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\GbpLocation;
 use App\Models\GoogleAccount;
+use App\Support\GbpReviews;
 use App\Support\GoogleBusiness;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,21 @@ class GoogleController extends Controller
         }
 
         return redirect()->route('admin.google.index')->with('status', count($locations).' location(s) found. Link each one to its client below.');
+    }
+
+    /** Fetch reviews of every linked location now instead of waiting for gbp:reviews */
+    public function syncReviews(): RedirectResponse
+    {
+        try {
+            $new = GbpReviews::syncAll();
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('status', 'Google said: '.$e->getMessage());
+        }
+        $failed = GbpLocation::whereNotNull('client_id')->whereNotNull('reviews_error')->count();
+
+        return back()->with('status', $new.' new review(s) fetched.'.($failed ? " $failed location(s) failed: see the error below." : ''));
     }
 
     public function link(Request $request, GbpLocation $location): RedirectResponse

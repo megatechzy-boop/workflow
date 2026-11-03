@@ -199,6 +199,26 @@ class ReviewTest extends TestCase
         $this->assertSame('replied', $low->fresh()->status);
     }
 
+    public function test_admin_syncs_now_and_sees_sync_status_and_errors(): void
+    {
+        $this->fakeReviews(
+            ['reviews' => [$this->apiReview('old1', 'FIVE', 'Old and answered', reply: ['comment' => 'Thanks!', 'updateTime' => '2026-10-01T10:00:00Z'])]],
+        );
+        $this->actingAs($this->admin)->post(route('admin.google.syncReviews'))->assertSessionHas('status', '1 new review(s) fetched.');
+        $this->actingAs($this->admin)->get(route('admin.google.index'))->assertSee('Reviews: synced');
+
+        // already-answered old reviews show under "All reviews", not under the default "Not replied yet"
+        $this->actingAs($this->admin)->get(route('reviews.index'))->assertDontSee('Old and answered');
+        $this->actingAs($this->admin)->get(route('reviews.index', ['status' => 'all']))->assertSee('Old and answered');
+    }
+
+    public function test_sync_errors_are_shown_on_the_google_page(): void
+    {
+        Http::fake(['mybusiness.googleapis.com/*' => Http::response(['error' => ['message' => 'Google My Business API has not been used in project 123']], 403)]);
+        $this->actingAs($this->admin)->post(route('admin.google.syncReviews'))->assertSessionHas('status', '0 new review(s) fetched. 1 location(s) failed: see the error below.');
+        $this->actingAs($this->admin)->get(route('admin.google.index'))->assertSee('Reviews: Google My Business API has not been used in project 123');
+    }
+
     public function test_admin_manages_templates_with_duplicate(): void
     {
         $this->actingAs($this->admin)->get(route('admin.review-templates.index'))->assertOk()->assertSee('5 active');

@@ -5,6 +5,10 @@
             @if ($ready)
                 <div class="flex flex-wrap gap-2">
                     @if ($account)
+                        <form method="POST" action="{{ route('admin.google.syncReviews') }}">
+                            @csrf
+                            <button class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 min-h-[44px]">Sync reviews now</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.google.refresh') }}">
                             @csrf
                             <button class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 min-h-[44px]">Refresh locations</button>
@@ -45,6 +49,13 @@
                         <div class="flex-1 min-w-0">
                             <div class="font-medium truncate">{{ $location->title }}</div>
                             <div class="text-gray-500 truncate">{{ collect([$location->city, $location->phone])->filter()->join(' · ') ?: $location->location_name }}</div>
+                            @if ($location->client_id)
+                                @if ($location->reviews_error)
+                                    <div class="text-xs text-red-700 break-words">Reviews: {{ $location->reviews_error }}</div>
+                                @else
+                                    <div class="text-xs text-gray-500">Reviews: {{ $location->reviews_synced_at ? 'synced '.$location->reviews_synced_at->diffForHumans() : 'not synced yet' }}</div>
+                                @endif
+                            @endif
                         </div>
                         <select name="client_id" onchange="this.form.submit()" class="w-full sm:w-56 border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]" aria-label="Client for {{ $location->title }}">
                             <option value="">Not linked</option>

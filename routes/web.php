@@ -173,6 +173,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('google', [GoogleController::class, 'index'])->name('google.index');
     Route::get('google/connect', [GoogleController::class, 'connect'])->name('google.connect');
     Route::post('google/refresh', [GoogleController::class, 'refresh'])->name('google.refresh');
+    Route::post('google/sync-reviews', [GoogleController::class, 'syncReviews'])->name('google.syncReviews');
     Route::put('google/locations/{location}', [GoogleController::class, 'link'])->name('google.link');
     Route::resource('review-templates', ReviewTemplateController::class)->except(['show', 'destroy']);
     Route::post('review-templates/{reviewTemplate}/duplicate', [ReviewTemplateController::class, 'duplicate'])->name('review-templates.duplicate');

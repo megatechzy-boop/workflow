@@ -29,6 +29,7 @@ class GbpReviews
                 $new += self::sync($location, $token);
             } catch (Throwable $e) {
                 report($e);
+                $location->update(['reviews_error' => mb_substr($e->getMessage(), 0, 1000)]); // shown on Admin > Google Business
             }
         }
 
@@ -47,7 +48,7 @@ class GbpReviews
             }
             $pageToken = $first ? $page['next'] : null; // later syncs: the newest 50 are enough every 15 minutes
         } while ($pageToken);
-        $location->update(['reviews_synced_at' => now()]);
+        $location->update(['reviews_synced_at' => now(), 'reviews_error' => null]);
 
         return $new;
     }

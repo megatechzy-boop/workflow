@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** A Google Business Profile location the Admin connected; linked to at most one client */
 class GbpLocation extends Model
 {
-    protected $fillable = ['client_id', 'account_name', 'location_name', 'title', 'city', 'phone', 'reviews_synced_at'];
+    protected $fillable = ['client_id', 'account_name', 'location_name', 'title', 'city', 'phone', 'reviews_synced_at', 'reviews_error'];
 
     protected function casts(): array
     {

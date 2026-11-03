@@ -22,7 +22,7 @@ class ReviewController extends Controller
         $filters = $request->validate([
             'client' => ['nullable', 'integer'],
             'stars' => ['nullable', 'integer', 'between:1,5'],
-            'status' => ['nullable', Rule::in(array_merge(array_keys(GbpReview::STATUSES), ['open']))],
+            'status' => ['nullable', Rule::in(array_merge(array_keys(GbpReview::STATUSES), ['open', 'all']))],
         ]);
         $status = $filters['status'] ?? 'open';
 
@@ -31,7 +31,8 @@ class ReviewController extends Controller
                 ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))
                 ->when($filters['client'] ?? null, fn ($q, $id) => $q->where('client_id', $id))
                 ->when($filters['stars'] ?? null, fn ($q, $stars) => $q->where('rating', $stars))
-                ->when($status === 'open', fn ($q) => $q->where('status', '!=', 'replied'), fn ($q) => $q->where('status', $status))
+                ->when($status === 'open', fn ($q) => $q->where('status', '!=', 'replied'))
+                ->when(! in_array($status, ['open', 'all'], true), fn ($q) => $q->where('status', $status))
                 ->latest('reviewed_at')->paginate(30)->withQueryString(),
             'clients' => Client::whereHas('gbpLocation')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->orderBy('name')->pluck('name', 'id'),
             'filters' => $filters + ['status' => $status],

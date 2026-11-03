@@ -27,6 +27,7 @@
                 </select>
                 <select name="status" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]" aria-label="Status">
                     <option value="open" @selected($filters['status'] === 'open')>Not replied yet</option>
+                    <option value="all" @selected($filters['status'] === 'all')>All reviews</option>
                     @foreach (\App\Models\GbpReview::STATUSES as $key => $label)
                         <option value="{{ $key }}" @selected($filters['status'] === $key)>{{ $label }}</option>
                     @endforeach
@@ -89,7 +90,7 @@
                         @endif
                     </div>
                 @empty
-                    <div class="card px-4 py-6 text-center text-gray-500">No reviews here. New reviews come in every 15 minutes.</div>
+                    <div class="card px-4 py-6 text-center text-gray-500">No reviews here. New reviews come in every 15 minutes (Admin &gt; Google Business shows the last sync).</div>
                 @endforelse
             </div>
 
