@@ -33,6 +33,13 @@ class Notify
         return User::whereIn('role', $roles)->where('is_active', true)->get();
     }
 
+    /** Admin + Ops Managers + the brand's Social Media Managers (those with this brand ticked) */
+    public static function brandManagers(int $clientId): Collection
+    {
+        return self::role(Role::Admin, Role::Manager)
+            ->merge(self::role(Role::SocialMediaManager)->filter(fn (User $u) => $u->brandLimit() && $u->canSeeBrand($clientId)));
+    }
+
     /** "@TeamMember" => that user (name without spaces, case-insensitive) */
     public static function mentioned(?string $text): Collection
     {

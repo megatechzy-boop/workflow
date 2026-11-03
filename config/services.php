@@ -36,6 +36,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'post_media' => env('GBP_POST_MEDIA', 'url'), // url = Google fetches our signed link first; upload = always send the bytes
     ],
 
     'resend' => [

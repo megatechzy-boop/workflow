@@ -22,6 +22,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\CustomerBillController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GbpPostController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
@@ -43,6 +44,7 @@ Route::view('privacy', 'legal.privacy')->name('privacy');
 
 // Meta fetches post media from short-lived signed links (no login)
 Route::get('meta/media/{media}', [MetaController::class, 'media'])->middleware('signed')->name('meta.media');
+Route::get('gbp/media/{post}', [GbpPostController::class, 'media'])->middleware('signed')->name('gbp.media');
 Route::get('enquiry', [LeadController::class, 'form'])->name('enquiry.form');
 Route::post('enquiry', [LeadController::class, 'submit'])->middleware('throttle:5,1')->name('enquiry.submit');
 Route::get('enquiry/thanks', [LeadController::class, 'thanks'])->name('enquiry.thanks');
@@ -95,6 +97,8 @@ Route::middleware('auth')->group(function () {
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
+    Route::resource('gbp-posts', GbpPostController::class)->except('show');
+    Route::get('gbp-posts/{gbpPost}/image', [GbpPostController::class, 'image'])->name('gbp-posts.image');
     Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');

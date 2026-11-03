@@ -61,6 +61,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   Admin / Ops / brand SMMs alerted. First sync of a location only imports old reviews. Templates (Admin > Review
   templates) per client + a default set copied to new clients; the last 3 used on a location are not repeated.
   Healthcare clients (Clients > Edit): replies never use the reviewer's name. No AI.
+- GBP Posts (Social media > GBP Posts, no approval, one post at a time): update / offer / event, 1 image, `gbp:posts`
+  (every minute) publishes due posts. Try 1 gives Google our signed image link; tries 2–3 upload the bytes as a
+  location photo (host firewall blocks some crawlers; `GBP_POST_MEDIA=upload` always uploads). After 3 fails: Failed + alert.
 
 ## Next up
 

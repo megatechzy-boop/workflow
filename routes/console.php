@@ -4,6 +4,7 @@ use Illuminate\Foundation\Inspiring;
 use App\Models\MetaPost;
 use App\Models\Task;
 use App\Models\GoogleAccount;
+use App\Support\GbpPublisher;
 use App\Support\GbpReviews;
 use App\Support\MetaInbox;
 use App\Support\MetaPublisher;
@@ -54,6 +55,12 @@ Artisan::command('gbp:replies', function () {
     $this->info(GbpReviews::sendDue().' auto reply(s) sent.');
 })->purpose('Send Google review auto replies that are due');
 Schedule::call(fn () => Artisan::call('gbp:replies'))->name('gbp-replies')->everyMinute()->withoutOverlapping();
+
+// GBP posts that are due (3 tries, then Failed + team alert)
+Artisan::command('gbp:posts', function () {
+    $this->info(GbpPublisher::publishDue().' GBP post(s) processed.');
+})->purpose('Publish due Google Business Profile posts');
+Schedule::call(fn () => Artisan::call('gbp:posts'))->name('gbp-posts')->everyMinute()->withoutOverlapping();
 
 // One-time clean-up before go-live: removes test work data, keeps users, roles, permissions and clients.
 // No SSH on cPanel, so it runs from a one-time cron; the marker file stops a left-over cron from wiping real data.

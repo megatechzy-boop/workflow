@@ -88,6 +88,30 @@ class GoogleBusiness
         self::check(Http::withToken(self::token())->timeout(30)->put(self::V4.'/'.$reviewName.'/reply', ['comment' => $text]));
     }
 
+    /** Create a local post. @return array{name: string, searchUrl: ?string, state: ?string} */
+    public static function createLocalPost(GbpLocation $location, array $body): array
+    {
+        return self::check(Http::withToken(self::token())->timeout(60)->post(self::V4.'/'.$location->v4Path().'/localPosts', $body));
+    }
+
+    /**
+     * Upload image bytes as a location photo and return its public googleusercontent URL.
+     * Used when Google cannot fetch the image from our own link (the host firewall blocks some crawlers).
+     */
+    public static function uploadPhoto(GbpLocation $location, string $bytes, string $mime): string
+    {
+        $token = self::token();
+        $parent = self::V4.'/'.$location->v4Path().'/media';
+        $ref = self::check(Http::withToken($token)->timeout(30)->post($parent.':startUpload'))['resourceName'];
+        self::check(Http::withToken($token)->timeout(120)->withBody($bytes, $mime)
+            ->post('https://mybusiness.googleapis.com/upload/v1/media/'.$ref.'?upload_type=media'));
+        $item = self::check(Http::withToken($token)->timeout(60)->post($parent, [
+            'mediaFormat' => 'PHOTO', 'locationAssociation' => ['category' => 'ADDITIONAL'], 'dataRef' => ['resourceName' => $ref],
+        ]));
+
+        return $item['googleUrl'] ?? throw new RuntimeException('Google did not return a link for the uploaded photo.');
+    }
+
     public static function get(string $url, array $query, string $token): array
     {
         return self::check(Http::withToken($token)->timeout(30)->get($url, $query));

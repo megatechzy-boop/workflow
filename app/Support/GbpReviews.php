@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\Role;
 use App\Models\GbpLocation;
 use App\Models\GbpReview;
 use App\Models\ReviewReplyLog;
@@ -90,7 +89,7 @@ class GbpReviews
         $client = $review->client;
 
         if ($review->rating <= 2) {
-            Notify::send(self::managers($client->id), $review->rating.'-star Google review',
+            Notify::send(Notify::brandManagers($client->id), $review->rating.'-star Google review',
                 $client->name.': '.($review->reviewer_name ?? 'Someone').' gave '.$review->rating.' star(s). '.mb_strimwidth((string) $review->comment, 0, 200, '…'),
                 route('reviews.index', ['client' => $client->id, 'status' => 'pending']));
 
@@ -137,12 +136,5 @@ class GbpReviews
         GoogleBusiness::replyToReview($review->review_name, $text);
         $review->update(['status' => 'replied', 'reply' => $text, 'replied_at' => now(), 'reply_due_at' => null, 'error' => null]);
         ReviewReplyLog::create(['gbp_review_id' => $review->id, 'template_id' => $templateId, 'final_text' => $text, 'sent_at' => now(), 'approved_by' => $approver?->id]);
-    }
-
-    /** Admin + Ops Managers + the brand's Social Media Managers */
-    private static function managers(int $clientId)
-    {
-        return Notify::role(Role::Admin, Role::Manager)
-            ->merge(Notify::role(Role::SocialMediaManager)->filter(fn (User $u) => $u->brandLimit() && $u->canSeeBrand($clientId)));
     }
 }
