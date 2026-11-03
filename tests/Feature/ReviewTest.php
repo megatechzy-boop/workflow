@@ -219,6 +219,34 @@ class ReviewTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.google.index'))->assertSee('Reviews: Google My Business API has not been used in project 123');
     }
 
+    public function test_old_reviews_get_replies_spread_out_and_drafts(): void
+    {
+        $smm = User::factory()->create(['role' => Role::SocialMediaManager]);
+        $already = $this->review(5, ['status' => 'scheduled', 'draft' => 'x', 'reply_due_at' => now()->addHour()]);
+        $old = collect([5, 4, 5])->map(fn ($r, $i) => $this->review($r, ['reviewed_at' => now()->subDays(10 + $i)]));
+        $three = $this->review(3, ['reviewed_at' => now()->subDays(20)]);
+        $low = $this->review(1);
+        $replied = $this->review(5, ['status' => 'replied', 'reply' => 'Thanks', 'replied_at' => now()]);
+
+        $this->client->update(['gbp_auto_reply' => false]);
+        $this->actingAs($smm)->get(route('reviews.index', ['client' => $this->client->id]))->assertSee('4 old 3–5 star review(s)');
+        $this->actingAs($smm)->post(route('reviews.backfill', $this->client))->assertSessionHasErrors('reply');
+
+        $this->client->update(['gbp_auto_reply' => true]);
+        $this->actingAs($smm)->post(route('reviews.backfill', $this->client))
+            ->assertSessionHas('status', '3 reply(s) scheduled, one every 10–30 minutes; 1 draft(s) for 3-star reviews to approve.');
+
+        $due = $old->map(fn ($r) => $r->fresh())->each(fn ($r) => $this->assertSame('scheduled', $r->status))->pluck('reply_due_at');
+        $this->assertTrue($due[0]->between($already->reply_due_at->copy()->addMinutes(10), $already->reply_due_at->copy()->addMinutes(30))); // newest first, after the one already waiting
+        $this->assertTrue($due[1]->gt($due[0]) && $due[2]->gt($due[1]));
+        $this->assertCount(3, $old->map(fn ($r) => $r->fresh()->template_id)->unique()); // rotation: no repeats in a row
+        $this->assertSame('draft', $three->fresh()->status);
+        $this->assertSame(['pending', 'replied'], [$low->fresh()->status, $replied->fresh()->status]);
+
+        $this->actingAs($smm)->post(route('reviews.backfill', $this->client))->assertSessionHas('status', 'No old 3–5 star reviews waiting for a reply.');
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('reviews.backfill', $this->client))->assertForbidden();
+    }
+
     public function test_admin_manages_templates_with_duplicate(): void
     {
         $this->actingAs($this->admin)->get(route('admin.review-templates.index'))->assertOk()->assertSee('5 active');

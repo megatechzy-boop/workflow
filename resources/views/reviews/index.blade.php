@@ -35,6 +35,16 @@
                 <noscript><button class="px-3 py-2 border rounded-xl">Filter</button></noscript>
             </form>
 
+            @if ($waiting)
+                <form method="POST" action="{{ route('reviews.backfill', $filters['client']) }}" class="card p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                    onsubmit="return confirm('Schedule template replies for the old 4–5 star reviews (one every 10–30 minutes) and make drafts for 3-star ones?')">
+                    @csrf
+                    <p class="flex-1 text-sm text-gray-700">{{ $waiting }} old 3–5 star review(s) of {{ $clients[$filters['client']] ?? 'this client' }} have no reply yet.
+                        4–5 stars get template replies one by one (10–30 min apart, up to 100 at a time); 3 stars get drafts to approve. 1–2 stars stay manual.</p>
+                    <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold min-h-[44px] shrink-0">Schedule replies</button>
+                </form>
+            @endif
+
             <div class="space-y-3">
                 @forelse ($reviews as $review)
                     <div class="card p-4 space-y-2">

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Client;
 use App\Models\GbpLocation;
 use App\Models\GbpReview;
 use App\Models\ReviewReplyLog;
@@ -106,6 +107,37 @@ class GbpReviews
         }
         $review->update(['draft' => $picked['text'], 'template_id' => $picked['template']->id, 'templated_at' => now()]
             + ($positive ? ['status' => 'scheduled', 'reply_due_at' => now()->addMinutes(random_int(10, 30))] : ['status' => 'draft']));
+    }
+
+    /**
+     * Old reviews still without a reply: 4–5 stars get template replies spread out (one every 10–30 min, after any
+     * already scheduled for this client), 3 stars get drafts for approval; 1–2 stars stay manual. Newest first, 100 per run.
+     *
+     * @return array{scheduled: int, drafts: int}
+     */
+    public static function backfill(Client $client): array
+    {
+        $done = ['scheduled' => 0, 'drafts' => 0];
+        $last = GbpReview::where('client_id', $client->id)->where('status', 'scheduled')->max('reply_due_at');
+        $due = $last && Carbon::parse($last)->isFuture() ? Carbon::parse($last) : now();
+        $reviews = GbpReview::where('client_id', $client->id)->where('status', 'pending')->whereNull('draft')->where('rating', '>=', 3)
+            ->latest('reviewed_at')->limit(100)->get();
+        foreach ($reviews as $review) {
+            $positive = $review->rating >= 4;
+            $review->setRelation('client', $client)->setRelation('location', $review->location()->first());
+            if (! $picked = ReviewTemplates::pick($review, $positive ? 'positive' : 'neutral')) {
+                continue;
+            }
+            if ($positive) {
+                $due = $due->copy()->addMinutes(random_int(10, 30));
+            }
+            // templated_at = due time, so rotation sees them in the order they go out
+            $review->update(['draft' => $picked['text'], 'template_id' => $picked['template']->id, 'templated_at' => $positive ? $due : now()]
+                + ($positive ? ['status' => 'scheduled', 'reply_due_at' => $due] : ['status' => 'draft']));
+            $done[$positive ? 'scheduled' : 'drafts']++;
+        }
+
+        return $done;
     }
 
     /** Auto replies whose time has come (gbp:replies, every minute) */

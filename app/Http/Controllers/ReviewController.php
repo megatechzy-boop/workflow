@@ -36,7 +36,25 @@ class ReviewController extends Controller
                 ->latest('reviewed_at')->paginate(30)->withQueryString(),
             'clients' => Client::whereHas('gbpLocation')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->orderBy('name')->pluck('name', 'id'),
             'filters' => $filters + ['status' => $status],
+            // old reviews the "Schedule replies" button would take (shown when one client is picked)
+            'waiting' => ($filters['client'] ?? null) && $user->canSeeBrand((int) $filters['client'])
+                ? GbpReview::where('client_id', $filters['client'])->where('status', 'pending')->whereNull('draft')->where('rating', '>=', 3)->count() : 0,
         ]);
+    }
+
+    /** Old unanswered reviews of one client: replies scheduled one by one (4–5 stars), drafts for 3 stars */
+    public function backfill(Request $request, Client $client): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($client->id), 403);
+        if (! $client->gbp_auto_reply) {
+            return back()->withErrors(['reply' => 'Turn on auto reply for '.$client->name.' first (Clients > Edit > Google reviews).']);
+        }
+        $done = GbpReviews::backfill($client);
+
+        return back()->with('status', $done['scheduled'] + $done['drafts']
+            ? $done['scheduled'].' reply(s) scheduled, one every 10–30 minutes; '.$done['drafts'].' draft(s) for 3-star reviews to approve.'
+            : 'No old 3–5 star reviews waiting for a reply.');
     }
 
     /** Manual reply, or approve (and maybe edit) a template draft */
