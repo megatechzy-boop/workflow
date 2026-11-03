@@ -26,7 +26,7 @@ class TaskController extends Controller
         $tasks = Task::query()
             ->with(['item.calendar.client', 'assignee'])
             ->when(! $canSeeAll, fn ($q) => $q->where('assigned_to', $user->id))
-            ->when($canSeeAll && $request->member, fn ($q, $id) => $q->where('assigned_to', $id))
+            ->when($canSeeAll ? $request->member : null, fn ($q, $id) => $q->where('assigned_to', $id))
             ->when($request->status ?? 'pending', fn ($q, $s) => $s === 'all' ? $q : $q->where('status', $s))
             ->orderBy('deadline')
             ->paginate(30)

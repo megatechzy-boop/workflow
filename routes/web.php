@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('calendars', CalendarController::class)->except(['edit', 'update']);
     Route::post('calendars/{calendar}/submit', [CalendarController::class, 'submit'])->name('calendars.submit');
     Route::post('calendars/{calendar}/review', [CalendarController::class, 'review'])->name('calendars.review');
+    Route::post('calendars/{calendar}/items-review', [CalendarController::class, 'reviewItemsBulk'])->name('calendars.items.reviewBulk');
     Route::post('calendars/{calendar}/items/{item}/review', [CalendarController::class, 'reviewItem'])->scopeBindings()->name('calendars.items.review');
     Route::post('calendars/{calendar}/assign', [TaskController::class, 'assign'])->name('calendars.assign');
     Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
@@ -70,6 +71,7 @@ Route::middleware('auth')->group(function () {
     // Content upload + approval (permissions in ContentPolicy)
     Route::post('tasks/{task}/contents', [ContentController::class, 'store'])->name('tasks.contents.store');
     Route::get('contents', [ContentController::class, 'index'])->name('contents.index');
+    Route::post('contents/bulk-approve', [ContentController::class, 'bulkApprove'])->name('contents.bulkApprove');
     Route::get('contents/{content}', [ContentController::class, 'show'])->name('contents.show');
     Route::post('contents/{content}/resubmit', [ContentController::class, 'resubmit'])->name('contents.resubmit');
     Route::post('contents/{content}/replace', [ContentController::class, 'replace'])->name('contents.replace');

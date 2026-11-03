@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CalendarController extends Controller
@@ -177,6 +178,12 @@ class CalendarController extends Controller
      */
     public function reviewItem(Request $request, Calendar $calendar, CalendarItem $item): RedirectResponse
     {
+        if ($item->client_status === 'later' && Gate::allows('approveLater', $calendar)) {
+            $request->validate(['action' => ['required', Rule::in(['approved'])]]);
+
+            return $this->approveLaterRows($request, $calendar, collect([$item]));
+        }
+
         // Calendar already moved on (double tap, or an old tab): back to the list with a popup instead of a 403 page
         $user = $request->user();
         if ($calendar->status !== CalendarStatus::ApproverApproved && $user->role === Role::Client && $user->client_id === $calendar->client_id) {
@@ -185,22 +192,49 @@ class CalendarController extends Controller
         Gate::authorize('reviewItems', $calendar);
 
         $data = $request->validate([
-            'action' => ['required', Rule::in(['approved', 'revision'])],
+            'action' => ['required', Rule::in(['approved', 'revision', 'later'])],
             'comment' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
         ], ['comment.required_if' => 'A comment is required for a revision.']);
+        if ($data['action'] === 'later' && ! $item->isReel()) {
+            throw ValidationException::withMessages(['action' => 'Only a Reel can wait for the video.']);
+        }
 
         $item->update(['client_status' => $data['action'], 'client_comment' => $data['comment'] ?? null]);
 
+        return $this->afterRowReview($request, $calendar, 'Row marked '.['approved' => 'approved', 'revision' => 'for revision', 'later' => 'video later'][$data['action']]);
+    }
+
+    /** Customer ticks rows and approves them together (or approves ticked "Video later" Reels on an approved calendar) */
+    public function reviewItemsBulk(Request $request, Calendar $calendar): RedirectResponse
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:200'], 'ids.*' => ['integer']]);
+        $items = $calendar->items()->whereKey($data['ids'])->get(); // only this calendar's rows
+
+        if (Gate::allows('approveLater', $calendar)) {
+            return $this->approveLaterRows($request, $calendar, $items->where('client_status', 'later'));
+        }
+        Gate::authorize('reviewItems', $calendar);
+
+        CalendarItem::whereKey($items->modelKeys())->update(['client_status' => 'approved', 'client_comment' => null]);
+
+        return $this->afterRowReview($request, $calendar, $items->count().' row(s) approved');
+    }
+
+    /** Every row checked => approved (tasks made, "Video later" Reels wait) or, with any revision, back to the SMM */
+    private function afterRowReview(Request $request, Calendar $calendar, string $done): RedirectResponse
+    {
         $items = $calendar->items()->get();
         if ($items->whereNull('client_status')->isNotEmpty()) {
-            return back()->with('status', 'Row marked '.($data['action'] === 'approved' ? 'approved' : 'for revision').'. Rows left: '.$items->whereNull('client_status')->count());
+            return back()->with('status', $done.'. Rows left: '.$items->whereNull('client_status')->count());
         }
 
         $revisions = $items->where('client_status', 'revision');
         if ($revisions->isEmpty()) {
             $this->transition($request, $calendar, CalendarStatus::ClientApproved, 'approved', null);
+            $later = $items->where('client_status', 'later')->count();
 
-            return back()->with('status', 'All rows approved! Calendar approved.');
+            return back()->with('status', 'All rows checked! Calendar approved.'
+                .($later ? " $later Reel(s) wait for the video: approve them here once the video is uploaded." : ''));
         }
 
         $summary = $revisions->map(fn ($i) => $i->post_date->format('d M').': '.$i->client_comment)->implode("\n");
@@ -208,6 +242,28 @@ class CalendarController extends Controller
 
         // The calendar is a draft again, hidden from the Customer: send them to the list, not back to it
         return redirect()->route('calendars.index')->with('popup', 'Thank you! '.$revisions->count().' row(s) were sent back for changes. You will get the calendar again to check.');
+    }
+
+    /** "Video later" Reels approved on an approved calendar: their tasks are made now */
+    private function approveLaterRows(Request $request, Calendar $calendar, $items): RedirectResponse
+    {
+        if ($items->isEmpty()) {
+            return back()->with('status', 'Nothing to approve.');
+        }
+        $tasks = DB::transaction(function () use ($request, $calendar, $items) {
+            CalendarItem::whereKey($items->modelKeys())->update(['client_status' => 'approved']);
+
+            return Task::autoAssign($calendar, $request->user()->id);
+        });
+
+        Notify::send(User::withPermission(Permission::AssignTasks)->push($calendar->creator), 'Reel approved',
+            $this->name($calendar).': the customer approved '.$items->count().' Reel(s) that waited for the video. '.count($tasks).' task(s) were auto-assigned.',
+            route('calendars.show', $calendar));
+        foreach ($tasks as $task) {
+            $task->notifyAssignee();
+        }
+
+        return back()->with('status', $items->count().' Reel(s) approved. The team has started on them.');
     }
 
     /** Change status + history + (on approval) auto-assign + notifications */

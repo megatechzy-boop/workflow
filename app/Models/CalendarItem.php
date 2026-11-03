@@ -82,6 +82,12 @@ class CalendarItem extends Model
      * Who can take this post: Reel => Video Editor, Post/Carousel => Graphic Designer.
      * shortcut: one task per item, so a "Post + Reel" mix shows both roles; split tasks per format if different people are needed.
      */
+    /** One format per row: a Reel row may wait for the client's video ("Video later") */
+    public function isReel(): bool
+    {
+        return in_array(PostType::Reel, $this->formats(), true);
+    }
+
     public function assigneeRoles(): array
     {
         $types = collect($this->post_types ?? [])->map(fn ($key) => Content::typeOf($key));

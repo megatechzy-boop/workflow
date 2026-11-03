@@ -18,6 +18,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   (Approve, or Revision with a comment) → tasks auto-assigned (Reel → Video Editor, Post/Carousel →
   Graphic Designer, least-loaded; deadline = post date − 2 days) → Designer/Editor uploads files only →
   SMM approves (caption, hashtags, approver are SMM's) → Customer approves → Scheduled → Published → points.
+- Customer row check: rows can be ticked and approved together; a Reel whose client video is not ready can be
+  "Video later" (calendar still gets approved, no task for it) and is approved on the approved calendar later, which makes its task.
+  Approvals list: client filter + tick and approve together (SMM step or Customer step); revisions stay one by one.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
 - Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.
 - Roles: Admin, Operation Manager (`manager`), Social Media Manager, Graphic Designer, Video Editor, Customer (`client`).

@@ -285,4 +285,26 @@ class ContentTest extends TestCase
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
         $this->actingAs($this->member)->post("/contents/{$content->id}/replace", ['images' => $this->images(2)])->assertForbidden();
     }
+
+    public function test_bulk_approve_by_smm_then_customer_and_client_filter(): void
+    {
+        $this->uploadCarousel();
+        $content = Content::firstOrFail();
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->task->item->calendar->client_id]);
+
+        // Client filter on the approvals list
+        $other = Client::create(['name' => 'Other']);
+        $this->actingAs($this->approver)->get('/contents?client='.$other->id)->assertSee('Nothing pending.')->assertDontSee('Approve selected');
+        $this->actingAs($this->approver)->get('/contents?client='.$content->task->item->calendar->client_id)->assertSee('Acme')->assertSee('Approve selected');
+
+        // Customer cannot bulk approve a post still with the SMM: skipped
+        $this->actingAs($customer)->post('/contents/bulk-approve', ['ids' => [$content->id]])->assertSessionHas('status', '0 post(s) approved. 1 skipped (already reviewed).');
+        $this->assertSame(ContentStatus::Submitted, $content->fresh()->status);
+
+        $this->actingAs($this->approver)->post('/contents/bulk-approve', ['ids' => [$content->id]])->assertSessionHas('status', '1 post(s) approved.');
+        $this->assertSame(ContentStatus::ClientReview, $content->fresh()->status);
+
+        $this->actingAs($customer)->post('/contents/bulk-approve', ['ids' => [$content->id]]);
+        $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
+    }
 }

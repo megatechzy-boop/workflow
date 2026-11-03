@@ -42,7 +42,9 @@ class Task extends Model
         $brandTeam = $links->where('client_id', $calendar->client_id)->pluck('user_id');
 
         $created = [];
-        foreach ($calendar->items()->doesntHave('task')->get() as $item) {
+        // Reels kept for later (client's video not ready) get their task when the Customer approves them
+        $rows = $calendar->items()->doesntHave('task')->where(fn ($q) => $q->whereNull('client_status')->orWhere('client_status', '!=', 'later'));
+        foreach ($rows->get() as $item) {
             $roleMembers = $creators->filter(fn ($u) => in_array($u->role, $item->assigneeRoles(), true));
             $pool = $roleMembers->filter(fn ($u) => $brandTeam->contains($u->id) || ! $hasBrands->contains($u->id));
             $member = ($pool->isNotEmpty() ? $pool : $roleMembers) // nobody fits: any member of the role rather than no one

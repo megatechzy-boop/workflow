@@ -91,6 +91,9 @@ class TaskTest extends TestCase
         $this->actingAs($this->member)->get('/tasks')->assertOk()->assertSee('My task')->assertDontSee('Other task');
         $this->actingAs($this->manager)->get('/tasks')->assertSee('My task')->assertSee('Other task');
         $this->actingAs(User::factory()->create(['role' => Role::Client]))->get('/tasks')->assertForbidden();
+
+        // Member filter shows only that member's tasks
+        $this->actingAs($this->manager)->get('/tasks?member='.$other->id)->assertSee('Other task')->assertDontSee('My task');
     }
 
     public function test_reel_goes_to_video_editor_and_post_to_designer(): void

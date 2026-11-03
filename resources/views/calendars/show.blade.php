@@ -51,10 +51,34 @@
                 @php($pending = $calendar->items->whereNull('client_status')->count())
                 <div class="p-4 rounded bg-purple-50 border border-purple-200 text-sm">
                     <strong>Please check every row:</strong> use Approve or Revision (with a comment) in the "Customer check" column.
+                    Reel video not ready yet? Use <strong>Video later</strong>: the other rows go ahead now, and you approve the Reel here once the video is uploaded.
                     Once every row is checked, the calendar moves on automatically.
                     <span class="block mt-1 font-semibold">{{ $calendar->items->count() - $pending }} / {{ $calendar->items->count() }} rows checked</span>
                 </div>
             @endcan
+            @can('approveLater', $calendar)
+                @if ($calendar->items->where('client_status', 'later')->isNotEmpty())
+                    <div class="p-4 rounded bg-purple-50 border border-purple-200 text-sm">
+                        <strong>{{ $calendar->items->where('client_status', 'later')->count() }} Reel(s) wait for your video.</strong>
+                        Upload the video in the "Files" column, then Approve the row so the team can start.
+                    </div>
+                @endif
+            @endcan
+
+            {{-- Bulk approve: the ticks in the "Customer check" column point at this form --}}
+            @php($bulkRows = auth()->user()->can('reviewItems', $calendar) ? $calendar->items : (auth()->user()->can('approveLater', $calendar) ? $calendar->items->where('client_status', 'later') : collect()))
+            @if ($bulkRows->isNotEmpty())
+                <form id="rows-bulk" method="POST" action="{{ route('calendars.items.reviewBulk', $calendar) }}" class="flex flex-wrap items-center gap-3 p-3 rounded bg-white border border-gray-200"
+                      onsubmit="if (!document.querySelector('input[form=rows-bulk]:checked')) { alert('Tick at least one row.'); return false }">
+                    @csrf
+                    <label class="flex items-center gap-2 text-sm font-medium">
+                        <input type="checkbox" class="rounded border-gray-300 text-brand-600"
+                               onchange="document.querySelectorAll('input[form=rows-bulk][name]').forEach(b => b.checked = this.checked)">
+                        Select all ({{ $bulkRows->count() }})
+                    </label>
+                    <x-primary-button>Approve selected</x-primary-button>
+                </form>
+            @endif
 
             {{-- Items table --}}
             {{-- Spreadsheet look: grid borders, light blue cells, centered text --}}
@@ -114,7 +138,20 @@
                                     </form>
                                 </td>
                                 <td class="px-3 py-4 bg-[#faf5ff] text-left">
-                                    @if ($item->client_status === 'approved')
+                                    @if ($bulkRows->contains($item))
+                                        <label class="flex items-center gap-1 mb-1 text-xs text-gray-600">
+                                            <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="rows-bulk" class="rounded border-gray-300 text-brand-600"> Select
+                                        </label>
+                                    @endif
+                                    @if ($item->client_status === 'later')
+                                        <span class="inline-block px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-xs font-semibold"><x-icon name="film" class="w-3.5 h-3.5 inline -mt-0.5" /> Video later</span>
+                                        @can('approveLater', $calendar)
+                                            <form method="POST" action="{{ route('calendars.items.review', [$calendar, $item]) }}" class="mt-2">
+                                                @csrf
+                                                <button name="action" value="approved" class="px-2 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-500"><x-icon name="tick" class="w-3.5 h-3.5 inline -mt-0.5" /> Approve</button>
+                                            </form>
+                                        @endcan
+                                    @elseif ($item->client_status === 'approved')
                                         <span class="inline-block px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold"><x-icon name="tick" class="w-3.5 h-3.5 inline -mt-0.5" /> Approved</span>
                                     @elseif ($item->client_status === 'revision')
                                         <span class="inline-block px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs font-semibold">Revision</span>
@@ -131,6 +168,9 @@
                                             <div class="flex gap-1">
                                                 <button name="action" value="approved" class="px-2 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-500"><x-icon name="tick" class="w-3.5 h-3.5 inline -mt-0.5" /> Approve</button>
                                                 <button name="action" value="revision" class="px-2 py-1 rounded bg-orange-500 text-white text-xs font-semibold hover:bg-orange-400">Revision</button>
+                                                @if ($item->isReel())
+                                                    <button name="action" value="later" class="px-2 py-1 rounded bg-purple-600 text-white text-xs font-semibold hover:bg-purple-500">Video later</button>
+                                                @endif
                                             </div>
                                         </form>
                                     @endcan

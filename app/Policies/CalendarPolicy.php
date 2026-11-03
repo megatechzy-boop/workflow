@@ -75,4 +75,11 @@ class CalendarPolicy
         return $calendar->status === CalendarStatus::ApproverApproved
             && $user->role === Role::Client && $user->client_id === $calendar->client_id;
     }
+
+    /** Approved calendar: the Customer approves the Reels kept for later once the video is there */
+    public function approveLater(User $user, Calendar $calendar): bool
+    {
+        return $calendar->status === CalendarStatus::ClientApproved
+            && $user->role === Role::Client && $user->client_id === $calendar->client_id;
+    }
 }

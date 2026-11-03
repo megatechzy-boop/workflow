@@ -6,6 +6,7 @@ use App\Enums\ContentStatus;
 use App\Enums\Permission;
 use App\Enums\PostType;
 use App\Enums\Role;
+use App\Models\Client;
 use App\Models\Content;
 use App\Models\ContentComment;
 use App\Models\ContentMedia;
@@ -41,6 +42,7 @@ class ContentController extends Controller
                 ->whereIn('status', array_filter(ContentStatus::cases(), fn ($s) => $s->visibleToCustomer())))
             ->when(! $isCustomer && ! $user->hasPermission(Permission::ViewAllTasks), fn ($q) => $q->where('approver_id', $user->id))
             ->when($user->brandLimit(), fn ($q, $ids) => $q->whereHas('task.item.calendar', fn ($c) => $c->whereIn('client_id', $ids)))
+            ->when($request->client, fn ($q, $id) => $q->whereHas('task.item.calendar', fn ($c) => $c->where('client_id', $id)))
             ->when($request->status ?? 'pending', fn ($q, $s) => match ($s) {
                 'all' => $q,
                 'pending' => $q->whereIn('status', $isCustomer ? [ContentStatus::ClientReview] : [ContentStatus::Submitted, ContentStatus::Resubmitted]),
@@ -50,7 +52,11 @@ class ContentController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        return view('contents.index', ['contents' => $contents, 'statuses' => ContentStatus::cases()]);
+        return view('contents.index', [
+            'contents' => $contents,
+            'statuses' => ContentStatus::cases(),
+            'clients' => $isCustomer ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(['id', 'name']),
+        ]);
     }
 
     /** First upload (V1) of one format on a task */
@@ -148,6 +154,45 @@ class ContentController extends Controller
             'body' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
         ], ['body.required_if' => 'A comment is required for a revision.']);
 
+        $this->smmReview($request, $content, $data['action'], $data['body'] ?? null);
+
+        return back()->with('status', 'Review saved.');
+    }
+
+    /** Approvals list: tick posts and approve them together (SMM step or Customer step, whichever the user may do) */
+    public function bulkApprove(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:100'], 'ids.*' => ['integer']]);
+
+        $done = 0;
+        $readyForCustomer = [];
+        foreach (Content::with('task.item.calendar.client')->whereKey($data['ids'])->get() as $content) {
+            if (Gate::allows('review', $content)) {
+                $this->smmReview($request, $content, 'approved', null, false);
+                if (! $content->task->item->calendar->client->is_internal) {
+                    $readyForCustomer[$content->task->item->calendar->client_id][] = $content;
+                }
+            } elseif (Gate::allows('customerReview', $content)) {
+                $this->customerDecision($request, $content, 'approved', null);
+            } else {
+                continue; // already reviewed or not theirs: skipped
+            }
+            $done++;
+        }
+
+        // One push per brand instead of one per post
+        foreach ($readyForCustomer as $contents) {
+            Notify::send($this->customers($contents[0]), 'Content ready for your approval',
+                count($contents).' post(s) are ready for your approval.', route('contents.index'));
+        }
+
+        return back()->with('status', "$done post(s) approved.".($done < count($data['ids']) ? ' '.(count($data['ids']) - $done).' skipped (already reviewed).' : ''));
+    }
+
+    private function smmReview(Request $request, Content $content, string $action, ?string $body, bool $notifyCustomers = true): void
+    {
+        $data = ['action' => $action, 'body' => $body];
+
         DB::transaction(function () use ($request, $content, $data) {
             $content->update(['status' => match ($data['action']) {
                 // after the SMM the Customer gives final approval; internal brands have no Customer step
@@ -162,11 +207,9 @@ class ContentController extends Controller
         $label = ['approved' => 'Approved by SMM, now with the Customer', 'revision' => 'Revision required', 'rejected' => 'Rejected'][$data['action']];
         Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
         Notify::send(Notify::mentioned($data['body'] ?? null), 'You were mentioned', $request->user()->name.': '.$data['body'], $url);
-        if ($data['action'] === 'approved' && ! $content->task->item->calendar->client->is_internal) {
+        if ($notifyCustomers && $data['action'] === 'approved' && ! $content->task->item->calendar->client->is_internal) {
             Notify::send($this->customers($content), 'Content ready for your approval', $this->title($content).' is ready for your approval.', $url);
         }
-
-        return back()->with('status', 'Review saved.');
     }
 
     /** Customer final review: Approve or Revision (comment required) */
@@ -186,6 +229,15 @@ class ContentController extends Controller
             'body' => ['required_if:action,revision', 'nullable', 'string', 'max:5000'],
         ], ['body.required_if' => 'A comment is required for a revision.']);
 
+        $this->customerDecision($request, $content, $data['action'], $data['body'] ?? null);
+
+        return back()->with('status', 'Thank you! Your review has been saved.');
+    }
+
+    private function customerDecision(Request $request, Content $content, string $action, ?string $body): void
+    {
+        $data = ['action' => $action, 'body' => $body];
+
         DB::transaction(function () use ($request, $content, $data) {
             $approved = $data['action'] === 'approved';
             $content->update(['status' => $approved ? ContentStatus::Approved : ContentStatus::RevisionRequired]);
@@ -198,8 +250,6 @@ class ContentController extends Controller
         $title = $data['action'] === 'approved' ? 'Customer approved' : 'Customer requested changes';
         Notify::send([$content->task->assignee, $content->approver], $title,
             $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), route('contents.show', $content));
-
-        return back()->with('status', 'Thank you! Your review has been saved.');
     }
 
     private function customers(Content $content)

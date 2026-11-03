@@ -298,4 +298,38 @@ class CalendarTest extends TestCase
         $this->assertSame([['instagram_reel'], ['instagram_post', 'facebook_post', 'linkedin_post']],
             $calendar->items()->orderBy('id')->pluck('post_types')->all());
     }
+
+    public function test_bulk_approve_with_reel_video_later(): void
+    {
+        User::factory()->create(['role' => Role::GraphicDesigner]);
+        $editor = User::factory()->create(['role' => Role::VideoEditor]);
+        $calendar = $this->draftWithItem(); // carousel
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-11-07', 'format' => 'post', 'platforms' => ['instagram']]);
+        $this->actingAs($this->team)->post("/calendars/{$calendar->id}/items", ['post_date' => '2026-11-09', 'format' => 'reel', 'platforms' => ['instagram']]);
+        [$carousel, $post, $reel] = $calendar->items()->orderBy('post_date')->get()->all();
+        $this->assertTrue($reel->isReel());
+        $this->submitAndOpsApprove($calendar);
+
+        // Only a Reel can wait for the video
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items/{$post->id}/review", ['action' => 'later'])->assertSessionHasErrors('action');
+
+        // Bulk: carousel + post approved, reel still open
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items-review", ['ids' => [$carousel->id, $post->id]]);
+        $this->assertSame(CalendarStatus::ApproverApproved, $calendar->fresh()->status);
+
+        // Reel: video later => calendar approved, tasks only for the ready rows
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items/{$reel->id}/review", ['action' => 'later']);
+        $this->assertSame(CalendarStatus::ClientApproved, $calendar->fresh()->status);
+        $this->assertNotNull($carousel->task()->first());
+        $this->assertNotNull($post->task()->first());
+        $this->assertNull($reel->task()->first());
+        $this->actingAs($this->clientUser)->get("/calendars/{$calendar->id}")->assertSee('wait for your video');
+
+        // Another customer cannot approve it; the brand's Customer can, and the Editor gets the task
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Other'])->id]);
+        $this->actingAs($other)->post("/calendars/{$calendar->id}/items-review", ['ids' => [$reel->id]])->assertForbidden();
+        $this->actingAs($this->clientUser)->post("/calendars/{$calendar->id}/items-review", ['ids' => [$reel->id]]);
+        $this->assertSame('approved', $reel->fresh()->client_status);
+        $this->assertSame($editor->id, $reel->task()->first()->assigned_to);
+    }
 }
