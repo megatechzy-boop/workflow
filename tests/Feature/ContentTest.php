@@ -75,6 +75,17 @@ class ContentTest extends TestCase
         $this->assertSame(3, $content->versions()->first()->media()->count());
     }
 
+    public function test_carousel_slides_follow_file_names_not_pick_order(): void
+    {
+        $files = array_map(fn ($n) => UploadedFile::fake()->image("Slide $n.jpg"), [10, 1, 3, 2]); // Windows sends the last-clicked file first
+        $this->actingAs($this->member)->post("/tasks/{$this->task->id}/contents", [
+            'post_type' => 'carousel', 'approver_id' => $this->approver->id, 'images' => $files,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['Slide 1.jpg', 'Slide 2.jpg', 'Slide 3.jpg', 'Slide 10.jpg'],
+            Content::firstOrFail()->versions()->first()->media()->pluck('original_name')->all());
+    }
+
     public function test_reel_needs_video(): void
     {
         // Reels belong to the Video Editor

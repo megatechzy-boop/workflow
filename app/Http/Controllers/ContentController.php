@@ -432,9 +432,12 @@ class ContentController extends Controller
     private function storeMedia(Request $request, Content $content, ContentVersion $version, string $action): void
     {
         $dir = "contents/{$content->id}/v{$version->number}";
+        // Browsers do not keep the pick order (Windows puts the last-clicked file first): slides go by file name, 1, 2 ... 10
+        $images = $request->file('images') ?? [];
+        usort($images, fn ($a, $b) => strnatcasecmp($a->getClientOriginalName(), $b->getClientOriginalName()));
         $files = $content->type() === PostType::Reel
             ? array_filter([['video', $request->file('video')], ['cover', $request->file('cover')]], fn ($f) => $f[1])
-            : array_map(fn ($f) => ['image', $f], $request->file('images'));
+            : array_map(fn ($f) => ['image', $f], $images);
 
         $stored = [];
         try {
