@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\ChatMessage;
+use App\Models\GbpReview;
 use App\Models\Lead;
 use App\Models\MetaComment;
 use App\Models\MetaLead;
@@ -48,6 +49,10 @@ class Navigation
                 ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
         }
         if ($publishes) {
+            $add('Social media', 'Reviews', 'reviews.index', 'star', 'reviews.*', GbpReview::whereIn('status', ['pending', 'draft'])
+                ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
+        }
+        if ($publishes) {
             $add('Meta ads', 'Ads', 'ads.index', 'play', ['ads.index', 'ads.create']);
             $add('Meta ads', 'Audiences', 'ads.audiences', 'users', 'ads.audiences*');
             $add('Meta ads', 'Pixel', 'ads.pixel', 'search', 'ads.pixel*');
@@ -78,6 +83,7 @@ class Navigation
             $add('Accounts', 'Expenses', 'admin.expenses.index', 'clipboard', 'admin.expenses.*');
             $add('Settings', 'Facebook / IG', 'admin.meta.index', 'send', 'admin.meta.*');
             $add('Settings', 'Google Business', 'admin.google.index', 'building', 'admin.google.*');
+            $add('Settings', 'Review templates', 'admin.review-templates.index', 'star', 'admin.review-templates.*');
         }
 
         return $items;

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\MailTestController;
 use App\Http\Controllers\Admin\BillingController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\PackageController;
+use App\Http\Controllers\Admin\ReviewTemplateController;
 use App\Http\Controllers\Admin\SalaryController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Admin\RoleController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +93,8 @@ Route::middleware('auth')->group(function () {
     Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
     Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
+    Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
     Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
@@ -166,6 +170,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('google/connect', [GoogleController::class, 'connect'])->name('google.connect');
     Route::post('google/refresh', [GoogleController::class, 'refresh'])->name('google.refresh');
     Route::put('google/locations/{location}', [GoogleController::class, 'link'])->name('google.link');
+    Route::resource('review-templates', ReviewTemplateController::class)->except(['show', 'destroy']);
+    Route::post('review-templates/{reviewTemplate}/duplicate', [ReviewTemplateController::class, 'duplicate'])->name('review-templates.duplicate');
 
     // Module 7: office (Admin only)
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');

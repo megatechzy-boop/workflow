@@ -129,6 +129,30 @@
                         <span class="text-sm text-gray-700">Internal brand (our own, e.g. Mega Techzy): no Customer approval step</span>
                     </label>
 
+                    <fieldset class="space-y-3 border-t pt-4">
+                        <legend class="text-sm font-semibold text-gray-900">Google reviews</legend>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="gbp_auto_reply" value="1" class="rounded border-gray-300" @checked(old('gbp_auto_reply', $client->gbp_auto_reply))>
+                            <span class="text-sm text-gray-700">Auto reply to 4–5 star reviews (from templates, 10–30 min later)</span>
+                        </label>
+                        <div>
+                            <x-input-label for="gbp_language" value="Reply language" />
+                            <select id="gbp_language" name="gbp_language" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                                @foreach (\App\Support\ReviewTemplates::LANGUAGES as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('gbp_language', $client->gbp_language ?? 'en') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="gbp_auto_language" value="1" class="rounded border-gray-300" @checked(old('gbp_auto_language', $client->gbp_auto_language))>
+                            <span class="text-sm text-gray-700">Auto language: review in Hindi/Marathi script → reply in Hindi (Marathi if chosen above), otherwise English</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="is_healthcare" value="1" class="rounded border-gray-300" @checked(old('is_healthcare', $client->is_healthcare))>
+                            <span class="text-sm text-gray-700">Healthcare (doctor, clinic, hospital): replies never use the reviewer's name</span>
+                        </label>
+                    </fieldset>
+
                     <div class="flex items-center gap-3">
                         <x-primary-button>{{ $client->exists ? 'Update' : 'Create' }}</x-primary-button>
                         <a href="{{ route('clients.index') }}" class="text-sm text-gray-600 hover:underline">Cancel</a>

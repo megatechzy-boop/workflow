@@ -54,6 +54,14 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Meta ads: Ads (optional saved audience; optional A/B test = 2 ad sets at half budget + Meta split test), Audiences
   (Page/IG engagers, website visitors, customer list hashed SHA-256, lookalike), Pixel (one per client, website code, custom conversions).
 
+- Google Business (Admin > Google Business): Admin connects Google once (Cloud project megatechzy-workflow,
+  scope business.manage, redirect `/google/callback`); each GBP location is linked to one client there.
+- Reviews (Social media > Reviews, `gbp:reviews` every 15 min, `gbp:replies` every minute): 4–5 stars → template
+  auto reply after 10–30 min (client's auto reply on), 3 stars → template draft to approve, 1–2 stars → no reply,
+  Admin / Ops / brand SMMs alerted. First sync of a location only imports old reviews. Templates (Admin > Review
+  templates) per client + a default set copied to new clients; the last 3 used on a location are not repeated.
+  Healthcare clients (Clients > Edit): replies never use the reviewer's name. No AI.
+
 ## Next up
 
 Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls).

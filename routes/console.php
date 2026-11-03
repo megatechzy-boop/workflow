@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Inspiring;
 use App\Models\MetaPost;
 use App\Models\Task;
+use App\Models\GoogleAccount;
+use App\Support\GbpReviews;
 use App\Support\MetaInbox;
 use App\Support\MetaPublisher;
 use Illuminate\Support\Facades\Artisan;
@@ -38,6 +40,20 @@ Artisan::command('meta:sync', function () {
     $this->info(MetaInbox::syncComments().' comment(s), '.MetaInbox::syncLeads().' lead(s) added.');
 })->purpose('Fetch new Facebook / Instagram comments and leads');
 Schedule::call(fn () => Artisan::call('meta:sync'))->name('meta-sync')->everyTenMinutes()->withoutOverlapping();
+
+// Google reviews: new ones every 15 minutes (rules in GbpReviews), due auto replies every minute
+Artisan::command('gbp:reviews', function () {
+    if (! GoogleAccount::current()) {
+        return $this->info('Google is not connected.');
+    }
+    $this->info(GbpReviews::syncAll().' new review(s).');
+})->purpose('Fetch new Google reviews and apply the reply rules');
+Schedule::call(fn () => Artisan::call('gbp:reviews'))->name('gbp-reviews')->everyFifteenMinutes()->withoutOverlapping();
+
+Artisan::command('gbp:replies', function () {
+    $this->info(GbpReviews::sendDue().' auto reply(s) sent.');
+})->purpose('Send Google review auto replies that are due');
+Schedule::call(fn () => Artisan::call('gbp:replies'))->name('gbp-replies')->everyMinute()->withoutOverlapping();
 
 // One-time clean-up before go-live: removes test work data, keeps users, roles, permissions and clients.
 // No SSH on cPanel, so it runs from a one-time cron; the marker file stops a left-over cron from wiping real data.

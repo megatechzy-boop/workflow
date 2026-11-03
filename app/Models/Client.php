@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ReviewTemplates;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,22 +11,29 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
-    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id', 'meta_ad_account_id', 'is_internal', 'meta_pixel_id'];
+    protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id', 'meta_ad_account_id', 'is_internal', 'meta_pixel_id',
+        'gbp_auto_reply', 'gbp_language', 'gbp_auto_language', 'is_healthcare'];
 
     protected $attributes = ['is_active' => true];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'is_internal' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
+        return ['is_active' => 'boolean', 'is_internal' => 'boolean', 'gbp_auto_reply' => 'boolean', 'gbp_auto_language' => 'boolean', 'is_healthcare' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
     }
 
-    /** Facebook Page (and its Instagram) where approved posts are published */
+    protected static function booted(): void
+    {
+        // Every new client starts with its own copy of the default review reply templates
+        static::created(fn (Client $client) => ReviewTemplates::copyDefaultsTo($client));
+    }
+
     /** Ad account boosts are charged to (the client's own) */
     public function metaAdAccount(): BelongsTo
     {
         return $this->belongsTo(MetaAdAccount::class);
     }
 
+    /** Facebook Page (and its Instagram) where approved posts are published */
     public function metaPage(): BelongsTo
     {
         return $this->belongsTo(MetaPage::class);

@@ -2,17 +2,21 @@
 
 namespace App\Support;
 
+use App\Models\GbpLocation;
 use App\Models\GoogleAccount;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
  * Small Google Business Profile client: OAuth login (offline, so we get a refresh token),
- * access-token renewal, and the list of locations the login manages.
+ * access-token renewal, the locations the login manages, and reviews.
  */
 class GoogleBusiness
 {
     public const SCOPE = 'https://www.googleapis.com/auth/business.manage';
+
+    /** Reviews and local posts still live on the old v4 API */
+    public const V4 = 'https://mybusiness.googleapis.com/v4';
 
     public static function loginUrl(string $state): string
     {
@@ -68,6 +72,20 @@ class GoogleBusiness
         }
 
         return $locations;
+    }
+
+    /** One page of reviews, newest first (v4 API). @return array{reviews: array, next: ?string} */
+    public static function reviews(GbpLocation $location, string $token, ?string $pageToken = null): array
+    {
+        $r = self::get(self::V4.'/'.$location->v4Path().'/reviews', ['pageSize' => 50, 'orderBy' => 'updateTime desc'] + array_filter(['pageToken' => $pageToken]), $token);
+
+        return ['reviews' => $r['reviews'] ?? [], 'next' => $r['nextPageToken'] ?? null];
+    }
+
+    /** Reply (or replace our reply) as the business. $reviewName = accounts/../locations/../reviews/.. */
+    public static function replyToReview(string $reviewName, string $text): void
+    {
+        self::check(Http::withToken(self::token())->timeout(30)->put(self::V4.'/'.$reviewName.'/reply', ['comment' => $text]));
     }
 
     public static function get(string $url, array $query, string $token): array
