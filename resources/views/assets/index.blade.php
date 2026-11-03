@@ -3,13 +3,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-bold text-2xl text-gray-900 tracking-tight flex items-center gap-2"><x-icon name="folder" class="w-7 h-7 text-brand-600" /> Assets · {{ $client->name }}</h2>
             @if ($brands->count() > 1)
-                <form method="GET">
-                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" aria-label="Choose brand">
-                        @foreach ($brands as $b)
-                            <option value="{{ $b->id }}" @selected($b->id === $client->id)>{{ $b->name }}</option>
-                        @endforeach
-                    </select>
-                </form>
+                <a href="{{ route('assets.index') }}" class="text-sm text-brand-600 hover:underline">‹ All folders</a>
             @endif
         </div>
     </x-slot>

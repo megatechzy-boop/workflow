@@ -24,8 +24,15 @@ class AssetController extends Controller
         $user = $request->user();
         $isCustomer = $user->role === Role::Client;
         $brands = $isCustomer ? Client::whereKey($user->client_id)->get() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get();
+        abort_if($brands->isEmpty(), 404, 'No brand found.');
+
+        // Several brands and none picked: one folder per brand instead of a dropdown
+        if ($brands->count() > 1 && ! $request->client) {
+            $counts = Asset::whereIn('client_id', $brands->modelKeys())->selectRaw('client_id, COUNT(*) as n')->groupBy('client_id')->pluck('n', 'client_id');
+
+            return view('assets.folders', compact('brands', 'counts'));
+        }
         $client = $isCustomer ? $brands->first() : ($brands->firstWhere('id', (int) $request->client) ?? $brands->first());
-        abort_unless($client, 404, 'No brand found.');
 
         $assets = Asset::with(['uploader', 'item'])
             ->where('client_id', $client->id)

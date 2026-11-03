@@ -55,8 +55,14 @@ class AssetChatTest extends TestCase
         $this->assertSame(3, Asset::count());
         $this->assertSame(1, $item->assets()->count());
         $this->actingAs($this->smm)->get("/calendars/{$calendar->id}")->assertSee('row.jpg');
-        $this->actingAs($this->smm)->get('/assets?client='.$this->acme->id)->assertSee('shoot.jpg');
+        $this->actingAs($this->smm)->get('/assets?client='.$this->acme->id)->assertSee('shoot.jpg')->assertSee('All folders');
         $this->actingAs($this->smm)->get('/assets/'.Asset::first()->id.'/download')->assertOk();
+
+        // No brand picked: one folder per brand with its file count, no files yet
+        $this->actingAs($this->smm)->get('/assets')->assertSee($this->acme->name)->assertSee($this->other->name)
+            ->assertSee('3 file(s)')->assertDontSee('shoot.jpg');
+        // Customer has one brand: straight to the files
+        $this->actingAs($this->customer)->get('/assets')->assertSee('shoot.jpg')->assertDontSee('All folders');
     }
 
     public function test_files_sent_one_by_one_notify_the_team_once(): void
