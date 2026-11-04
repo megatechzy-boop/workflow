@@ -3,8 +3,11 @@
 namespace App\Support;
 
 use App\Models\GbpLocation;
+use App\Models\GbpReview;
 use App\Models\GoogleAccount;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -64,14 +67,15 @@ class GoogleBusiness
             $rows = self::paged("https://mybusinessbusinessinformation.googleapis.com/v1/{$account['name']}/locations",
                 ['readMask' => 'name,title,storefrontAddress,phoneNumbers'], 'locations', $token);
             foreach ($rows as $l) {
-                $locations[] = [
+                // a location shown under several accounts comes in once (the first account; replies find the right one)
+                $locations[$l['name']] ??= [
                     'account_name' => $account['name'], 'location_name' => $l['name'], 'title' => $l['title'] ?? $l['name'],
                     'city' => $l['storefrontAddress']['locality'] ?? null, 'phone' => $l['phoneNumbers']['primaryPhone'] ?? null,
                 ];
             }
         }
 
-        return $locations;
+        return array_values($locations);
     }
 
     /** One page of reviews, newest first (v4 API). @return array{reviews: array, next: ?string} */
@@ -82,16 +86,61 @@ class GoogleBusiness
         return ['reviews' => $r['reviews'] ?? [], 'next' => $r['nextPageToken'] ?? null];
     }
 
-    /** Reply (or replace our reply) as the business. $reviewName = accounts/../locations/../reviews/.. */
-    public static function replyToReview(string $reviewName, string $text): void
+    /** Reply (or replace our reply) as the business */
+    public static function replyToReview(GbpReview $review, string $text): void
     {
-        self::check(Http::withToken(self::token())->timeout(30)->put(self::V4.'/'.$reviewName.'/reply', ['comment' => $text]));
+        $token = self::token();
+        $location = $review->location;
+        $reviewId = Str::after($review->review_name, '/reviews/');
+        $response = self::onLocation($location, $token, fn (string $account) => Http::withToken($token)->timeout(30)
+            ->put(self::V4."/$account/{$location->location_name}/reviews/$reviewId/reply", ['comment' => $text]));
+        if ($response->status() === 404) {
+            throw new RuntimeException('Google could not find this review under any connected account (Requested entity was not found). The reviewer may have removed it.');
+        }
+        self::check($response);
     }
 
     /** Create a local post. @return array{name: string, searchUrl: ?string, state: ?string} */
     public static function createLocalPost(GbpLocation $location, array $body): array
     {
-        return self::check(Http::withToken(self::token())->timeout(60)->post(self::V4.'/'.$location->v4Path().'/localPosts', $body));
+        $token = self::token();
+
+        return self::check(self::onLocation($location, $token, fn (string $account) => Http::withToken($token)->timeout(60)
+            ->post(self::V4."/$account/{$location->location_name}/localPosts", $body)));
+    }
+
+    /**
+     * A location the login sees under several accounts (personal + location group / organisation) can be read
+     * through any of them, but Google accepts replies and posts only through the account that manages it, else 404
+     * "Requested entity was not found". On a 404 the other accounts are tried; the one that works is remembered.
+     */
+    private static function onLocation(GbpLocation $location, string $token, callable $request): Response
+    {
+        $response = $request($location->account_name);
+        if ($response->status() !== 404) {
+            return $response;
+        }
+        foreach (self::paged('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', [], 'accounts', $token) as $account) {
+            if ($account['name'] === $location->account_name) {
+                continue;
+            }
+            $try = $request($account['name']);
+            if ($try->successful()) {
+                self::moveLocation($location, $account['name']);
+
+                return $try;
+            }
+        }
+
+        return $response;
+    }
+
+    private static function moveLocation(GbpLocation $location, string $account): void
+    {
+        $old = $location->account_name.'/';
+        $location->update(['account_name' => $account]);
+        GbpReview::where('gbp_location_id', $location->id)->where('review_name', 'like', $old.'%')->get()
+            ->each(fn (GbpReview $r) => $r->update(['review_name' => $account.'/'.Str::after($r->review_name, $old)]));
     }
 
     /**

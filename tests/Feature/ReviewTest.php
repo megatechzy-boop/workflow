@@ -72,6 +72,7 @@ class ReviewTest extends TestCase
 
     public function test_first_sync_only_imports_then_new_reviews_follow_the_rules(): void
     {
+        $this->freezeTime(); // the 10–30 min check must not drift a second
         Notification::fake();
         $manager = User::factory()->create(['role' => Role::Manager]);
         $designer = User::factory()->create(['role' => Role::GraphicDesigner]);
@@ -112,6 +113,40 @@ class ReviewTest extends TestCase
         $this->assertSame('replied', $review->fresh()->status);
         $this->assertNull(ReviewReplyLog::sole()->approved_by);
         $this->assertSame('scheduled', $later->fresh()->status);
+    }
+
+    public function test_reply_404_tries_the_other_accounts_and_remembers_the_right_one(): void
+    {
+        // Location listed under the personal account (11) but managed through a location group (77)
+        Http::fake([
+            'mybusiness.googleapis.com/v4/accounts/11/*' => Http::response(['error' => ['code' => 404, 'message' => 'Requested entity was not found.']], 404),
+            'mybusiness.googleapis.com/v4/accounts/77/locations/21/reviews/*/reply' => Http::response(['comment' => 'ok']),
+            'mybusinessaccountmanagement.googleapis.com/*' => Http::response(['accounts' => [['name' => 'accounts/11'], ['name' => 'accounts/77']]]),
+        ]);
+        $review = $this->review(5, ['status' => 'scheduled', 'draft' => 'Thanks!', 'reply_due_at' => now()->subMinute()]);
+        $other = $this->review(4);
+
+        $this->assertSame(1, GbpReviews::sendDue());
+
+        $this->assertSame('replied', $review->fresh()->status);
+        $this->assertSame('accounts/77', $this->location->fresh()->account_name);
+        $this->assertSame('accounts/77/locations/21/reviews/'.$review->review_id, $review->fresh()->review_name);
+        $this->assertSame('accounts/77/locations/21/reviews/'.$other->review_id, $other->fresh()->review_name);
+        Http::assertSent(fn (Request $r) => $r->method() === 'PUT' && str_contains($r->url(), 'accounts/11/locations/21/reviews/'.$review->review_id.'/reply'));
+    }
+
+    public function test_reply_404_under_every_account_says_the_review_is_gone(): void
+    {
+        Http::fake([
+            'mybusiness.googleapis.com/v4/*' => Http::response(['error' => ['code' => 404, 'message' => 'Requested entity was not found.']], 404),
+            'mybusinessaccountmanagement.googleapis.com/*' => Http::response(['accounts' => [['name' => 'accounts/11'], ['name' => 'accounts/77']]]),
+        ]);
+        $review = $this->review(5, ['status' => 'scheduled', 'draft' => 'Thanks!', 'reply_due_at' => now()->subMinute()]);
+
+        GbpReviews::sendDue();
+
+        $this->assertStringContainsString('The reviewer may have removed it', $review->fresh()->error);
+        $this->assertSame('accounts/11', $this->location->fresh()->account_name);
     }
 
     public function test_auto_reply_is_held_when_switched_off_and_fails_after_three_tries(): void
@@ -227,14 +262,16 @@ class ReviewTest extends TestCase
         $three = $this->review(3, ['reviewed_at' => now()->subDays(20)]);
         $low = $this->review(1);
         $replied = $this->review(5, ['status' => 'replied', 'reply' => 'Thanks', 'replied_at' => now()]);
+        $failed = $this->review(5, ['draft' => 'x', 'attempts' => 3, 'error' => 'Requested entity was not found.', 'reviewed_at' => now()->subDays(30)]);
 
         $this->client->update(['gbp_auto_reply' => false]);
-        $this->actingAs($smm)->get(route('reviews.index', ['client' => $this->client->id]))->assertSee('4 old 3–5 star review(s)');
+        $this->actingAs($smm)->get(route('reviews.index', ['client' => $this->client->id]))->assertSee('5 old 3–5 star review(s)');
         $this->actingAs($smm)->post(route('reviews.backfill', $this->client))->assertSessionHasErrors('reply');
 
         $this->client->update(['gbp_auto_reply' => true]);
         $this->actingAs($smm)->post(route('reviews.backfill', $this->client))
-            ->assertSessionHas('status', '3 reply(s) scheduled, one every 10–30 minutes; 1 draft(s) for 3-star reviews to approve.');
+            ->assertSessionHas('status', '4 reply(s) scheduled, one every 10–30 minutes; 1 draft(s) for 3-star reviews to approve.');
+        $this->assertSame(['scheduled', 0, null], [$failed->fresh()->status, $failed->fresh()->attempts, $failed->fresh()->error]); // failed auto reply gets a fresh try
 
         $due = $old->map(fn ($r) => $r->fresh())->each(fn ($r) => $this->assertSame('scheduled', $r->status))->pluck('reply_due_at');
         $this->assertTrue($due[0]->between($already->reply_due_at->copy()->addMinutes(10), $already->reply_due_at->copy()->addMinutes(30))); // newest first, after the one already waiting

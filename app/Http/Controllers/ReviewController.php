@@ -38,7 +38,7 @@ class ReviewController extends Controller
             'filters' => $filters + ['status' => $status],
             // old reviews the "Schedule replies" button would take (shown when one client is picked)
             'waiting' => ($filters['client'] ?? null) && $user->canSeeBrand((int) $filters['client'])
-                ? GbpReview::where('client_id', $filters['client'])->where('status', 'pending')->whereNull('draft')->where('rating', '>=', 3)->count() : 0,
+                ? GbpReview::where('client_id', $filters['client'])->where('status', 'pending')->where('rating', '>=', 3)->count() : 0,
         ]);
     }
 

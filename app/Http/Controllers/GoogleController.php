@@ -9,6 +9,7 @@ use App\Support\GbpReviews;
 use App\Support\GoogleBusiness;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -66,7 +67,9 @@ class GoogleController extends Controller
             return redirect()->route('admin.google.index')->with('status', 'Google said: '.$e->getMessage());
         }
         foreach ($locations as $location) {
-            GbpLocation::updateOrCreate(['location_name' => $location['location_name']], $location);
+            $model = GbpLocation::firstOrNew(['location_name' => $location['location_name']]);
+            // keep the account a reply / post already proved works for this location
+            $model->fill($model->exists ? Arr::except($location, 'account_name') : $location)->save();
         }
 
         return redirect()->route('admin.google.index')->with('status', count($locations).' location(s) found. Link each one to its client below.');

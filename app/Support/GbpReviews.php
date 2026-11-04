@@ -110,7 +110,7 @@ class GbpReviews
     }
 
     /**
-     * Old reviews still without a reply: 4–5 stars get template replies spread out (one every 10–30 min, after any
+     * Old reviews still without a reply (failed auto replies too): 4–5 stars get template replies spread out (one every 10–30 min, after any
      * already scheduled for this client), 3 stars get drafts for approval; 1–2 stars stay manual. Newest first, 100 per run.
      *
      * @return array{scheduled: int, drafts: int}
@@ -120,7 +120,7 @@ class GbpReviews
         $done = ['scheduled' => 0, 'drafts' => 0];
         $last = GbpReview::where('client_id', $client->id)->where('status', 'scheduled')->max('reply_due_at');
         $due = $last && Carbon::parse($last)->isFuture() ? Carbon::parse($last) : now();
-        $reviews = GbpReview::where('client_id', $client->id)->where('status', 'pending')->whereNull('draft')->where('rating', '>=', 3)
+        $reviews = GbpReview::where('client_id', $client->id)->where('status', 'pending')->where('rating', '>=', 3)
             ->latest('reviewed_at')->limit(100)->get();
         foreach ($reviews as $review) {
             $positive = $review->rating >= 4;
@@ -132,7 +132,7 @@ class GbpReviews
                 $due = $due->copy()->addMinutes(random_int(10, 30));
             }
             // templated_at = due time, so rotation sees them in the order they go out
-            $review->update(['draft' => $picked['text'], 'template_id' => $picked['template']->id, 'templated_at' => $positive ? $due : now()]
+            $review->update(['draft' => $picked['text'], 'template_id' => $picked['template']->id, 'templated_at' => $positive ? $due : now(), 'attempts' => 0, 'error' => null]
                 + ($positive ? ['status' => 'scheduled', 'reply_due_at' => $due] : ['status' => 'draft']));
             $done[$positive ? 'scheduled' : 'drafts']++;
         }
@@ -166,7 +166,7 @@ class GbpReviews
     /** Send to Google, then mark replied and log it. $approver null = automatic. */
     public static function reply(GbpReview $review, string $text, ?User $approver, ?int $templateId = null): void
     {
-        GoogleBusiness::replyToReview($review->review_name, $text);
+        GoogleBusiness::replyToReview($review, $text);
         $review->update(['status' => 'replied', 'reply' => $text, 'replied_at' => now(), 'reply_due_at' => null, 'error' => null]);
         ReviewReplyLog::create(['gbp_review_id' => $review->id, 'template_id' => $templateId, 'final_text' => $text, 'sent_at' => now(), 'approved_by' => $approver?->id]);
     }

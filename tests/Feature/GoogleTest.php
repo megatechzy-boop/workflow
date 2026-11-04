@@ -98,6 +98,22 @@ class GoogleTest extends TestCase
         $this->assertSame(2, GbpLocation::count());
     }
 
+    public function test_location_under_two_accounts_comes_in_once_and_refresh_keeps_its_account(): void
+    {
+        Http::fake([
+            'mybusinessaccountmanagement.googleapis.com/*' => Http::response(['accounts' => [['name' => 'accounts/11'], ['name' => 'accounts/77']]]),
+            'mybusinessbusinessinformation.googleapis.com/*' => Http::response(['locations' => [['name' => 'locations/21', 'title' => 'Acme Yoga']]]),
+        ]);
+        GoogleAccount::create(['access_token' => 'a', 'refresh_token' => 'r', 'expires_at' => now()->addHour()]);
+
+        $this->assertCount(1, GoogleBusiness::locations('a'));
+
+        // a reply already proved accounts/77 works: refresh must not switch it back
+        GbpLocation::create(['account_name' => 'accounts/77', 'location_name' => 'locations/21', 'title' => 'Old']);
+        $this->actingAs($this->admin)->post(route('admin.google.refresh'));
+        $this->assertSame(['accounts/77', 'Acme Yoga'], [GbpLocation::sole()->account_name, GbpLocation::sole()->title]);
+    }
+
     public function test_admin_links_a_location_to_one_client_only(): void
     {
         $client = Client::create(['name' => 'Acme']);
