@@ -111,6 +111,18 @@ class MetaGraph
         return array_values(array_filter(array_map(fn ($id) => self::get("/$id", $token + ['fields' => 'images'])['images'][0]['source'] ?? null, $photoIds)));
     }
 
+    /** Facebook's own MP4 of an uploaded video (null while Facebook is still processing it) */
+    public static function facebookVideoUrl(MetaPage $page, string $videoId): ?string
+    {
+        return self::get("/$videoId", ['fields' => 'source', 'access_token' => $page->access_token])['source'] ?? null;
+    }
+
+    /** Instagram's reason for a failed container, e.g. "Error: ... 2207026" */
+    public static function containerError(MetaPage $page, string $containerId): string
+    {
+        return self::get("/$containerId", ['fields' => 'status', 'access_token' => $page->access_token])['status'] ?? '';
+    }
+
     /** FINISHED | IN_PROGRESS | ERROR | EXPIRED */
     public static function containerStatus(MetaPage $page, string $containerId): string
     {

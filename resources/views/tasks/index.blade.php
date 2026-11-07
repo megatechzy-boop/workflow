@@ -6,6 +6,12 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
             <form method="GET" class="flex flex-wrap gap-2">
+                <select name="client" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
+                    <option value="">All clients</option>
+                    @foreach ($clients as $c)
+                        <option value="{{ $c->id }}" @selected(request('client') == $c->id)>{{ $c->name }}</option>
+                    @endforeach
+                </select>
                 @if ($members->isNotEmpty())
                     <select name="member" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
                         <option value="">All members</option>

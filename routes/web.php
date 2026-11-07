@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/review', [ContentController::class, 'review'])->name('contents.review');
     Route::post('contents/{content}/comments', [ContentController::class, 'comment'])->name('contents.comment');
     Route::post('contents/{content}/caption', [ContentController::class, 'updateCaption'])->name('contents.caption');
+    Route::post('contents/{content}/caption-ai', [ContentController::class, 'aiCaption'])->name('contents.captionAi');
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
     Route::post('contents/{content}/meta', [MetaController::class, 'publish'])->name('contents.meta');
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
+    Route::get('contents/{content}/download-all', [ContentController::class, 'downloadAll'])->name('contents.downloadAll');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule');

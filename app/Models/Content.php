@@ -53,6 +53,12 @@ class Content extends Model
         return $this->hasMany(ContentVersion::class)->orderBy('number');
     }
 
+    /** Rule: no scheduling or publishing without a caption on the current version */
+    public function hasCaption(): bool
+    {
+        return trim((string) $this->versions()->where('number', $this->current_version)->value('caption')) !== '';
+    }
+
     public function comments(): HasMany
     {
         return $this->hasMany(ContentComment::class)->orderBy('id');

@@ -121,6 +121,45 @@ class MetaTest extends TestCase
         $this->assertSame('queued', MetaPost::sole()->status);
     }
 
+    public function test_instagram_reel_uses_facebooks_video_copy_and_shows_instagrams_reason(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
+        $content = $this->approvedPost(['facebook_reel', 'instagram_reel'], $page);
+        $content->forceFill(['post_type' => 'reel'])->save();
+        $content->versions()->first()->media()->update(['kind' => 'video']);
+        Http::fake([
+            '*/111/videos' => Http::response(['id' => 'vid1']),
+            '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']), // processing, then ready
+            '*/999/media' => Http::response(['id' => 'container1']),
+            '*/container1*' => Http::sequence()->push(['status_code' => 'ERROR'])->push(['status' => 'Error: unsupported format 2207026']),
+        ]);
+
+        $this->actingAs($this->admin)->post(route('contents.meta', $content));
+        $this->artisan('meta:publish'); // Facebook posted; Instagram waits while Facebook still processes the video
+        $this->assertSame('queued', MetaPost::where('platform', 'instagram')->sole()->status);
+
+        $this->artisan('meta:publish');
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['video_url'] === 'https://video.xx.fbcdn.net/v1.mp4');
+        $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', MetaPost::where('platform', 'instagram')->sole()->error);
+    }
+
+    public function test_no_caption_no_scheduling(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
+        $content = $this->approvedPost(page: $page);
+        $content->versions()->update(['caption' => ' ']);
+        $msg = 'Add the caption first: a post without a caption cannot be scheduled or published.';
+
+        $this->actingAs($this->admin)->post(route('contents.meta', $content), ['publish_at' => now()->addDay()->format('Y-m-d H:i')])->assertSessionHas('status', $msg);
+        $this->assertSame(0, MetaPost::count());
+        $this->actingAs($this->admin)->post(route('contents.status', $content))->assertSessionHas('status', 'Add the caption first: a post without a caption cannot be scheduled.');
+        $this->assertSame(ContentStatus::Approved, $content->fresh()->status);
+
+        $content->versions()->update(['caption' => 'Diwali offer']);
+        $this->actingAs($this->admin)->post(route('contents.status', $content));
+        $this->assertSame(ContentStatus::Scheduled, $content->fresh()->status);
+    }
+
     public function test_media_link_needs_a_valid_signature(): void
     {
         $content = $this->approvedPost();

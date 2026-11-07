@@ -94,6 +94,9 @@ class TaskTest extends TestCase
 
         // Member filter shows only that member's tasks
         $this->actingAs($this->manager)->get('/tasks?member='.$other->id)->assertSee('Other task')->assertDontSee('My task');
+        // Client filter
+        $this->actingAs($this->manager)->get('/tasks?client='.$this->calendar->client_id)->assertSee('My task')->assertSee('Other task');
+        $this->actingAs($this->manager)->get('/tasks?client=999999')->assertDontSee('My task')->assertDontSee('Other task');
     }
 
     public function test_reel_goes_to_video_editor_and_post_to_designer(): void

@@ -86,6 +86,49 @@ class ContentTest extends TestCase
             Content::firstOrFail()->versions()->first()->media()->pluck('original_name')->all());
     }
 
+    public function test_download_all_is_one_zip_of_the_version(): void
+    {
+        $this->uploadCarousel(3);
+        $content = Content::firstOrFail();
+
+        $response = $this->actingAs($this->approver)->get(route('contents.downloadAll', [$content, 'v' => 1]))->assertOk();
+        $this->assertStringContainsString('acme-2026-11-10-carousel-v1.zip', $response->headers->get('content-disposition'));
+        $zip = new \ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $this->assertSame(['acme-2026-11-10-carousel-slide-1.jpg', 'acme-2026-11-10-carousel-slide-2.jpg', 'acme-2026-11-10-carousel-slide-3.jpg'],
+            array_map(fn ($i) => $zip->getNameIndex($i), range(0, $zip->numFiles - 1)));
+        $zip->close();
+
+        $this->actingAs(User::factory()->create(['role' => Role::Client]))->get(route('contents.downloadAll', $content))->assertForbidden();
+    }
+
+    public function test_ai_caption_fills_the_form_in_the_clients_language(): void
+    {
+        $this->uploadCarousel();
+        $content = Content::firstOrFail();
+        $this->task->item->calendar->client->update(['caption_language' => 'hinglish']);
+        $this->task->item->update(['creative_copy' => 'Diwali sale 20% off']);
+
+        // No key: a clear message, no call
+        config(['services.groq.key' => null]);
+        $this->actingAs($this->approver)->post(route('contents.captionAi', $content))
+            ->assertSessionHas('status', 'AI captions are not set up yet (GROQ_API_KEY in the server .env).');
+
+        config(['services.groq.key' => 'test-key']);
+        \Illuminate\Support\Facades\Http::fake(['api.groq.com/*' => \Illuminate\Support\Facades\Http::response(['choices' => [['message' => [
+            'content' => "Sure!\n```json\n{\"caption\": \"Is Diwali 20% off!\", \"hashtags\": \"#diwali #sale\"}\n```",
+        ]]]])]);
+        $this->actingAs($this->approver)->post(route('contents.captionAi', $content))
+            ->assertSessionHas('_old_input', ['caption' => 'Is Diwali 20% off!', 'hashtags' => '#diwali #sale']);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->hasHeader('Authorization', 'Bearer test-key')
+            && str_contains($r['messages'][0]['content'], 'Write in Hinglish') && str_contains($r['messages'][1]['content'], 'Diwali sale 20% off'));
+        // Nothing saved until the SMM presses Save
+        $this->assertNull($content->versions()->first()->caption);
+
+        // Designer may not use it
+        $this->actingAs($this->member)->post(route('contents.captionAi', $content))->assertForbidden();
+    }
+
     public function test_reel_needs_video(): void
     {
         // Reels belong to the Video Editor

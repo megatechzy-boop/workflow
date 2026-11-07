@@ -21,6 +21,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Customer row check: rows can be ticked and approved together; a Reel whose client video is not ready can be
   "Video later" (calendar still gets approved, no task for it) and is approved on the approved calendar later, which makes its task.
   Approvals list: client filter + tick and approve together (SMM step or Customer step); revisions stay one by one.
+- AI only for captions: "Generate with AI" on a post (SMM) fills caption + hashtags from the calendar row via Groq
+  (free plan, `GROQ_API_KEY`, model `GROQ_MODEL`), in the client's "Caption language"; nothing is saved until the SMM saves.
+- No caption, no scheduling: the manual "Scheduled" step and Facebook / Instagram publish (now or scheduled) need a caption on the current version.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
 - Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.
 - Roles: Admin, Operation Manager (`manager`), Social Media Manager, Graphic Designer, Video Editor, Customer (`client`).

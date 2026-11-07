@@ -30,6 +30,7 @@ class MetaPublisher
         return match (true) {
             ! config('services.meta.app_id') => 'Meta app is not set up yet (META_APP_ID).',
             ! $page => 'Link this client to a Facebook Page first (Clients > Edit).',
+            ! $content->hasCaption() => 'Add the caption first: a post without a caption cannot be scheduled or published.',
             ! self::platforms($content) => 'This post is not for Facebook or Instagram.',
             in_array('instagram', self::platforms($content), true) && ! $page->ig_user_id => 'The Page has no Instagram business account linked.',
             default => null,
@@ -66,9 +67,10 @@ class MetaPublisher
         $cover = $media->firstWhere('kind', 'cover');
         $caption = trim(($version->caption ?? '')."\n\n".($version->hashtags ?? ''));
 
-        // Instagram photos are taken from Facebook's copy once the Facebook post is out: Meta reads its own CDN
-        // reliably, while our server is sometimes unreachable for Meta (DNS / firewall on the host)
-        $facebook = $post->platform === 'instagram' && $format !== 'reel'
+        // Instagram media is taken from Facebook's copy once the Facebook post is out: Meta reads its own CDN
+        // reliably, while our server is sometimes unreachable for Meta (DNS / firewall on the host); for reels
+        // Facebook's MP4 is also re-encoded, so phone videos Instagram rejects (e.g. HEVC .mov) go through
+        $facebook = $post->platform === 'instagram'
             ? MetaPost::where('content_id', $content->id)->where('platform', 'facebook')->first() : null;
         if ($facebook && ! $post->container_id && in_array($facebook->status, ['queued', 'processing'], true)) {
             return; // wait for the Facebook post (next run)
@@ -81,8 +83,16 @@ class MetaPublisher
             } else {
                 if (! $post->container_id && $facebook?->status === 'done') {
                     try {
-                        $copies = MetaGraph::facebookPhotoUrls($page, $facebook->post_id);
-                        $urls = count($copies) === count($urls) ? $copies : $urls;
+                        if ($format === 'reel') {
+                            $source = MetaGraph::facebookVideoUrl($page, $facebook->post_id);
+                            if (! $source && $post->attempts < 15) {
+                                return; // Facebook is still processing the video: next run (then our own link)
+                            }
+                            $urls = $source ? [$source] : $urls;
+                        } else {
+                            $copies = MetaGraph::facebookPhotoUrls($page, $facebook->post_id);
+                            $urls = count($copies) === count($urls) ? $copies : $urls;
+                        }
                     } catch (Throwable $e) {
                         report($e); // fall back to our own links
                     }
@@ -94,7 +104,8 @@ class MetaPublisher
                 if ($status === 'FINISHED') {
                     $post->update(['status' => 'done', 'post_id' => MetaGraph::publishInstagram($page, $post->container_id)]);
                 } elseif (in_array($status, ['ERROR', 'EXPIRED'], true) || $post->attempts >= 30) {
-                    $post->update(['status' => 'failed', 'error' => "Instagram could not process the media ($status)."]);
+                    $why = $status === 'ERROR' ? MetaGraph::containerError($page, $post->container_id) : '';
+                    $post->update(['status' => 'failed', 'error' => mb_substr("Instagram could not process the media ($status).".($why ? " $why" : ''), 0, 1000)]);
                 }
             }
         } catch (Throwable $e) {

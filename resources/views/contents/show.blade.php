@@ -79,8 +79,7 @@
                             </a>
                         @endforeach
                         @if ($files->count() > 1)
-                            <button type="button" class="inline-flex items-center px-3 py-1.5 rounded bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700"
-                                onclick="document.querySelectorAll('.dl-link').forEach((a, i) => setTimeout(() => a.click(), i * 700))"><x-icon name="download" class="w-4 h-4" /> Download all ({{ $files->count() }})</button>
+                            <a href="{{ route('contents.downloadAll', [$content, 'v' => $version->number]) }}" class="inline-flex items-center px-3 py-1.5 rounded bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700"><x-icon name="download" class="w-4 h-4" /> Download all ({{ $files->count() }}) · ZIP</a>
                         @endif
                         @if ($type === App\Enums\PostType::Carousel)
                             {{-- LinkedIn carousel = PDF document: one page per slide --}}
@@ -93,9 +92,6 @@
                                 onclick="navigator.clipboard.writeText({{ Js::from(trim($version->caption."\n\n".$version->hashtags)) }}).then(() => { this.textContent = 'Copied!'; })"><x-icon name="clipboard" class="w-4 h-4" /> Copy caption</button>
                         @endif
                     </div>
-                    @if ($files->count() > 1)
-                        <p class="text-xs text-gray-400">On "Download all" the browser may ask once to allow multiple downloads — please allow it.</p>
-                    @endif
 
                     {{-- Caption + hashtags: written by the SMM (Designers/Editors only upload files) --}}
                     @if (auth()->user()->can('editCaption', $content) && $version->number === $content->current_version)
@@ -105,11 +101,14 @@
                             <textarea id="caption" name="caption" rows="5" class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">{{ old('caption', $version->caption ?? $item->creative_copy) }}</textarea>
                             <x-input-label for="hashtags" value="Hashtags" />
                             <x-text-input id="hashtags" name="hashtags" class="block w-full text-sm" placeholder="#brand #offer" :value="old('hashtags', $version->hashtags)" />
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <x-secondary-button type="submit">Save caption</x-secondary-button>
+                                <button type="submit" form="ai-caption" class="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-accent-400 text-accent-600 text-xs font-semibold hover:bg-accent-50"
+                                    onclick="this.textContent = 'Writing…'">Generate with AI</button>
                                 @unless ($version->caption)<span class="text-xs text-gray-500">Pre-filled from the calendar's creative copy — edit and save.</span>@endunless
                             </div>
                         </form>
+                        <form id="ai-caption" method="POST" action="{{ route('contents.captionAi', $content) }}" class="hidden">@csrf</form>
                     @elseif ($version->caption || $version->hashtags)
                         <div class="border-t pt-4 text-sm">
                             <div class="whitespace-pre-line text-gray-800">{{ $version->caption }}</div>

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Client extends Model
 {
     protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id', 'meta_ad_account_id', 'is_internal', 'meta_pixel_id',
-        'gbp_auto_reply', 'gbp_language', 'gbp_auto_language', 'is_healthcare'];
+        'gbp_auto_reply', 'gbp_language', 'gbp_auto_language', 'is_healthcare', 'caption_language'];
 
     protected $attributes = ['is_active' => true];
 

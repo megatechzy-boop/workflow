@@ -14,6 +14,7 @@ use App\Models\ContentVersion;
 use App\Models\PointEntry;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\CaptionAi;
 use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -313,6 +314,9 @@ class ContentController extends Controller
         Gate::authorize('markStatus', $content);
 
         $next = $content->status === ContentStatus::Approved ? ContentStatus::Scheduled : ContentStatus::Published;
+        if ($next === ContentStatus::Scheduled && ! $content->hasCaption()) {
+            return back()->with('status', 'Add the caption first: a post without a caption cannot be scheduled.');
+        }
         $content->update(['status' => $next]);
         $this->log($request, $content, $next->value, null);
 
@@ -333,15 +337,45 @@ class ContentController extends Controller
         $content = $media->version->content;
         Gate::authorize('view', $content);
 
+        return response()->download(Storage::disk('local')->path($media->path), $this->fileName($content, $media));
+    }
+
+    /** "Download all": one ZIP of a version's files (browsers block several downloads at once, phones keep only one) */
+    public function downloadAll(Request $request, Content $content): BinaryFileResponse
+    {
+        Gate::authorize('view', $content);
+        $version = $content->versions()->where('number', $request->integer('v', $content->current_version))->with('media')->firstOrFail();
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'zip');
+        $zip = new \ZipArchive;
+        $zip->open($zipPath, \ZipArchive::OVERWRITE);
+        foreach ($version->media as $media) {
+            $name = $this->fileName($content, $media);
+            $zip->addFile(Storage::disk('local')->path($media->path), $name);
+            $zip->setCompressionName($name, \ZipArchive::CM_STORE); // photos/videos are compressed already: just store, fast
+        }
+        $zip->close();
+
+        return response()->download($zipPath, $this->baseName($content).'-v'.$version->number.'.zip')->deleteFileAfterSend();
+    }
+
+    /** acme-2026-11-10-carousel */
+    private function baseName(Content $content): string
+    {
         $item = $content->task->item;
+
+        return Str::slug($item->calendar->client->name).'-'.$item->post_date->format('Y-m-d').'-'.$content->type()->value;
+    }
+
+    /** acme-2026-11-10-carousel-slide-2.jpg */
+    private function fileName(Content $content, ContentMedia $media): string
+    {
         $part = match ($media->kind) {
             'image' => $content->type() === PostType::Carousel ? 'slide-'.$media->sort_order : 'image',
             default => $media->kind, // video / cover
         };
-        $name = Str::slug($item->calendar->client->name).'-'.$item->post_date->format('Y-m-d').'-'
-            .$content->type()->value.'-'.$part.'.'.pathinfo($media->path, PATHINFO_EXTENSION);
 
-        return response()->download(Storage::disk('local')->path($media->path), $name);
+        return $this->baseName($content).'-'.$part.'.'.pathinfo($media->path, PATHINFO_EXTENSION);
     }
 
     /** "Instagram Reel · Acme · 05 Nov" */
@@ -384,6 +418,25 @@ class ContentController extends Controller
         $content->versions()->where('number', $content->current_version)->update($data);
 
         return back()->with('status', 'Caption and hashtags saved.');
+    }
+
+    /** AI draft of caption + hashtags: fills the form only, the SMM checks and saves */
+    public function aiCaption(Content $content): RedirectResponse
+    {
+        Gate::authorize('editCaption', $content);
+        if (! config('services.groq.key')) {
+            return back()->with('status', 'AI captions are not set up yet (GROQ_API_KEY in the server .env).');
+        }
+
+        try {
+            $draft = CaptionAi::generate($content);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('status', 'AI could not write a caption: '.Str::limit($e->getMessage(), 200));
+        }
+
+        return back()->withInput($draft)->with('status', 'AI caption ready. Check it, edit if needed, then Save caption.');
     }
 
     /** Calendar creator if they can approve content, otherwise the first active SMM (Admin as last resort) */

@@ -77,8 +77,10 @@ class ClientController extends Controller
             'meta_page_id' => ['nullable', 'exists:meta_pages,id'],
             'meta_ad_account_id' => ['nullable', 'exists:meta_ad_accounts,id'],
             'gbp_language' => ['nullable', Rule::in(array_keys(ReviewTemplates::LANGUAGES))],
+            'caption_language' => ['nullable', Rule::in(array_keys(ReviewTemplates::LANGUAGES))],
         ]);
         $data['gbp_language'] ??= 'en';
+        $data['caption_language'] ??= 'en';
         foreach (['gbp_auto_reply', 'gbp_auto_language', 'is_healthcare'] as $flag) {
             $data[$flag] = $request->boolean($flag);
         }

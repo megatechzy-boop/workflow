@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Permission;
 use App\Models\Calendar;
+use App\Models\Client;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class TaskController extends Controller
             ->with(['item.calendar.client', 'assignee'])
             ->when(! $canSeeAll, fn ($q) => $q->where('assigned_to', $user->id))
             ->when($canSeeAll ? $request->member : null, fn ($q, $id) => $q->where('assigned_to', $id))
+            ->when($request->client, fn ($q, $id) => $q->whereHas('item.calendar', fn ($c) => $c->where('client_id', $id)))
             ->when($request->status ?? 'pending', fn ($q, $s) => $s === 'all' ? $q : $q->where('status', $s))
             ->orderBy('deadline')
             ->paginate(30)
@@ -35,6 +37,7 @@ class TaskController extends Controller
         return view('tasks.index', [
             'tasks' => $tasks,
             'members' => $canSeeAll ? User::creators() : collect(),
+            'clients' => Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(['id', 'name']),
         ]);
     }
 

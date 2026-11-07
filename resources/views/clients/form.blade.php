@@ -129,6 +129,15 @@
                         <span class="text-sm text-gray-700">Internal brand (our own, e.g. Mega Techzy): no Customer approval step</span>
                     </label>
 
+                    <div>
+                        <x-input-label for="caption_language" value="Caption language (Generate with AI)" />
+                        <select id="caption_language" name="caption_language" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                            @foreach (\App\Support\ReviewTemplates::LANGUAGES as $key => $label)
+                                <option value="{{ $key }}" @selected(old('caption_language', $client->caption_language ?? 'en') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <fieldset class="space-y-3 border-t pt-4">
                         <legend class="text-sm font-semibold text-gray-900">Google reviews</legend>
                         <label class="flex items-center gap-2">
