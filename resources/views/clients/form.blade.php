@@ -137,6 +137,13 @@
                             @endforeach
                         </select>
                     </div>
+                    <div>
+                        <x-input-label for="caption_style" value="Caption style (Generate with AI)" />
+                        <textarea id="caption_style" name="caption_style" rows="5" maxlength="3000" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm"
+                            placeholder="Tone: friendly. 3-4 lines. Max 1 emoji. End every caption with: Call 98xxxxxxxx. Always add #brandname. Never use the word 'cheap'.&#10;Sample caption: ...">{{ old('caption_style', $client->caption_style) }}</textarea>
+                        <p class="text-xs text-gray-500 mt-1">The AI follows these rules over its defaults. Empty = default style (2-4 lines, call to action, max 2 emojis, 5-10 hashtags).</p>
+                        <x-input-error :messages="$errors->get('caption_style')" class="mt-1" />
+                    </div>
 
                     <fieldset class="space-y-3 border-t pt-4">
                         <legend class="text-sm font-semibold text-gray-900">Google reviews</legend>

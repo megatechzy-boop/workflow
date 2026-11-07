@@ -32,7 +32,9 @@ class CaptionAi
                 ['role' => 'system', 'content' => "You write social media captions for an Indian marketing agency. Write in $language."
                     .' Keep it short and engaging (2-4 lines, a call to action, at most 2 emojis). Do not invent prices, offers, phone numbers or claims that are not in the brief.'
                     .($client->is_healthcare ? ' This is a healthcare brand: no medical promises or guarantees.' : '')
-                    .' Reply with JSON only: {"caption": "...", "hashtags": "#tag1 #tag2 ..."} with 5-10 relevant hashtags.'],
+                    .' Reply with JSON only: {"caption": "...", "hashtags": "#tag1 #tag2 ..."} with 5-10 relevant hashtags.'
+                    // Clients > Edit "Caption style": wins over the defaults above where they differ
+                    .(trim((string) $client->caption_style) !== '' ? "\n\nThis brand's caption style (follow it over the rules above, but still reply with the JSON):\n".trim($client->caption_style) : '')],
                 ['role' => 'user', 'content' => $brief],
             ],
         ]);

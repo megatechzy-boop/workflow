@@ -78,6 +78,7 @@ class ClientController extends Controller
             'meta_ad_account_id' => ['nullable', 'exists:meta_ad_accounts,id'],
             'gbp_language' => ['nullable', Rule::in(array_keys(ReviewTemplates::LANGUAGES))],
             'caption_language' => ['nullable', Rule::in(array_keys(ReviewTemplates::LANGUAGES))],
+            'caption_style' => ['nullable', 'string', 'max:3000'],
         ]);
         $data['gbp_language'] ??= 'en';
         $data['caption_language'] ??= 'en';

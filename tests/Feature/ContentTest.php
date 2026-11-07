@@ -106,7 +106,7 @@ class ContentTest extends TestCase
     {
         $this->uploadCarousel();
         $content = Content::firstOrFail();
-        $this->task->item->calendar->client->update(['caption_language' => 'hinglish']);
+        $this->task->item->calendar->client->update(['caption_language' => 'hinglish', 'caption_style' => 'End with: Call 9800000000']);
         $this->task->item->update(['creative_copy' => 'Diwali sale 20% off']);
 
         // No key: a clear message, no call
@@ -121,7 +121,7 @@ class ContentTest extends TestCase
         $this->actingAs($this->approver)->post(route('contents.captionAi', $content))
             ->assertSessionHas('_old_input', ['caption' => 'Is Diwali 20% off!', 'hashtags' => '#diwali #sale']);
         \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->hasHeader('Authorization', 'Bearer test-key')
-            && str_contains($r['messages'][0]['content'], 'Write in Hinglish') && str_contains($r['messages'][1]['content'], 'Diwali sale 20% off'));
+            && str_contains($r['messages'][0]['content'], 'Write in Hinglish') && str_contains($r['messages'][0]['content'], "caption style (follow it over the rules above, but still reply with the JSON):\nEnd with: Call 9800000000") && str_contains($r['messages'][1]['content'], 'Diwali sale 20% off'));
         // Nothing saved until the SMM presses Save
         $this->assertNull($content->versions()->first()->caption);
 
