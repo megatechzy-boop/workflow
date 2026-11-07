@@ -22,8 +22,11 @@ class ScheduleController extends Controller
             : now()->startOfMonth();
         $clientId = $isCustomer ? $user->client_id : ($request->client ? (int) $request->client : null);
 
-        $items = CalendarItem::with(['calendar.client', 'task.contents', 'task.assignee'])
-            ->whereBetween('post_date', [$month, $month->copy()->endOfMonth()])
+        $range = [$month, $month->copy()->endOfMonth()];
+        $items = CalendarItem::with(['calendar.client', 'task.contents.metaPosts', 'task.assignee'])
+            // the calendar date, or a Facebook / Instagram time set on another day
+            ->where(fn ($q) => $q->whereBetween('post_date', $range)
+                ->orWhereHas('task.contents.metaPosts', fn ($m) => $m->whereBetween('publish_at', $range)))
             // Designers/Editors: only their own posts
             ->when($user->seesOnlyOwnRows(), fn ($q) => $q->whereHas('task', fn ($t) => $t->where('assigned_to', $user->id)))
             ->whereHas('calendar', fn ($q) => $q
@@ -32,15 +35,23 @@ class ScheduleController extends Controller
                 ->when($user->brandLimit(), fn ($c, $ids) => $c->whereIn('client_id', $ids))
                 // Customers only see calendars that were sent to them
                 ->when($isCustomer, fn ($c) => $c->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved])))
-            ->orderBy('post_date')->orderBy('id')
-            ->get();
+            ->orderBy('id')
+            ->get()
+            ->filter(fn ($i) => self::postAt($i)->between(...$range)) // moved out of this month
+            ->sortBy(fn ($i) => self::postAt($i));
 
         return view('schedule.index', [
             'month' => $month,
-            'byDay' => $items->groupBy(fn ($i) => $i->post_date->day),
+            'byDay' => $items->groupBy(fn ($i) => self::postAt($i)->day),
             'brands' => $isCustomer ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(['id', 'name']),
             'clientId' => $clientId,
         ]);
+    }
+
+    /** When the post goes out: the earliest Facebook / Instagram scheduled time, else the calendar's post date */
+    public static function postAt(CalendarItem $item): Carbon
+    {
+        return $item->task?->contents->flatMap->metaPosts->pluck('publish_at')->filter()->min() ?? $item->post_date;
     }
 
     /** [label, tailwind classes] for a row: content status, else task, else calendar status */

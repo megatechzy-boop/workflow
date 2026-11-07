@@ -143,6 +143,18 @@ class MetaTest extends TestCase
         $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', MetaPost::where('platform', 'instagram')->sole()->error);
     }
 
+    public function test_schedule_shows_the_post_on_its_scheduled_day(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
+        $content = $this->approvedPost(page: $page); // calendar post date: 5 Nov 2026
+        $card = route('tasks.show', $content->task); // the post's card links to its task
+        $this->actingAs($this->admin)->get('/schedule?month=2026-11')->assertSee($card);
+
+        $this->actingAs($this->admin)->post(route('contents.meta', $content), ['publish_at' => '2026-12-02 10:30']);
+        $this->actingAs($this->admin)->get('/schedule?month=2026-11')->assertDontSee($card);
+        $this->actingAs($this->admin)->get('/schedule?month=2026-12')->assertSee($card)->assertSee('10:30 AM · moved from 05 Nov');
+    }
+
     public function test_no_caption_no_scheduling(): void
     {
         $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);

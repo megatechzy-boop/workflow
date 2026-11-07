@@ -53,6 +53,12 @@ class Content extends Model
         return $this->hasMany(ContentVersion::class)->orderBy('number');
     }
 
+    /** Facebook / Instagram posts of this content (one per platform) */
+    public function metaPosts(): HasMany
+    {
+        return $this->hasMany(MetaPost::class);
+    }
+
     /** Rule: no scheduling or publishing without a caption on the current version */
     public function hasCaption(): bool
     {

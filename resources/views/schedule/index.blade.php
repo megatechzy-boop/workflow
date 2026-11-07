@@ -44,6 +44,10 @@
                                         @unless ($clientId)<span class="font-semibold">{{ $item->calendar->client->name }}</span> · @endunless
                                         {{ collect($item->formats())->map->label()->implode(', ') }}
                                         <span class="block opacity-80">{{ $label }}</span>
+                                        @php($at = App\Http\Controllers\ScheduleController::postAt($item))
+                                        @unless ($at->equalTo($item->post_date))
+                                            <span class="block opacity-80">{{ $at->format('h:i A') }}@unless ($at->isSameDay($item->post_date)) · moved from {{ $item->post_date->format('d M') }}@endunless</span>
+                                        @endunless
                                     </a>
                                 @endforeach
                             </div>
