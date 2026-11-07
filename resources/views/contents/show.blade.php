@@ -103,6 +103,14 @@
                             <x-text-input id="hashtags" name="hashtags" class="block w-full text-sm" placeholder="#brand #offer" :value="old('hashtags', $version->hashtags)" />
                             <div class="flex flex-wrap items-center gap-2">
                                 <x-secondary-button type="submit">Save caption</x-secondary-button>
+                                @php($captionLanguages = $item->calendar->client->captionLanguages())
+                                @if (count($captionLanguages) > 1)
+                                    <select name="language" form="ai-caption" aria-label="AI caption language" class="border-gray-300 rounded-xl shadow-sm text-xs py-1.5">
+                                        @foreach ($captionLanguages as $key)
+                                            <option value="{{ $key }}">{{ \App\Support\ReviewTemplates::LANGUAGES[$key] }}</option>
+                                        @endforeach
+                                    </select>
+                                @endif
                                 <button type="submit" form="ai-caption" class="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-accent-400 text-accent-600 text-xs font-semibold hover:bg-accent-50"
                                     onclick="this.textContent = 'Writing…'">Generate with AI</button>
                                 @unless ($version->caption)<span class="text-xs text-gray-500">Pre-filled from the calendar's creative copy — edit and save.</span>@endunless

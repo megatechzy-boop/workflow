@@ -22,7 +22,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   "Video later" (calendar still gets approved, no task for it) and is approved on the approved calendar later, which makes its task.
   Approvals list: client filter + tick and approve together (SMM step or Customer step); revisions stay one by one.
 - AI only for captions: "Generate with AI" on a post (SMM) fills caption + hashtags from the calendar row via Groq
-  (free plan, `GROQ_API_KEY`, model `GROQ_MODEL`), in the client's "Caption language" and following its "Caption style" (Clients > Edit, wins over the default
+  (free plan, `GROQ_API_KEY`, model `GROQ_MODEL`), in one of the client's ticked "Caption languages" (picked next to the button) and following its "Caption style" (Clients > Edit, wins over the default
   2-4 lines / CTA / max 2 emojis / 5-10 hashtags); nothing is saved until the SMM saves.
 - No caption, no scheduling: the manual "Scheduled" step and Facebook / Instagram publish (now or scheduled) need a caption on the current version.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
@@ -67,7 +67,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   auto reply after 10–30 min (client's auto reply on), 3 stars → template draft to approve, 1–2 stars → no reply,
   Admin / Ops / brand SMMs alerted. First sync of a location only imports old reviews. Templates (Admin > Review
   templates) per client + a default set copied to new clients; the last 3 used on a location are not repeated.
-  Healthcare clients (Clients > Edit): replies never use the reviewer's name. No AI.
+  Healthcare clients (Clients > Edit): replies never use the reviewer's name. Auto replies stay template-only; "Write with AI"
+  (Groq) only fills one review's reply box, and the team posts it. Reply languages (several ticked):
+  reply in the review's own language among them, else the first ticked (`ReviewTemplates::languageFor`).
 - GBP Posts (Social media > GBP Posts, no approval, one post at a time): update / offer / event, 1 image, `gbp:posts`
   (every minute) publishes due posts. Try 1 gives Google our signed image link; tries 2–3 upload the bytes as a
   location photo (host firewall blocks some crawlers; `GBP_POST_MEDIA=upload` always uploads). After 3 fails: Failed + alert.

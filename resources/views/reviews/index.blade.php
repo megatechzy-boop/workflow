@@ -89,13 +89,19 @@
                             @if ($review->client->is_healthcare)
                                 <p class="text-xs text-gray-500">Healthcare client: no patient name, condition or treatment details in the reply.</p>
                             @endif
-                            <details @if ($review->draft) open @endif>
+                            @php($aiHere = (int) old('ai_review') === $review->id) {{-- AI draft came back for this review --}}
+                            <details @if ($review->draft || $aiHere) open @endif>
                                 <summary class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 cursor-pointer min-h-[44px]">Reply</summary>
                                 <form method="POST" action="{{ route('reviews.reply', $review) }}" class="mt-2 space-y-2">
                                     @csrf
-                                    <textarea name="reply" rows="4" required maxlength="4000" class="block w-full border-gray-300 rounded-xl shadow-sm text-sm" aria-label="Reply">{{ $review->draft }}</textarea>
-                                    <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold min-h-[44px]">{{ $review->status === 'draft' ? 'Approve & post' : 'Post reply' }}</button>
+                                    <textarea name="reply" rows="4" required maxlength="4000" class="block w-full border-gray-300 rounded-xl shadow-sm text-sm" aria-label="Reply">{{ $aiHere ? old('reply') : $review->draft }}</textarea>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold min-h-[44px]">{{ $review->status === 'draft' ? 'Approve & post' : 'Post reply' }}</button>
+                                        <button type="submit" form="ai-review-{{ $review->id }}" onclick="this.textContent = 'Writing…'"
+                                            class="px-4 py-2 rounded-xl border border-accent-400 text-accent-600 text-sm font-semibold min-h-[44px] hover:bg-accent-50">Write with AI</button>
+                                    </div>
                                 </form>
+                                <form id="ai-review-{{ $review->id }}" method="POST" action="{{ route('reviews.ai', $review) }}" class="hidden">@csrf</form>
                             </details>
                         @endif
                     </div>

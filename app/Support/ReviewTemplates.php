@@ -128,18 +128,21 @@ class ReviewTemplates
         }
     }
 
-    /** Auto-language: a review written in Devanagari gets the client's Hindi / Marathi, any other gets English */
+    /**
+     * Reply in the review's own language among the client's ticked ones: Devanagari → Marathi / Hindi,
+     * English letters → English, then Hinglish / Marathi (English letters). Can't tell → the first ticked.
+     * shortcut: English vs Hinglish (and Hindi vs Marathi) is not told apart, the earlier one in LANGUAGES wins.
+     */
     public static function languageFor(Client $client, ?string $text): string
     {
-        $default = $client->gbp_language ?: 'en';
-        if (! $client->gbp_auto_language) {
-            return $default;
+        $ticked = $client->replyLanguages();
+        $text = trim((string) $text);
+        if (count($ticked) === 1 || $text === '') {
+            return $ticked[0];
         }
-        if (preg_match('/\p{Devanagari}/u', (string) $text)) {
-            return in_array($default, ['mr', 'mr_en'], true) ? 'mr' : 'hi';
-        }
+        $fits = preg_match('/\p{Devanagari}/u', $text) ? ['mr', 'hi'] : ['en', 'hinglish', 'mr_en'];
 
-        return 'en';
+        return collect($ticked)->first(fn ($l) => in_array($l, $fits, true)) ?? $ticked[0];
     }
 
     /** First name for {name}/{greeting}; none for anonymous reviewers and healthcare clients (no patient details) */

@@ -12,13 +12,26 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Client extends Model
 {
     protected $fillable = ['name', 'contact_email', 'phone', 'address', 'notes', 'is_active', 'package_id', 'package_start', 'onboarding_token', 'onboarding', 'onboarded_at', 'meta_page_id', 'meta_ad_account_id', 'is_internal', 'meta_pixel_id',
-        'gbp_auto_reply', 'gbp_language', 'gbp_auto_language', 'is_healthcare', 'caption_language', 'caption_style'];
+        'gbp_auto_reply', 'gbp_languages', 'is_healthcare', 'caption_languages', 'caption_style'];
 
     protected $attributes = ['is_active' => true];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'is_internal' => 'boolean', 'gbp_auto_reply' => 'boolean', 'gbp_auto_language' => 'boolean', 'is_healthcare' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime'];
+        return ['is_active' => 'boolean', 'is_internal' => 'boolean', 'gbp_auto_reply' => 'boolean', 'is_healthcare' => 'boolean', 'package_start' => 'date', 'onboarding' => 'array', 'onboarded_at' => 'datetime',
+            'caption_languages' => 'array', 'gbp_languages' => 'array'];
+    }
+
+    /** Ticked caption languages (Clients > Edit), in list order; English when none */
+    public function captionLanguages(): array
+    {
+        return $this->caption_languages ?: ['en'];
+    }
+
+    /** Ticked review reply languages, in list order; the first one is the fallback */
+    public function replyLanguages(): array
+    {
+        return $this->gbp_languages ?: ['en'];
     }
 
     protected static function booted(): void

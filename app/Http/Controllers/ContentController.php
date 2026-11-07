@@ -421,15 +421,17 @@ class ContentController extends Controller
     }
 
     /** AI draft of caption + hashtags: fills the form only, the SMM checks and saves */
-    public function aiCaption(Content $content): RedirectResponse
+    public function aiCaption(Request $request, Content $content): RedirectResponse
     {
         Gate::authorize('editCaption', $content);
         if (! config('services.groq.key')) {
             return back()->with('status', 'AI captions are not set up yet (GROQ_API_KEY in the server .env).');
         }
+        $languages = $content->task->item->calendar->client->captionLanguages();
+        $language = $request->validate(['language' => ['nullable', Rule::in($languages)]])['language'] ?? $languages[0];
 
         try {
-            $draft = CaptionAi::generate($content);
+            $draft = CaptionAi::generate($content, $language);
         } catch (\Throwable $e) {
             report($e);
 

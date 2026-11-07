@@ -34,7 +34,7 @@ class ReviewTest extends TestCase
         parent::setUp();
         $this->admin = User::factory()->create(['role' => Role::Admin]);
         GoogleAccount::create(['access_token' => 'token', 'refresh_token' => 'r', 'expires_at' => now()->addHour()]);
-        $this->client = Client::create(['name' => 'Acme', 'gbp_auto_reply' => true, 'gbp_language' => 'en']);
+        $this->client = Client::create(['name' => 'Acme', 'gbp_auto_reply' => true, 'gbp_languages' => ['en']]);
         $this->location = GbpLocation::create(['client_id' => $this->client->id, 'account_name' => 'accounts/11', 'location_name' => 'locations/21',
             'title' => 'Acme Yoga', 'city' => 'Pune', 'phone' => '020 1234']);
     }
@@ -174,12 +174,15 @@ class ReviewTest extends TestCase
         $this->assertSame('Namaskar,', ReviewTemplates::render('{greeting}', 'mr_en', []));
         $this->assertSame('Namaste, Acme · Pune · 1', ReviewTemplates::render('{greeting} {business} · {city} · {phone}', 'hinglish', ['business' => 'Acme', 'city' => 'Pune', 'phone' => '1']));
 
-        $this->client->update(['gbp_auto_language' => true, 'gbp_language' => 'mr_en']);
+        // Several ticked: the review's own language; can't tell → the first ticked
+        $this->client->update(['gbp_languages' => ['mr', 'mr_en']]);
         $this->assertSame('mr', ReviewTemplates::languageFor($this->client, 'खूप छान'));
-        $this->assertSame('en', ReviewTemplates::languageFor($this->client, 'Very good'));
-        $this->client->update(['gbp_language' => 'hinglish']);
+        $this->assertSame('mr_en', ReviewTemplates::languageFor($this->client, 'Khup chan'));
+        $this->assertSame('mr', ReviewTemplates::languageFor($this->client, '')); // stars only
+        $this->client->update(['gbp_languages' => ['en', 'hi', 'hinglish']]);
         $this->assertSame('hi', ReviewTemplates::languageFor($this->client, 'बहुत अच्छा'));
-        $this->client->update(['gbp_auto_language' => false]);
+        $this->assertSame('en', ReviewTemplates::languageFor($this->client, 'Very good'));
+        $this->client->update(['gbp_languages' => ['hinglish']]); // one ticked: always that
         $this->assertSame('hinglish', ReviewTemplates::languageFor($this->client, 'बहुत अच्छा'));
 
         $this->assertSame('Rahul', ReviewTemplates::firstName($this->client, 'rahul sharma'));
@@ -306,10 +309,43 @@ class ReviewTest extends TestCase
     public function test_client_form_saves_review_settings(): void
     {
         $this->actingAs($this->admin)->put(route('clients.update', $this->client), [
-            'name' => 'Acme', 'is_active' => 1, 'gbp_auto_reply' => 1, 'gbp_language' => 'mr', 'gbp_auto_language' => 1, 'is_healthcare' => 1,
+            'name' => 'Acme', 'is_active' => 1, 'gbp_auto_reply' => 1, 'gbp_languages' => ['mr_en', 'mr'], 'is_healthcare' => 1,
+            'caption_languages' => ['mr', 'en'], 'caption_style' => 'Short',
         ])->assertRedirect(route('clients.index'));
         $client = $this->client->fresh();
-        $this->assertSame([true, 'mr', true, true], [$client->gbp_auto_reply, $client->gbp_language, $client->gbp_auto_language, $client->is_healthcare]);
-        $this->actingAs($this->admin)->get(route('clients.edit', $client))->assertOk()->assertSee('Google reviews');
+        // saved in list order
+        $this->assertSame([true, ['mr', 'mr_en'], true, ['en', 'mr'], 'Short'],
+            [$client->gbp_auto_reply, $client->gbp_languages, $client->is_healthcare, $client->caption_languages, $client->caption_style]);
+        $this->actingAs($this->admin)->get(route('clients.edit', $client))->assertOk()->assertSee('Google reviews')->assertSee('Reply languages');
+
+        // none ticked = English; unknown language rejected
+        $this->actingAs($this->admin)->put(route('clients.update', $this->client), ['name' => 'Acme']);
+        $this->assertSame(['en'], $this->client->fresh()->gbp_languages);
+        $this->actingAs($this->admin)->put(route('clients.update', $this->client), ['name' => 'Acme', 'gbp_languages' => ['xx']])->assertSessionHasErrors('gbp_languages.0');
+    }
+
+    public function test_ai_writes_a_reply_draft_in_the_reply_language_without_posting(): void
+    {
+        $this->client->update(['gbp_languages' => ['mr'], 'phone' => '9800000000']);
+        $review = $this->review(2, ['comment' => 'Service was slow']);
+
+        config(['services.groq.key' => null]);
+        $this->actingAs($this->admin)->post(route('reviews.ai', $review))->assertSessionHas('status', 'AI is not set up yet (GROQ_API_KEY in the server .env).');
+
+        config(['services.groq.key' => 'k']);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => '{"reply": "Rahul ji, kshama kara..."}']]]])]);
+        $this->actingAs($this->admin)->post(route('reviews.ai', $review))
+            ->assertSessionHas('_old_input', ['reply' => 'Rahul ji, kshama kara...', 'ai_review' => $review->id]);
+        Http::assertSent(fn (Request $r) => str_contains($r['messages'][0]['content'], 'Write in Marathi.')
+            && str_contains($r['messages'][1]['content'], 'Reviewer first name: Rahul') && str_contains($r['messages'][1]['content'], 'Service was slow')
+            && str_contains($r['messages'][1]['content'], '9800000000'));
+        $this->assertNull($review->fresh()->reply); // nothing posted to Google
+
+        // Healthcare: no reviewer name goes to the AI
+        $this->client->update(['is_healthcare' => true]);
+        $this->actingAs($this->admin)->post(route('reviews.ai', $review));
+        Http::assertSent(fn (Request $r) => str_contains($r['messages'][0]['content'], 'Do not use any name') && ! str_contains($r['messages'][1]['content'], 'Rahul'));
+
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('reviews.ai', $review))->assertForbidden();
     }
 }

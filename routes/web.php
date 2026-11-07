@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
+    Route::post('reviews/{review}/ai', [ReviewController::class, 'aiReply'])->name('reviews.ai');
     Route::post('reviews/backfill/{client}', [ReviewController::class, 'backfill'])->name('reviews.backfill');
     Route::resource('gbp-posts', GbpPostController::class)->except('show');
     Route::get('gbp-posts/{gbpPost}/image', [GbpPostController::class, 'image'])->name('gbp-posts.image');

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\Permission;
 use App\Models\Client;
 use App\Models\GbpReview;
+use App\Support\CaptionAi;
 use App\Support\GbpReviews;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -71,5 +73,25 @@ class ReviewController extends Controller
         }
 
         return back()->with('status', 'Reply posted on Google.');
+    }
+
+    /** "Write with AI": fills this review's reply box only; the team checks it and posts */
+    public function aiReply(Request $request, GbpReview $review): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($review->client_id), 403);
+        if (! config('services.groq.key')) {
+            return back()->with('status', 'AI is not set up yet (GROQ_API_KEY in the server .env).');
+        }
+
+        try {
+            $reply = CaptionAi::reviewReply($review);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('status', 'AI could not write a reply: '.Str::limit($e->getMessage(), 200));
+        }
+
+        return back()->withInput(['reply' => $reply, 'ai_review' => $review->id])->with('status', 'AI reply ready. Check it, edit if needed, then post.');
     }
 }

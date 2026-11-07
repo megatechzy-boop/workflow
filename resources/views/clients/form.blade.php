@@ -129,14 +129,17 @@
                         <span class="text-sm text-gray-700">Internal brand (our own, e.g. Mega Techzy): no Customer approval step</span>
                     </label>
 
-                    <div>
-                        <x-input-label for="caption_language" value="Caption language (Generate with AI)" />
-                        <select id="caption_language" name="caption_language" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                    <fieldset>
+                        <legend class="block font-medium text-sm text-gray-700">Caption languages (Generate with AI: pick one per post)</legend>
+                        @php($ticked = old('caption_languages', $client->caption_languages ?? ['en']))
+                        <div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
                             @foreach (\App\Support\ReviewTemplates::LANGUAGES as $key => $label)
-                                <option value="{{ $key }}" @selected(old('caption_language', $client->caption_language ?? 'en') === $key)>{{ $label }}</option>
+                                <label class="flex items-center gap-2 text-sm text-gray-700 min-h-[32px]">
+                                    <input type="checkbox" name="caption_languages[]" value="{{ $key }}" class="rounded border-gray-300" @checked(in_array($key, $ticked, true))> {{ $label }}
+                                </label>
                             @endforeach
-                        </select>
-                    </div>
+                        </div>
+                    </fieldset>
                     <div>
                         <x-input-label for="caption_style" value="Caption style (Generate with AI)" />
                         <textarea id="caption_style" name="caption_style" rows="5" maxlength="3000" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm"
@@ -151,18 +154,18 @@
                             <input type="checkbox" name="gbp_auto_reply" value="1" class="rounded border-gray-300" @checked(old('gbp_auto_reply', $client->gbp_auto_reply))>
                             <span class="text-sm text-gray-700">Auto reply to 4–5 star reviews (from templates, 10–30 min later)</span>
                         </label>
-                        <div>
-                            <x-input-label for="gbp_language" value="Reply language" />
-                            <select id="gbp_language" name="gbp_language" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm">
+                        <fieldset>
+                            <legend class="block font-medium text-sm text-gray-700">Reply languages</legend>
+                            @php($ticked = old('gbp_languages', $client->gbp_languages ?? ['en']))
+                            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
                                 @foreach (\App\Support\ReviewTemplates::LANGUAGES as $key => $label)
-                                    <option value="{{ $key }}" @selected(old('gbp_language', $client->gbp_language ?? 'en') === $key)>{{ $label }}</option>
+                                    <label class="flex items-center gap-2 text-sm text-gray-700 min-h-[32px]">
+                                        <input type="checkbox" name="gbp_languages[]" value="{{ $key }}" class="rounded border-gray-300" @checked(in_array($key, $ticked, true))> {{ $label }}
+                                    </label>
                                 @endforeach
-                            </select>
-                        </div>
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" name="gbp_auto_language" value="1" class="rounded border-gray-300" @checked(old('gbp_auto_language', $client->gbp_auto_language))>
-                            <span class="text-sm text-gray-700">Auto language: review in Hindi/Marathi script → reply in Hindi (Marathi if chosen above), otherwise English</span>
-                        </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Several ticked: the reply goes in the review's own language (Devanagari → Marathi / Hindi, English letters → English, then Hinglish / Marathi in English letters). Can't tell (stars only) → the first ticked in this list.</p>
+                        </fieldset>
                         <label class="flex items-center gap-2">
                             <input type="checkbox" name="is_healthcare" value="1" class="rounded border-gray-300" @checked(old('is_healthcare', $client->is_healthcare))>
                             <span class="text-sm text-gray-700">Healthcare (doctor, clinic, hospital): replies never use the reviewer's name</span>
