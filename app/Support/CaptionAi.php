@@ -30,15 +30,29 @@ class CaptionAi
             'Remarks' => $item->remarks,
         ])->filter()->map(fn ($v, $k) => "$k: $v")->implode("\n");
 
-        $json = self::ask("You write social media captions for an Indian marketing agency. Write in $language."
-            .' Keep it short and engaging (2-4 lines, a call to action, at most 2 emojis). Do not invent prices, offers, phone numbers or claims that are not in the brief.'
+        $system = "You write social media captions for an Indian marketing agency. Write in $language."
+            .' Write at least '.self::MIN_LINES.' lines (6-8 is best): short, engaging lines, each on its own line (use \n between lines), ending with a call to action, at most 3 emojis.'
+            .' Do not invent prices, offers, phone numbers or claims that are not in the brief.'
             .($client->is_healthcare ? ' This is a healthcare brand: no medical promises or guarantees.' : '')
             .' Reply with JSON only: {"caption": "...", "hashtags": "#tag1 #tag2 ..."} with 5-10 relevant hashtags.'
             // Clients > Edit "Caption style": wins over the defaults above where they differ
-            .(trim((string) $client->caption_style) !== '' ? "\n\nThis brand's caption style (follow it over the rules above, but still reply with the JSON):\n".trim($client->caption_style) : ''),
-            $brief, 'caption');
+            .(trim((string) $client->caption_style) !== '' ? "\n\nThis brand's caption style (follow it over the rules above, but still reply with the JSON):\n".trim($client->caption_style) : '');
+
+        $json = self::ask($system, $brief, 'caption');
+        // Small models often still write 2-3 lines: ask once more, then take what comes
+        if (($lines = self::lines($json['caption'])) < self::MIN_LINES) {
+            $json = self::ask($system, $brief."\n\nYour last caption had only $lines lines. Write at least ".self::MIN_LINES.' lines this time.', 'caption');
+        }
 
         return ['caption' => $json['caption'], 'hashtags' => trim((string) ($json['hashtags'] ?? ''))];
+    }
+
+    /** Owner's rule: every post, carousel and reel caption has at least 6 lines */
+    private const MIN_LINES = 6;
+
+    private static function lines(string $text): int
+    {
+        return count(array_filter(preg_split('/\R/u', $text), fn ($l) => trim($l) !== ''));
     }
 
     /** Reply to a Google review, in the language the review templates would use (client's Reply language + Auto language) */

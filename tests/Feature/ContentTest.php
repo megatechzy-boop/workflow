@@ -124,6 +124,9 @@ class ContentTest extends TestCase
             ->assertSessionHas('_old_input', ['caption' => 'Is Diwali 20% off!', 'hashtags' => '#diwali #sale']);
         \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->hasHeader('Authorization', 'Bearer test-key')
             && str_contains($r['messages'][0]['content'], 'Write in Hinglish') && str_contains($r['messages'][0]['content'], "caption style (follow it over the rules above, but still reply with the JSON):\nEnd with: Call 9800000000") && str_contains($r['messages'][1]['content'], 'Diwali sale 20% off'));
+        // 1 line < 6: asked once more, then the answer is used as it is
+        \Illuminate\Support\Facades\Http::assertSentCount(2);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['messages'][1]['content'], 'Your last caption had only 1 lines. Write at least 6 lines this time.'));
         // Nothing saved until the SMM presses Save
         $this->assertNull($content->versions()->first()->caption);
 

@@ -42,7 +42,7 @@ return [
     // AI captions (Groq free plan; key only in the server .env)
     'groq' => [
         'key' => env('GROQ_API_KEY'),
-        'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
         'url' => 'https://api.groq.com/openai/v1/chat/completions',
     ],
 

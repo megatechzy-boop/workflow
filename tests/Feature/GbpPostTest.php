@@ -55,10 +55,11 @@ class GbpPostTest extends TestCase
     public function test_smm_schedules_a_post_and_the_location_is_filled_in(): void
     {
         $this->actingAs($this->smm)->get(route('gbp-posts.create'))->assertOk()->assertSee('Acme Yoga');
+        $at = now()->addDays(3)->setTime(9, 30); // always in the future
         $this->actingAs($this->smm)->post(route('gbp-posts.store'), [
             'client_id' => $this->client->id, 'post_type' => 'update', 'caption' => 'Diwali yoga camp', 'image' => $this->image(),
-            'cta_type' => 'LEARN_MORE', 'cta_url' => 'https://acme.test/camp', 'scheduled_at' => '2026-11-10 09:30',
-        ])->assertRedirect(route('gbp-posts.index'))->assertSessionHas('status', 'Scheduled for 10 Nov, 09:30 AM.');
+            'cta_type' => 'LEARN_MORE', 'cta_url' => 'https://acme.test/camp', 'scheduled_at' => $at->format('Y-m-d H:i'),
+        ])->assertRedirect(route('gbp-posts.index'))->assertSessionHas('status', 'Scheduled for '.$at->format('d M').', 09:30 AM.');
 
         $post = GbpPost::sole();
         $this->assertSame([$this->location->id, 'scheduled', $this->smm->id], [$post->location_id, $post->status, $post->created_by]);
