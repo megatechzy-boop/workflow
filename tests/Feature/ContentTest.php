@@ -126,7 +126,8 @@ class ContentTest extends TestCase
             && str_contains($r['messages'][0]['content'], 'Write in Hinglish') && str_contains($r['messages'][0]['content'], "caption style (follow it over the rules above, but still reply with the JSON):\nEnd with: Call 9800000000") && str_contains($r['messages'][1]['content'], 'Diwali sale 20% off'));
         // 1 line < 6: asked once more, then the answer is used as it is
         \Illuminate\Support\Facades\Http::assertSentCount(2);
-        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['messages'][1]['content'], 'Your last caption had only 1 lines. Write at least 6 lines this time.'));
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['messages'][1]['content'], 'Your last caption had only 1 lines and 4 words, too short.')
+            && str_contains($r['messages'][0]['content'], '120-200 words') && str_contains($r['messages'][0]['content'], 'search friendly'));
         // Nothing saved until the SMM presses Save
         $this->assertNull($content->versions()->first()->caption);
 

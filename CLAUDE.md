@@ -23,7 +23,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   Approvals list: client filter + tick and approve together (SMM step or Customer step); revisions stay one by one.
 - AI only for captions: "Generate with AI" on a post (SMM) fills caption + hashtags from the calendar row via Groq
   (free plan, `GROQ_API_KEY`, model `GROQ_MODEL`), in one of the client's ticked "Caption languages" (picked next to the button) and following its "Caption style" (Clients > Edit, wins over the default
-  6-8 lines / CTA / max 3 emojis / 5-10 hashtags). Owner's rule: at least 6 lines; a shorter answer is asked once more.
+  8-12 full lines / 120-200 words, search friendly: hook with the searched words + city, 3-5 natural keywords, CTA, max 3 emojis,
+  8-15 topic/niche/city hashtags). Owner's rule: at least 6 lines and 80 words; a shorter answer is asked once more.
   Default model `openai/gpt-oss-120b`. Nothing is saved until the SMM saves.
 - No caption, no scheduling: the manual "Scheduled" step and Facebook / Instagram publish (now or scheduled) need a caption on the current version.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.

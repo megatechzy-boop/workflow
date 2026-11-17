@@ -22,6 +22,7 @@ class CaptionAi
 
         $brief = collect([
             'Brand' => $client->name,
+            'City / area' => $client->gbpLocation?->city ?: $client->address,
             'Format' => $item->formatLabel($content->type()),
             'Post date' => $item->post_date?->format('d M Y, l'),
             'Creative copy' => $item->creative_copy,
@@ -31,24 +32,32 @@ class CaptionAi
         ])->filter()->map(fn ($v, $k) => "$k: $v")->implode("\n");
 
         $system = "You write social media captions for an Indian marketing agency. Write in $language."
-            .' Write at least '.self::MIN_LINES.' lines (6-8 is best): short, engaging lines, each on its own line (use \n between lines), ending with a call to action, at most 3 emojis.'
+            .' Length: 8-12 lines and 120-200 words in all. Every line is a full, useful sentence (not 2-4 word fragments), each on its own line (use \n between lines).'
+            .' Make it search friendly (Instagram and Facebook search read the caption): the first line is a hook that names the main topic in the words people search for,'
+            .' e.g. the service + the problem it solves + the city / area when given. Use 3-5 such keywords naturally across the caption, never stuffed.'
+            .' Structure: hook, the problem or need, 2-3 benefits or tips, who it is for, then a clear call to action. At most 3 emojis.'
             .' Do not invent prices, offers, phone numbers or claims that are not in the brief.'
             .($client->is_healthcare ? ' This is a healthcare brand: no medical promises or guarantees.' : '')
-            .' Reply with JSON only: {"caption": "...", "hashtags": "#tag1 #tag2 ..."} with 5-10 relevant hashtags.'
+            .' Reply with JSON only: {"caption": "...", "hashtags": "#tag1 #tag2 ..."} with 8-15 hashtags: the topic, the niche and the city / area (e.g. #yogaforbackpain #puneyoga), no generic tags like #love or #instagood.'
             // Clients > Edit "Caption style": wins over the defaults above where they differ
             .(trim((string) $client->caption_style) !== '' ? "\n\nThis brand's caption style (follow it over the rules above, but still reply with the JSON):\n".trim($client->caption_style) : '');
 
         $json = self::ask($system, $brief, 'caption');
-        // Small models often still write 2-3 lines: ask once more, then take what comes
-        if (($lines = self::lines($json['caption'])) < self::MIN_LINES) {
-            $json = self::ask($system, $brief."\n\nYour last caption had only $lines lines. Write at least ".self::MIN_LINES.' lines this time.', 'caption');
+        // Small models often still write a few short lines: ask once more, then take what comes
+        $lines = self::lines($json['caption']);
+        $words = count(preg_split('/\s+/u', $json['caption'], -1, PREG_SPLIT_NO_EMPTY)); // works for Hindi / Marathi too
+        if ($lines < self::MIN_LINES || $words < self::MIN_WORDS) {
+            $json = self::ask($system, $brief."\n\nYour last caption had only $lines lines and $words words, too short."
+                .' Write 8-12 full lines, 120-200 words, with the search keywords this time.', 'caption');
         }
 
         return ['caption' => $json['caption'], 'hashtags' => trim((string) ($json['hashtags'] ?? ''))];
     }
 
-    /** Owner's rule: every post, carousel and reel caption has at least 6 lines */
+    /** Owner's rule: every post, carousel and reel caption has at least 6 lines, and (search friendly) enough words */
     private const MIN_LINES = 6;
+
+    private const MIN_WORDS = 80;
 
     private static function lines(string $text): int
     {
