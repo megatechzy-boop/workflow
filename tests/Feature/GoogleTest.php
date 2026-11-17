@@ -33,8 +33,9 @@ class GoogleTest extends TestCase
             'oauth2.googleapis.com/token' => Http::response(['access_token' => 'access-1', 'refresh_token' => 'refresh-1', 'expires_in' => 3599]),
             'mybusinessaccountmanagement.googleapis.com/*' => Http::response(['accounts' => [['name' => 'accounts/11', 'accountName' => 'Mega Techzy']]]),
             'mybusinessbusinessinformation.googleapis.com/*' => Http::sequence()
-                ->push(['locations' => [['name' => 'locations/21', 'title' => 'Acme Yoga', 'storefrontAddress' => ['locality' => 'Pune'], 'phoneNumbers' => ['primaryPhone' => '020 1234']]], 'nextPageToken' => 'p2'])
-                ->push(['locations' => [['name' => 'locations/22', 'title' => 'Acme Dental']]]),
+                ->push(['locations' => [['name' => 'locations/21', 'title' => 'Acme Yoga', 'storefrontAddress' => ['locality' => 'Pune'], 'phoneNumbers' => ['primaryPhone' => '020 1234'],
+                    'metadata' => ['newReviewUri' => 'https://g.page/r/abc/review']]], 'nextPageToken' => 'p2'])
+                ->push(['locations' => [['name' => 'locations/22', 'title' => 'Acme Dental', 'metadata' => ['placeId' => 'PL22']]]]),
         ]);
     }
 
@@ -57,6 +58,10 @@ class GoogleTest extends TestCase
         $location = GbpLocation::where('location_name', 'locations/21')->sole();
         $this->assertSame(['accounts/11', 'Pune', '020 1234'], [$location->account_name, $location->city, $location->phone]);
         $this->assertSame('accounts/11/locations/21', $location->v4Path());
+        // Google's review link, or one made from the place id
+        $this->assertSame('https://g.page/r/abc/review', $location->review_url);
+        $this->assertSame('https://search.google.com/local/writereview?placeid=PL22', GbpLocation::where('location_name', 'locations/22')->value('review_url'));
+        Http::assertSent(fn (Request $r) => str_contains(urldecode($r->url()), 'readMask=name,title,storefrontAddress,phoneNumbers,metadata'));
         Http::assertSent(fn (Request $r) => str_contains($r->url(), 'pageToken=p2'));
         $this->actingAs($this->admin)->get(route('admin.google.index'))->assertOk()->assertSee('Acme Dental');
     }

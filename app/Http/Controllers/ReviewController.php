@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Permission;
+use App\Enums\Role;
 use App\Models\Client;
 use App\Models\GbpReview;
 use App\Support\CaptionAi;
@@ -42,6 +43,22 @@ class ReviewController extends Controller
             'waiting' => ($filters['client'] ?? null) && $user->canSeeBrand((int) $filters['client'])
                 ? GbpReview::where('client_id', $filters['client'])->where('status', 'pending')->where('rating', '>=', 3)->count() : 0,
         ]);
+    }
+
+    /** Printable "Review us on Google" QR for the counter: team (their brands) and the client's own Customer login */
+    public function qr(Request $request): View
+    {
+        $user = $request->user();
+        $isCustomer = $user->role === Role::Client;
+        abort_unless($isCustomer || $user->hasPermission(Permission::PublishContent), 403);
+        $clients = Client::whereHas('gbpLocation')->with('gbpLocation')
+            ->when($isCustomer, fn ($q) => $q->whereKey($user->client_id ?? 0))
+            ->when(! $isCustomer && $user->brandLimit(), fn ($q) => $q->whereIn('id', $user->brandLimit()))
+            ->orderBy('name')->get();
+        $client = $clients->firstWhere('id', $request->integer('client')) ?? $clients->first();
+        abort_unless($client, 404, 'No Google Business location is linked to this brand yet.');
+
+        return view('reviews.qr', ['clients' => $clients, 'client' => $client, 'location' => $client->gbpLocation]);
     }
 
     /** Old unanswered reviews of one client: replies scheduled one by one (4–5 stars), drafts for 3 stars */

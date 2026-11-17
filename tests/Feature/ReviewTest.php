@@ -348,4 +348,58 @@ class ReviewTest extends TestCase
 
         $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('reviews.ai', $review))->assertForbidden();
     }
+
+    public function test_review_qr_page_for_team_and_the_clients_own_login(): void
+    {
+        $smm = User::factory()->create(['role' => Role::SocialMediaManager]);
+        $this->actingAs($smm)->get(route('reviews.qr'))->assertOk()->assertSee('Refresh locations')->assertDontSee('Download PDF');
+
+        $this->location->update(['review_url' => 'https://g.page/r/abc/review']);
+        $this->actingAs($smm)->get(route('reviews.qr'))->assertOk()->assertSee('Review us on Google')->assertSee('https://g.page/r/abc/review')->assertSee('Download PDF');
+
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
+        $this->actingAs($customer)->get(route('reviews.qr', ['client' => 999]))->assertOk()->assertSee('Acme');
+        $this->actingAs($customer)->get(route('dashboard'))->assertSee(route('reviews.qr'));
+
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Zen'])->id]);
+        $this->actingAs($other)->get(route('reviews.qr'))->assertNotFound();
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->get(route('reviews.qr'))->assertForbidden();
+    }
+
+    public function test_google_report_shows_profile_numbers_and_reviews_of_the_month(): void
+    {
+        $this->travelTo('2026-11-20 12:00');
+        GoogleAccount::query()->update(['expires_at' => now()->addHour()]); // still valid after the time jump
+        $series = fn (string $metric, array $values) => ['dailyMetric' => $metric, 'timeSeries' => ['datedValues' => array_map(fn ($v) => $v === null ? ['date' => []] : ['date' => [], 'value' => (string) $v], $values)]];
+        Http::fake(['businessprofileperformance.googleapis.com/*' => Http::response(['multiDailyMetricTimeSeries' => [['dailyMetricTimeSeries' => [
+            $series('BUSINESS_IMPRESSIONS_MOBILE_SEARCH', [100, 20]), $series('BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', [30]),
+            $series('BUSINESS_IMPRESSIONS_MOBILE_MAPS', [40, null]), $series('BUSINESS_IMPRESSIONS_DESKTOP_MAPS', [10]),
+            $series('CALL_CLICKS', [7, 5]), $series('BUSINESS_DIRECTION_REQUESTS', [9]), $series('WEBSITE_CLICKS', [3]),
+        ]]]])]);
+        $this->review(5, ['reviewed_at' => '2026-11-03', 'status' => 'replied']);
+        $this->review(4, ['reviewed_at' => '2026-11-10']);
+        $this->review(1, ['reviewed_at' => '2026-10-30']); // last month
+
+        $this->actingAs($this->admin)->get(route('reports.google', ['client' => $this->client->id, 'month' => '2026-11']))->assertOk()
+            ->assertSeeInOrder(['200', 'Profile views', '12', 'Calls', '9', 'Direction requests', '3', 'Website clicks'])
+            ->assertSeeInOrder(['2', 'New reviews', '4.5', 'Average stars', '1', 'Replied']);
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'locations/21:fetchMultiDailyMetricsTimeSeries?dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_SEARCH&dailyMetrics=')
+            && str_contains(urldecode($r->url()), 'dailyRange.startDate.day=1') && str_contains(urldecode($r->url()), 'dailyRange.endDate.day=20') && $r->hasHeader('Authorization', 'Bearer token'));
+
+        // cached for 3 hours: the customer's view makes no new call
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
+        $this->actingAs($customer)->get(route('reports.google', ['month' => '2026-11']))->assertOk()->assertSee('Profile views');
+        Http::assertSentCount(1);
+    }
+
+    public function test_google_report_explains_when_google_gives_no_numbers(): void
+    {
+        Http::fake(['businessprofileperformance.googleapis.com/*' => Http::response(['error' => ['message' => 'Business Profile Performance API has not been used in project 1 before or it is disabled.']], 403)]);
+        $this->actingAs($this->admin)->get(route('reports.google', ['client' => $this->client->id]))->assertOk()
+            ->assertSee('Google did not give the profile numbers')->assertSee('enable "Business Profile Performance API"', false)->assertSee('New reviews');
+
+        $other = Client::create(['name' => 'Zen']);
+        $this->actingAs($this->admin)->get(route('reports.google', ['client' => $other->id]))->assertOk()->assertSee('No Google Business location is linked to Zen.');
+    }
 }
+

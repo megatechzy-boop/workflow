@@ -14,7 +14,7 @@ class GbpPost extends Model
 
     public const CTAS = ['CALL' => 'Call now', 'BOOK' => 'Book', 'ORDER' => 'Order online', 'SHOP' => 'Buy', 'LEARN_MORE' => 'Learn more', 'SIGN_UP' => 'Sign up'];
 
-    protected $fillable = ['client_id', 'location_id', 'status', 'post_type', 'caption', 'image_path', 'cta_type', 'cta_url', 'title', 'starts_at', 'ends_at',
+    protected $fillable = ['client_id', 'location_id', 'content_id', 'status', 'post_type', 'caption', 'image_path', 'cta_type', 'cta_url', 'title', 'starts_at', 'ends_at',
         'coupon', 'terms', 'scheduled_at', 'retry_at', 'attempts', 'published_at', 'google_post_name', 'search_url', 'error', 'created_by'];
 
     protected function casts(): array
@@ -30,6 +30,12 @@ class GbpPost extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(GbpLocation::class, 'location_id');
+    }
+
+    /** The calendar post it was made from, if any */
+    public function content(): BelongsTo
+    {
+        return $this->belongsTo(Content::class);
     }
 
     public function creator(): BelongsTo

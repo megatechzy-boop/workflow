@@ -233,6 +233,78 @@
                         </div>
                     @endif
 
+                    {{-- Google Business Profile: the same post with its own caption (single-image posts only) --}}
+                    @php($gbpClient = App\Http\Controllers\GbpPostController::gbpClientFor(auth()->user(), $content))
+                    @php($gbpPosts = App\Models\GbpPost::where('content_id', $content->id)->latest()->get())
+                    @if ($gbpClient || $gbpPosts->isNotEmpty())
+                        <div class="card p-4 space-y-3">
+                            <div class="font-semibold text-gray-900">Google Business</div>
+                            @foreach ($gbpPosts as $gbpPost)
+                                <div class="text-sm">
+                                    <span class="{{ ['published' => 'text-green-700', 'failed' => 'text-red-600'][$gbpPost->status] ?? 'text-gray-600' }}">
+                                        @if ($gbpPost->status === 'scheduled' && $gbpPost->scheduled_at->isFuture())
+                                            Scheduled for {{ $gbpPost->scheduled_at->format('d M, h:i A') }}
+                                        @else
+                                            {{ ['scheduled' => 'Waiting to post…', 'publishing' => 'Posting…', 'published' => 'Posted', 'failed' => 'Failed'][$gbpPost->status] }}
+                                        @endif
+                                    </span>
+                                    @if ($gbpPost->search_url) · <a href="{{ $gbpPost->search_url }}" target="_blank" rel="noopener" class="text-brand-600 hover:underline">View on Google</a>@endif
+                                    @if ($gbpPost->editable() && $gbpClient) · <a href="{{ route('gbp-posts.edit', $gbpPost) }}" class="text-brand-600 hover:underline">Edit</a>@endif
+                                    @if ($gbpPost->error)<div class="text-xs text-red-600">{{ $gbpPost->error }}</div>@endif
+                                </div>
+                            @endforeach
+                            @if ($gbpClient)
+                                <details @if ($errors->hasAny(['gbp_caption', 'cta_type', 'cta_url', 'scheduled_at']) || old('gbp_caption')) open @endif>
+                                    <summary class="cursor-pointer text-sm text-brand-600">{{ $gbpPosts->isEmpty() ? 'Post to Google Business' : 'Post to Google Business again' }}</summary>
+                                    <form method="POST" action="{{ route('contents.gbp', $content) }}" class="mt-3 space-y-3" x-data="{ cta: @js(old('cta_type', $gbpClient->gbpLocation->phone ? 'CALL' : '')) }">
+                                        @csrf
+                                        <div>
+                                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                                <label for="gbp_caption" class="text-xs text-gray-600">Google caption (its own; the Instagram caption stays as it is)</label>
+                                                <div class="flex items-center gap-1">
+                                                    @if (count($gbpClient->captionLanguages()) > 1)
+                                                        <select name="language" form="gbp-ai" aria-label="AI caption language" class="border-gray-300 rounded-xl shadow-sm text-xs py-1.5">
+                                                            @foreach ($gbpClient->captionLanguages() as $key)
+                                                                <option value="{{ $key }}">{{ \App\Support\ReviewTemplates::LANGUAGES[$key] }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @endif
+                                                    <button type="submit" form="gbp-ai" class="px-3 py-1.5 rounded border border-accent-400 text-accent-600 text-xs font-semibold hover:bg-accent-50"
+                                                        onclick="this.textContent = 'Writing…'">Generate with AI (Google)</button>
+                                                </div>
+                                            </div>
+                                            <textarea id="gbp_caption" name="gbp_caption" rows="7" maxlength="1500" required
+                                                class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm">{{ old('gbp_caption', Str::limit(trim(preg_replace(['/#[\p{L}\p{N}_]+/u', '/[ \t]+$/m', '/\n{3,}/'], ['', '', "\n\n"], (string) $content->versions()->where('number', $content->current_version)->value('caption'))), 1500, '')) }}</textarea>
+                                            <x-input-error :messages="$errors->get('gbp_caption')" />
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <label class="text-xs text-gray-600">Button
+                                                <select name="cta_type" x-model="cta" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]">
+                                                    <option value="">No button</option>
+                                                    @foreach (App\Models\GbpPost::CTAS as $key => $label)
+                                                        <option value="{{ $key }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <x-input-error :messages="$errors->get('cta_type')" />
+                                            </label>
+                                            <label class="text-xs text-gray-600" x-show="cta && cta !== 'CALL'" x-cloak>Button link
+                                                <input type="url" name="cta_url" value="{{ old('cta_url') }}" placeholder="https://" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]">
+                                                <x-input-error :messages="$errors->get('cta_url')" />
+                                            </label>
+                                        </div>
+                                        <label class="block text-xs text-gray-600">Post at (empty = now)
+                                            <input type="datetime-local" name="scheduled_at" value="{{ old('scheduled_at') }}" min="{{ now()->format('Y-m-d\TH:i') }}" class="mt-1 block w-full border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]">
+                                            <x-input-error :messages="$errors->get('scheduled_at')" />
+                                        </label>
+                                        <p class="text-xs text-gray-500">The post's first image goes with it. It appears in GBP Posts too.</p>
+                                        <button class="px-4 min-h-[44px] rounded-xl bg-brand-600 text-white text-sm font-semibold">Post to Google Business</button>
+                                    </form>
+                                    <form id="gbp-ai" method="POST" action="{{ route('contents.gbpAi', $content) }}" class="hidden">@csrf</form>
+                                </details>
+                            @endif
+                        </div>
+                    @endif
+
                     @can('replace', $content)
                         <details class="card p-4 border border-gray-200">
                             <summary class="cursor-pointer font-semibold text-gray-800">Wrong file? Replace V{{ $content->current_version }}</summary>

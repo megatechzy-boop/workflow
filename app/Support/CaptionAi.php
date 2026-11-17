@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Content;
 use App\Models\GbpReview;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /** AI drafts (Groq): post captions + hashtags, and Google review replies. The team checks and saves/posts them. */
@@ -52,6 +53,34 @@ class CaptionAi
         }
 
         return ['caption' => $json['caption'], 'hashtags' => trim((string) ($json['hashtags'] ?? ''))];
+    }
+
+    /** Google Business Profile post caption: local search words, no hashtags (GBP limit 1500 characters) */
+    public static function gbp(Content $content, string $languageKey): string
+    {
+        $item = $content->task->item;
+        $client = $item->calendar->client;
+        $language = ReviewTemplates::LANGUAGES[$languageKey] ?? 'English';
+        $version = $content->versions()->where('number', $content->current_version)->first();
+
+        $brief = collect([
+            'Business' => $client->name,
+            'City / area' => $client->gbpLocation?->city ?: $client->address,
+            'Creative copy' => $item->creative_copy,
+            'Brief' => $item->brief,
+            'Social media caption of the same post' => $version?->caption,
+        ])->filter()->map(fn ($v, $k) => "$k: $v")->implode("\n");
+
+        $json = self::ask("You write Google Business Profile posts for local businesses in India. Write in $language."
+            .' 100-250 words, under 1400 characters, in 3-5 short paragraphs (use \n\n between them).'
+            .' It must help local search: the first sentence names the service, the problem it solves and the city / area;'
+            .' use 3-5 local keywords naturally (service + city, "near" the area), never stuffed.'
+            .' Then the benefits, who it is for, and a clear call to action (visit, call or book). No hashtags, at most 2 emojis.'
+            .' Do not invent prices, offers, phone numbers or claims that are not in the brief.'
+            .($client->is_healthcare ? ' This is a healthcare business: no medical promises or guarantees, no patient details.' : '')
+            .' Reply with JSON only: {"caption": "..."}', $brief, 'caption');
+
+        return Str::limit($json['caption'], 1500, '');
     }
 
     /** Owner's rule: every post, carousel and reel caption has at least 6 lines, and (search friendly) enough words */

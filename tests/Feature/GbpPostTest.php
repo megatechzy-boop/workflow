@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CalendarStatus;
+use App\Enums\ContentStatus;
 use App\Enums\Role;
+use App\Models\Calendar;
 use App\Models\Client;
+use App\Models\Content;
 use App\Models\GbpLocation;
 use App\Models\GbpPost;
 use App\Models\GoogleAccount;
+use App\Models\Task;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use App\Support\GbpPublisher;
@@ -196,5 +201,72 @@ class GbpPostTest extends TestCase
         $this->actingAs($this->smm->fresh())->get(route('gbp-posts.index'))->assertDontSee('Beta November');
         $this->actingAs($this->smm->fresh())->get(route('gbp-posts.edit', GbpPost::where('client_id', $other->id)->sole()))->assertForbidden();
         $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->get(route('gbp-posts.index'))->assertForbidden();
+    }
+
+    /** An approved single-image calendar post of the client */
+    private function approvedPost(string $type = 'post', ContentStatus $status = ContentStatus::Approved): Content
+    {
+        $calendar = Calendar::where('client_id', $this->client->id)->first()
+            ?? Calendar::create(['client_id' => $this->client->id, 'month' => '2026-11-01', 'created_by' => $this->smm->id, 'status' => CalendarStatus::ClientApproved]);
+        $item = $calendar->items()->create(['post_date' => '2026-11-25', 'post_types' => ["instagram_$type", "facebook_$type"]]);
+        $task = Task::forceCreate(['calendar_item_id' => $item->id, 'assigned_to' => $this->smm->id, 'assigned_by' => $this->smm->id, 'deadline' => '2026-11-23']);
+        $content = Content::forceCreate(['task_id' => $task->id, 'post_type' => $type, 'approver_id' => $this->smm->id, 'status' => $status, 'current_version' => 1]);
+        $version = $content->versions()->create(['number' => 1, 'caption' => "Back pain? Try yoga.\nJoin our morning batch.", 'hashtags' => '#yoga', 'submitted_by' => $this->smm->id]);
+        Storage::disk('local')->put('contents/1/v1/a.jpg', str_repeat('x', 100));
+        $version->media()->create(['kind' => 'image', 'path' => 'contents/1/v1/a.jpg', 'original_name' => 'a.jpg', 'sort_order' => 1]);
+
+        return $content;
+    }
+
+    public function test_approved_post_goes_to_google_with_its_own_caption(): void
+    {
+        $content = $this->approvedPost();
+        $this->actingAs($this->smm)->get(route('contents.show', $content))->assertSee('Post to Google Business')->assertSee('Back pain? Try yoga.');
+
+        $this->actingAs($this->smm)->post(route('contents.gbp', $content), ['gbp_caption' => 'Yoga for back pain in Pune. Morning batch.', 'cta_type' => 'CALL'])
+            ->assertSessionHas('status', 'Google Business: Queued. It goes to Google within a minute or two.');
+        $post = GbpPost::sole();
+        $this->assertSame([$content->id, $this->location->id, 'update', 'Yoga for back pain in Pune. Morning batch.', 'CALL', 'scheduled'],
+            [$post->content_id, $post->location_id, $post->post_type, $post->caption, $post->cta_type, $post->status]);
+        $this->assertNotSame('contents/1/v1/a.jpg', $post->image_path); // a copy
+        Storage::disk('local')->assertExists($post->image_path);
+        $this->assertSame("Back pain? Try yoga.\nJoin our morning batch.", $content->versions()->first()->caption); // Instagram caption untouched
+        $this->actingAs($this->smm)->get(route('contents.show', $content))->assertSee('Waiting to post')->assertSee('Post to Google Business again');
+
+        // "Learn more" needs a link; a time in the future schedules it
+        $this->actingAs($this->smm)->post(route('contents.gbp', $content), ['gbp_caption' => 'x', 'cta_type' => 'LEARN_MORE'])->assertSessionHasErrors('cta_url');
+        $at = now()->addDay()->setTime(10, 0);
+        $this->actingAs($this->smm)->post(route('contents.gbp', $content), ['gbp_caption' => 'x', 'scheduled_at' => $at->format('Y-m-d H:i')])
+            ->assertSessionHas('status', 'Google Business: Scheduled for '.$at->format('d M, h:i A').'.');
+    }
+
+    public function test_google_option_only_for_approved_single_posts_of_linked_brands(): void
+    {
+        $designer = User::factory()->create(['role' => Role::GraphicDesigner]);
+        $carousel = $this->approvedPost('carousel');
+        $this->actingAs($this->smm)->get(route('contents.show', $carousel))->assertDontSee('Post to Google Business');
+        $this->actingAs($this->smm)->post(route('contents.gbp', $carousel), ['gbp_caption' => 'x'])->assertForbidden();
+
+        $draft = $this->approvedPost('post', ContentStatus::Submitted);
+        $this->actingAs($this->smm)->post(route('contents.gbp', $draft), ['gbp_caption' => 'x'])->assertForbidden();
+
+        $post = $this->approvedPost();
+        $this->actingAs($designer)->post(route('contents.gbp', $post), ['gbp_caption' => 'x'])->assertForbidden();
+        $this->location->update(['client_id' => null]);
+        $this->actingAs($this->smm)->post(route('contents.gbp', $post), ['gbp_caption' => 'x'])->assertForbidden();
+        $this->assertSame(0, GbpPost::count());
+    }
+
+    public function test_ai_writes_a_google_caption_without_hashtags(): void
+    {
+        $content = $this->approvedPost();
+        $this->location->update(['city' => 'Pune']);
+        config(['services.groq.key' => 'test-key']);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => '{"caption": "Yoga for back pain in Pune."}']]]])]);
+
+        $this->actingAs($this->smm)->post(route('contents.gbpAi', $content))->assertSessionHas('_old_input', ['gbp_caption' => 'Yoga for back pain in Pune.']);
+        Http::assertSent(fn (Request $r) => str_contains($r['messages'][0]['content'], 'Google Business Profile') && str_contains($r['messages'][0]['content'], 'No hashtags')
+            && str_contains($r['messages'][1]['content'], 'City / area: Pune') && str_contains($r['messages'][1]['content'], 'Back pain? Try yoga.'));
+        $this->assertSame(0, GbpPost::count());
     }
 }

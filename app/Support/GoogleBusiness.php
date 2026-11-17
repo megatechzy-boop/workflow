@@ -6,6 +6,7 @@ use App\Models\GbpLocation;
 use App\Models\GbpReview;
 use App\Models\GoogleAccount;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -59,23 +60,52 @@ class GoogleBusiness
         return $r['access_token'];
     }
 
-    /** @return array<int, array{account_name: string, location_name: string, title: string, city: ?string, phone: ?string}> every location of every account */
+    /** @return array<int, array{account_name: string, location_name: string, title: string, city: ?string, phone: ?string, review_url: ?string}> every location of every account */
     public static function locations(string $token): array
     {
         $locations = [];
         foreach (self::paged('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', [], 'accounts', $token) as $account) {
             $rows = self::paged("https://mybusinessbusinessinformation.googleapis.com/v1/{$account['name']}/locations",
-                ['readMask' => 'name,title,storefrontAddress,phoneNumbers'], 'locations', $token);
+                ['readMask' => 'name,title,storefrontAddress,phoneNumbers,metadata'], 'locations', $token);
             foreach ($rows as $l) {
                 // a location shown under several accounts comes in once (the first account; replies find the right one)
                 $locations[$l['name']] ??= [
                     'account_name' => $account['name'], 'location_name' => $l['name'], 'title' => $l['title'] ?? $l['name'],
                     'city' => $l['storefrontAddress']['locality'] ?? null, 'phone' => $l['phoneNumbers']['primaryPhone'] ?? null,
+                    'review_url' => $l['metadata']['newReviewUri']
+                        ?? (isset($l['metadata']['placeId']) ? 'https://search.google.com/local/writereview?placeid='.$l['metadata']['placeId'] : null),
                 ];
             }
         }
 
         return array_values($locations);
+    }
+
+    /** Daily numbers the Performance API gives, summed per metric for a date range */
+    public const METRICS = ['BUSINESS_IMPRESSIONS_MOBILE_SEARCH', 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 'BUSINESS_IMPRESSIONS_MOBILE_MAPS',
+        'BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'CALL_CLICKS', 'BUSINESS_DIRECTION_REQUESTS', 'WEBSITE_CLICKS'];
+
+    /**
+     * Profile views, calls, directions and website clicks (Business Profile Performance API, which must be enabled
+     * in the Google Cloud project). @return array<string, int> metric => total
+     */
+    public static function performance(GbpLocation $location, Carbon $from, Carbon $to): array
+    {
+        $date = fn (string $key, Carbon $d) => ["dailyRange.$key.year" => $d->year, "dailyRange.$key.month" => $d->month, "dailyRange.$key.day" => $d->day];
+        // dailyMetrics is repeated (dailyMetrics=A&dailyMetrics=B), which http_build_query would write as dailyMetrics[0]=
+        $query = implode('&', array_map(fn ($m) => 'dailyMetrics='.$m, self::METRICS)).'&'.http_build_query($date('startDate', $from) + $date('endDate', $to));
+        // the query goes in the URL itself: a query array (even empty) would replace it
+        $r = self::check(Http::withToken(self::token())->timeout(30)
+            ->get("https://businessprofileperformance.googleapis.com/v1/{$location->location_name}:fetchMultiDailyMetricsTimeSeries?$query"));
+
+        $totals = array_fill_keys(self::METRICS, 0);
+        foreach ($r['multiDailyMetricTimeSeries'] ?? [] as $group) {
+            foreach ($group['dailyMetricTimeSeries'] ?? [] as $series) {
+                $totals[$series['dailyMetric']] = array_sum(array_map(fn ($d) => (int) ($d['value'] ?? 0), $series['timeSeries']['datedValues'] ?? []));
+            }
+        }
+
+        return $totals;
     }
 
     /** One page of reviews, newest first (v4 API). @return array{reviews: array, next: ?string} */

@@ -81,6 +81,12 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - GBP Posts (Social media > GBP Posts, no approval, one post at a time): update / offer / event, 1 image, `gbp:posts`
   (every minute) publishes due posts. Try 1 gives Google our signed image link; tries 2–3 upload the bytes as a
   location photo (host firewall blocks some crawlers; `GBP_POST_MEDIA=upload` always uploads). After 3 fails: Failed + alert.
+  An approved single-image Post (Approved / Scheduled / Published) has "Post to Google Business" on its page: own Google
+  caption (pre-filled without hashtags; "Generate with AI (Google)" writes a local-search one), the first image copied, CTA, now or later.
+- Review QR (Social media > Review QR; the Customer sees their own): Google's `newReviewUri` of the location (saved by
+  Refresh locations), printable QR + WhatsApp / copy link.
+- Reports > Google: profile views (Search / Maps), calls, directions, website clicks from the Business Profile Performance
+  API (must be enabled in the Cloud project; cached 3 hours, Google is 2–3 days late) + the month's reviews and GBP posts.
 
 ## Next up
 

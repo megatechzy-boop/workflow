@@ -100,11 +100,14 @@ Route::middleware('auth')->group(function () {
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
     Route::get('meta-leads/export', [MetaInboxController::class, 'exportLeads'])->name('meta.leads.export');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::get('review-qr', [ReviewController::class, 'qr'])->name('reviews.qr');
     Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
     Route::post('reviews/{review}/ai', [ReviewController::class, 'aiReply'])->name('reviews.ai');
     Route::post('reviews/backfill/{client}', [ReviewController::class, 'backfill'])->name('reviews.backfill');
     Route::resource('gbp-posts', GbpPostController::class)->except('show');
     Route::get('gbp-posts/{gbpPost}/image', [GbpPostController::class, 'image'])->name('gbp-posts.image');
+    Route::post('contents/{content}/gbp', [GbpPostController::class, 'fromContent'])->name('contents.gbp');
+    Route::post('contents/{content}/gbp-ai', [GbpPostController::class, 'contentAi'])->name('contents.gbpAi');
     Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
     Route::post('meta-leads/{lead}/remarks', [MetaInboxController::class, 'remark'])->name('meta.leads.remark');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
@@ -117,6 +120,7 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/posting', [ReportController::class, 'posting'])->name('reports.posting');
     Route::get('reports/campaigns', [ReportController::class, 'ads'])->name('reports.ads');
     Route::get('reports/leads', [ReportController::class, 'leads'])->name('reports.leads');
+    Route::get('reports/google', [ReportController::class, 'google'])->name('reports.google');
     Route::get('calendars/{calendar}/import', [CalendarImportController::class, 'create'])->name('calendars.import');
     Route::post('calendars/{calendar}/import', [CalendarImportController::class, 'store'])->name('calendars.import.store');
 

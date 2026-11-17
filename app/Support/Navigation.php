@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\ChatMessage;
+use App\Models\GbpLocation;
 use App\Models\GbpPost;
 use App\Models\GbpReview;
 use App\Models\Lead;
@@ -54,6 +55,9 @@ class Navigation
                 ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
             $add('Social media', 'GBP Posts', 'gbp-posts.index', 'send', 'gbp-posts.*', GbpPost::where('status', 'failed')
                 ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count() ?: null);
+        }
+        if ($publishes || ($isCustomer && GbpLocation::where('client_id', $user->client_id ?? 0)->exists())) {
+            $add($isCustomer ? '' : 'Social media', 'Review QR', 'reviews.qr', 'star', 'reviews.qr');
         }
         if ($publishes) {
             $add('Meta ads', 'Ads', 'ads.index', 'play', ['ads.index', 'ads.create']);

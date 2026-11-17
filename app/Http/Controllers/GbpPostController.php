@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ContentStatus;
 use App\Enums\Permission;
 use App\Models\Client;
+use App\Models\Content;
 use App\Models\GbpPost;
+use App\Support\CaptionAi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Illuminate\View\View;
@@ -53,6 +57,71 @@ class GbpPostController extends Controller
         $post = GbpPost::create($data + ['created_by' => $user->id]);
 
         return redirect()->route('gbp-posts.index')->with('status', $this->scheduledMessage($post));
+    }
+
+    /** "Post to Google Business" on an approved single-image post: own GBP caption, the post's first image */
+    public function fromContent(Request $request, Content $content): RedirectResponse
+    {
+        $user = $request->user();
+        $client = self::gbpClientFor($user, $content);
+        abort_unless($client, 403);
+        $data = $request->validate([
+            'gbp_caption' => ['required', 'string', 'max:1500'],
+            'cta_type' => ['nullable', Rule::in(array_keys(GbpPost::CTAS))],
+            'cta_url' => [Rule::requiredIf($request->filled('cta_type') && $request->input('cta_type') !== 'CALL'), 'nullable', 'url:https,http', 'max:500'],
+            'scheduled_at' => ['nullable', 'date', 'after:now'],
+        ]);
+        if (($data['cta_type'] ?? null) === 'CALL' && ! $client->gbpLocation->phone) {
+            return back()->withInput()->withErrors(['cta_type' => 'The Google profile has no phone number, so "Call now" will not work.']);
+        }
+        $image = $content->versions()->where('number', $content->current_version)->firstOrFail()->media()->where('kind', 'image')->orderBy('sort_order')->first();
+        abort_unless($image, 422, 'This post has no image.');
+
+        // a copy: the GBP post keeps its image even if the calendar post is replaced later
+        $path = 'gbp-posts/'.Str::random(40).'.'.(pathinfo($image->path, PATHINFO_EXTENSION) ?: 'jpg');
+        Storage::disk('local')->copy($image->path, $path);
+        $post = GbpPost::create([
+            'client_id' => $client->id, 'location_id' => $client->gbpLocation->id, 'content_id' => $content->id, 'post_type' => 'update',
+            'caption' => $data['gbp_caption'], 'image_path' => $path, 'cta_type' => $data['cta_type'] ?? null,
+            'cta_url' => ($data['cta_type'] ?? null) === 'CALL' ? null : ($data['cta_url'] ?? null),
+            'scheduled_at' => isset($data['scheduled_at']) ? Carbon::parse($data['scheduled_at']) : now(), 'created_by' => $user->id,
+        ]);
+
+        return back()->with('status', 'Google Business: '.$this->scheduledMessage($post));
+    }
+
+    /** AI draft of the GBP caption (local search, no hashtags): fills the box only */
+    public function contentAi(Request $request, Content $content): RedirectResponse
+    {
+        abort_unless(self::gbpClientFor($request->user(), $content), 403);
+        if (! config('services.groq.key')) {
+            return back()->with('status', 'AI captions are not set up yet (GROQ_API_KEY in the server .env).');
+        }
+        $languages = $content->task->item->calendar->client->captionLanguages();
+        $language = $request->validate(['language' => ['nullable', Rule::in($languages)]])['language'] ?? $languages[0];
+
+        try {
+            $caption = CaptionAi::gbp($content, $language);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('status', 'AI could not write a caption: '.Str::limit($e->getMessage(), 200));
+        }
+
+        return back()->withInput(['gbp_caption' => $caption])->with('status', 'AI caption for Google ready. Check it, then post.');
+    }
+
+    /**
+     * The client, when this content can go to its Google Business Profile: a single-image post the customer
+     * approved (or later), a linked GBP location, and a user who publishes for that brand. Otherwise null.
+     */
+    public static function gbpClientFor($user, Content $content): ?Client
+    {
+        $client = $content->task->item->calendar->client;
+        $ready = $content->type()->value === 'post'
+            && in_array($content->status, [ContentStatus::Approved, ContentStatus::Scheduled, ContentStatus::Published], true);
+
+        return $ready && $client->gbpLocation && $user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($client->id) ? $client : null;
     }
 
     public function edit(Request $request, GbpPost $gbpPost): View

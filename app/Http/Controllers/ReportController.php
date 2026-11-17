@@ -7,14 +7,18 @@ use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\CalendarItem;
 use App\Models\Client;
+use App\Models\GbpPost;
+use App\Models\GbpReview;
 use App\Models\MetaAd;
 use App\Models\MetaBoost;
 use App\Models\MetaConnection;
 use App\Models\MetaLead;
 use App\Models\MetaPost;
+use App\Support\GoogleBusiness;
 use App\Support\MetaInsights;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /** Customer reports (monthly, posting, ads, leads): printable pages, "Save as PDF" from the browser (no server PDF library) */
@@ -106,6 +110,33 @@ class ReportController extends Controller
             'brands' => $brands, 'client' => $client, 'month' => $month, 'leads' => $leads,
             'byStatus' => collect(MetaLead::STATUSES)->map(fn ($label, $key) => $leads->where('status', $key)->count()),
             'byForm' => $leads->groupBy(fn ($l) => $l->form_name ?: 'Form')->map->count()->sortDesc(),
+        ]);
+    }
+
+    /** Google Business Profile: views, calls, directions, website clicks (cached 3 hours), plus our reviews and GBP posts */
+    public function google(Request $request): View
+    {
+        [$brands, $client, $month] = $this->scope($request);
+        $location = $client->gbpLocation;
+        $end = $month->copy()->endOfMonth()->min(today());
+        $numbers = null;
+        $error = null;
+        if ($location && $month->lte(today())) {
+            try {
+                $numbers = Cache::remember("gbp-performance:{$location->id}:{$month->format('Y-m')}:{$end->toDateString()}", now()->addHours(3),
+                    fn () => GoogleBusiness::performance($location, $month, $end));
+            } catch (\Throwable $e) {
+                report($e);
+                $error = $e->getMessage();
+            }
+        }
+        $reviews = GbpReview::where('client_id', $client->id)->whereBetween('reviewed_at', [$month, $month->copy()->endOfMonth()])->get();
+
+        return view('reports.google', [
+            'brands' => $brands, 'client' => $client, 'month' => $month, 'location' => $location, 'numbers' => $numbers, 'error' => $error,
+            'reviews' => $reviews,
+            'stars' => collect([5, 4, 3, 2, 1])->mapWithKeys(fn ($s) => [$s => $reviews->where('rating', $s)->count()]),
+            'posts' => GbpPost::where('client_id', $client->id)->where('status', 'published')->whereBetween('published_at', [$month, $month->copy()->endOfMonth()])->count(),
         ]);
     }
 

@@ -21,7 +21,7 @@
             </form>
         </div>
         <nav class="mt-3 flex gap-1 overflow-x-auto text-sm" aria-label="Reports">
-            @foreach (['reports.monthly' => 'Monthly', 'reports.posting' => 'Posting', 'reports.ads' => 'Ads', 'reports.leads' => 'Leads'] as $route => $label)
+            @foreach (['reports.monthly' => 'Monthly', 'reports.posting' => 'Posting', 'reports.ads' => 'Ads', 'reports.leads' => 'Leads', 'reports.google' => 'Google'] as $route => $label)
                 <a href="{{ route($route, ['client' => $client->id, 'month' => $month->format('Y-m')]) }}"
                    class="px-3 py-1.5 rounded-xl whitespace-nowrap {{ request()->routeIs($route) ? 'bg-brand-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50' }}">{{ $label }}</a>
             @endforeach
