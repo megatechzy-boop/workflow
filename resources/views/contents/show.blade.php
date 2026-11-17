@@ -169,6 +169,7 @@
 
                     {{-- Facebook / Instagram: queue the approved post; meta:publish sends it within a minute --}}
                     @php($metaPosts = App\Models\MetaPost::where('content_id', $content->id)->get())
+                    @php($missing = collect(App\Support\MetaPublisher::platforms($content))->diff($metaPosts->pluck('platform'))->values())
                     @if ($metaPosts->isNotEmpty() || (auth()->user()->can('publishMeta', $content) && App\Support\MetaPublisher::platforms($content)))
                         <div class="card p-4 space-y-2">
                             <div class="font-semibold text-gray-900">Facebook / Instagram</div>
@@ -176,7 +177,9 @@
                                 <div class="text-sm">
                                     {{ ucfirst($metaPost->platform) }}:
                                     <span class="{{ ['done' => 'text-green-700', 'failed' => 'text-red-600'][$metaPost->status] ?? 'text-gray-600' }}">
-                                        @if ($metaPost->status === 'queued' && $metaPost->publish_at?->isFuture())
+                                        @if ($metaPost->status === 'queued' && $metaPost->publish_at?->isFuture() && $metaPost->container_tries)
+                                            Trying again at {{ $metaPost->publish_at->format('h:i A') }}
+                                        @elseif ($metaPost->status === 'queued' && $metaPost->publish_at?->isFuture())
                                             Scheduled for {{ $metaPost->publish_at->format('d M, h:i A') }}
                                         @else
                                             {{ ['queued' => 'Waiting to post…', 'processing' => 'Instagram is processing…', 'done' => 'Posted', 'failed' => 'Failed'][$metaPost->status] }}
@@ -209,7 +212,7 @@
                                 @endif
                             @endforeach
                             @can('publishMeta', $content)
-                                @if ($metaPosts->isEmpty() || $metaPosts->contains('status', 'failed'))
+                                @if ($metaPosts->isEmpty() || $missing->isNotEmpty() || $metaPosts->contains('status', 'failed'))
                                     <form method="POST" action="{{ route('contents.meta', $content) }}" class="space-y-2">
                                         @csrf
                                         <label class="block text-xs text-gray-600">Post at (empty = now)
@@ -218,9 +221,9 @@
                                                 class="mt-1 block w-full border-gray-300 rounded-xl text-sm">
                                         </label>
                                         <x-input-error :messages="$errors->get('publish_at')" />
-                                        <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">{{ $metaPosts->contains('status', 'failed') ? 'Try again' : 'Publish to '.collect(App\Support\MetaPublisher::platforms($content))->map(fn ($p) => ucfirst($p))->implode(' + ') }}</button>
+                                        <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">{{ $metaPosts->contains('status', 'failed') ? 'Try again' : 'Publish to '.$missing->map(fn ($p) => ucfirst($p))->implode(' + ') }}</button>
                                     </form>
-                                @elseif ($metaPosts->contains(fn ($p) => $p->status === 'queued' && $p->publish_at?->isFuture()))
+                                @elseif ($metaPosts->contains(fn ($p) => $p->status === 'queued' && $p->publish_at?->isFuture() && ! $p->container_tries))
                                     <form method="POST" action="{{ route('contents.meta.unschedule', $content) }}">
                                         @csrf @method('DELETE')
                                         <button class="text-sm text-red-600 hover:underline">Cancel schedule</button>

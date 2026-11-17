@@ -279,6 +279,26 @@ class MetaTest extends TestCase
         $this->actingAs($this->admin)->get(route('contents.show', $content))->assertDontSee('Try again');
     }
 
+    public function test_instagram_retry_is_not_a_schedule_and_a_missing_platform_can_be_sent(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999']);
+        $content = $this->approvedPost(page: $page);
+        MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'facebook', 'status' => 'done', 'post_id' => '111_1']);
+        $ig = MetaPost::create(['content_id' => $content->id, 'meta_page_id' => $page->id, 'platform' => 'instagram', 'status' => 'queued',
+            'publish_at' => now()->addMinutes(5), 'container_tries' => 1, 'error' => 'Try 1 of 3 failed']);
+
+        // waiting to retry: "Trying again", no "Cancel schedule", and cancelling keeps it
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertSee('Trying again at')->assertDontSee('Cancel schedule');
+        $this->actingAs($this->admin)->delete(route('contents.meta.unschedule', $content));
+        $this->assertTrue($ig->exists());
+
+        // a platform with no entry (e.g. removed earlier) gets its own publish button
+        $ig->delete();
+        $this->actingAs($this->admin)->get(route('contents.show', $content))->assertSee('Publish to Instagram');
+        $this->actingAs($this->admin)->post(route('contents.meta', $content));
+        $this->assertSame(['done', 'queued'], [MetaPost::where('platform', 'facebook')->value('status'), MetaPost::where('platform', 'instagram')->value('status')]);
+    }
+
     public function test_post_marked_published_by_hand_can_still_be_sent(): void
     {
         $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999']);

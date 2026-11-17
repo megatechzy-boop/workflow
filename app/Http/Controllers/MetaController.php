@@ -127,7 +127,8 @@ class MetaController extends Controller
     public function unschedule(Content $content): RedirectResponse
     {
         Gate::authorize('markStatus', $content);
-        MetaPost::where('content_id', $content->id)->where('status', 'queued')->where('publish_at', '>', now())->delete();
+        // only posts scheduled by the team: an Instagram retry waiting a few minutes is not a schedule
+        MetaPost::where('content_id', $content->id)->where('status', 'queued')->where('publish_at', '>', now())->where('container_tries', 0)->delete();
         if ($content->status === ContentStatus::Scheduled) {
             $content->update(['status' => ContentStatus::Approved]);
         }
