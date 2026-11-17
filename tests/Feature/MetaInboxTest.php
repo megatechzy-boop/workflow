@@ -95,6 +95,27 @@ class MetaInboxTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('meta.comments.ai', $comment))->assertForbidden();
     }
 
+    public function test_comments_filter_and_ignore(): void
+    {
+        $fb = $this->publishedPost('facebook', '111_222');
+        $ig = $this->publishedPost('instagram', '777');
+        $make = fn ($post, $platform, $id, $text) => MetaComment::create(['meta_post_id' => $post->id, 'client_id' => $this->client->id, 'platform' => $platform,
+            'comment_id' => $id, 'author' => 'Riya', 'message' => $text, 'commented_at' => now()]);
+        $spam = $make($fb, 'facebook', 'c1', 'Buy followers cheap');
+        $make($ig, 'instagram', 'c2', 'Timings please');
+
+        $this->actingAs($this->smm)->get(route('meta.comments', ['platform' => 'instagram']))->assertSee('Timings please')->assertDontSee('Buy followers cheap');
+        $this->actingAs($this->smm)->post(route('meta.comments.ignore', $spam))->assertSessionHas('status', 'Comment ignored.');
+        $this->assertSame($this->smm->id, $spam->fresh()->ignored_by);
+        $this->actingAs($this->smm)->get(route('meta.comments'))->assertDontSee('Buy followers cheap')->assertSee('Timings please');
+        $this->actingAs($this->smm)->get(route('meta.comments', ['show' => 'ignored']))->assertSee('Buy followers cheap')->assertSee('Undo')->assertDontSee('Timings please');
+        $this->actingAs($this->smm)->get(route('dashboard'))->assertSeeInOrder(['Comments', '1']); // sidebar count leaves the ignored one out
+
+        $this->actingAs($this->smm)->post(route('meta.comments.ignore', $spam))->assertSessionHas('status', 'Comment is back in To reply.');
+        $this->assertNull($spam->fresh()->ignored_at);
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('meta.comments.ignore', $spam))->assertForbidden();
+    }
+
     public function test_comments_respect_brands(): void
     {
         $this->publishedPost('facebook', '111_222');

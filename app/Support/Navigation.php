@@ -43,7 +43,7 @@ class Navigation
 
         if ($publishes) {
             $add('Social media', 'Comments', 'meta.comments', 'chat', 'meta.comments*',
-                MetaComment::whereNull('replied_at')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
+                MetaComment::whereNull('replied_at')->whereNull('ignored_at')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->count());
         }
         if ($isCustomer || $publishes || $user->hasPermission(Permission::ManageClients)) {
             $add('Social media', 'Meta leads', 'meta.leads', 'users', 'meta.leads*', MetaLead::where('status', 'new')

@@ -24,13 +24,24 @@ class MetaInboxController extends Controller
     {
         $user = $request->user();
         abort_unless($user->hasPermission(Permission::PublishContent), 403);
-        $open = $request->query('show') !== 'all';
+        $filters = $request->validate([
+            'client' => ['nullable', 'integer'],
+            'platform' => ['nullable', Rule::in(['facebook', 'instagram'])],
+            'show' => ['nullable', Rule::in(['open', 'replied', 'ignored', 'all'])],
+        ]);
+        $show = $filters['show'] ?? 'open';
+        $brands = MetaComment::query()->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))->distinct()->pluck('client_id');
 
-        return view('meta.comments', ['open' => $open, 'comments' => MetaComment::with('metaPost.page', 'replier')
+        return view('meta.comments', ['show' => $show, 'filters' => $filters, 'comments' => MetaComment::with('metaPost.page', 'replier', 'ignorer')
             ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))
-            ->when($open, fn ($q) => $q->whereNull('replied_at'))
+            ->when($filters['client'] ?? null, fn ($q, $id) => $q->where('client_id', $id))
+            ->when($filters['platform'] ?? null, fn ($q, $p) => $q->where('platform', $p))
+            ->when($show === 'open', fn ($q) => $q->whereNull('replied_at')->whereNull('ignored_at'))
+            ->when($show === 'replied', fn ($q) => $q->whereNotNull('replied_at'))
+            ->when($show === 'ignored', fn ($q) => $q->whereNotNull('ignored_at')->whereNull('replied_at'))
             ->latest('commented_at')->paginate(30)->withQueryString(),
-            'clients' => Client::pluck('name', 'id')]);
+            'clients' => Client::pluck('name', 'id'),
+            'brandOptions' => Client::whereIn('id', $brands)->orderBy('name')->pluck('name', 'id')]);
     }
 
     public function reply(Request $request, MetaComment $comment): RedirectResponse
@@ -47,6 +58,17 @@ class MetaInboxController extends Controller
         $comment->update(['reply' => $data['reply'], 'replied_at' => now(), 'replied_by' => $user->id]);
 
         return back()->with('status', 'Reply posted.');
+    }
+
+    /** Ignore a comment (spam, nothing to answer) or bring it back */
+    public function ignore(Request $request, MetaComment $comment): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($comment->client_id), 403);
+        $ignore = ! $comment->ignored_at;
+        $comment->update(['ignored_at' => $ignore ? now() : null, 'ignored_by' => $ignore ? $user->id : null]);
+
+        return back()->with('status', $ignore ? 'Comment ignored.' : 'Comment is back in To reply.');
     }
 
     /** AI draft of a comment reply: fills the box only, the SMM checks and posts it */

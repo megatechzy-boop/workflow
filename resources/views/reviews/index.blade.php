@@ -75,6 +75,11 @@
                                     {{ $log ? ($log->approver?->name ?? 'Auto reply') : 'Replied on Google' }} · {{ $review->replied_at?->diffForHumans() }}
                                 </div>
                             </div>
+                        @elseif ($review->status === 'ignored')
+                            <form method="POST" action="{{ route('reviews.ignore', $review) }}" class="text-xs text-gray-500">
+                                @csrf
+                                Ignored, no reply will be sent. <button class="text-brand-600 hover:underline">Undo</button>
+                            </form>
                         @else
                             @if ($review->status === 'scheduled')
                                 <p class="text-xs text-blue-700">Auto reply goes out {{ $review->reply_due_at?->format('h:i A') }}. Send now to change it.</p>
@@ -103,6 +108,11 @@
                                 </form>
                                 <form id="ai-review-{{ $review->id }}" method="POST" action="{{ route('reviews.ai', $review) }}" class="hidden">@csrf</form>
                             </details>
+                            <form method="POST" action="{{ route('reviews.ignore', $review) }}"
+                                @if ($review->status === 'scheduled') onsubmit="return confirm('Ignore this review? Its scheduled auto reply will not be sent.')" @endif>
+                                @csrf
+                                <button class="text-sm text-gray-500 hover:underline min-h-[44px]">Ignore</button>
+                            </form>
                         @endif
                     </div>
                 @empty

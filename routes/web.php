@@ -98,11 +98,13 @@ Route::middleware('auth')->group(function () {
     Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
     Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
     Route::post('comments/{comment}/ai', [MetaInboxController::class, 'aiReply'])->name('meta.comments.ai');
+    Route::post('comments/{comment}/ignore', [MetaInboxController::class, 'ignore'])->name('meta.comments.ignore');
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
     Route::get('meta-leads/export', [MetaInboxController::class, 'exportLeads'])->name('meta.leads.export');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::get('review-qr', [ReviewController::class, 'qr'])->name('reviews.qr');
     Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
+    Route::post('reviews/{review}/ignore', [ReviewController::class, 'ignore'])->name('reviews.ignore');
     Route::post('reviews/{review}/ai', [ReviewController::class, 'aiReply'])->name('reviews.ai');
     Route::post('reviews/backfill/{client}', [ReviewController::class, 'backfill'])->name('reviews.backfill');
     Route::resource('gbp-posts', GbpPostController::class)->except('show');

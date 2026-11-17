@@ -401,5 +401,24 @@ class ReviewTest extends TestCase
         $other = Client::create(['name' => 'Zen']);
         $this->actingAs($this->admin)->get(route('reports.google', ['client' => $other->id]))->assertOk()->assertSee('No Google Business location is linked to Zen.');
     }
+
+    public function test_review_can_be_ignored_and_brought_back(): void
+    {
+        $scheduled = $this->review(5, ['comment' => 'Spammy text', 'status' => 'scheduled', 'reply_due_at' => now()->addMinutes(10), 'draft' => 'Thanks!']);
+        $this->review(4, ['comment' => 'Lovely place']);
+
+        $this->actingAs($this->admin)->post(route('reviews.ignore', $scheduled))->assertSessionHas('status', 'Review ignored.');
+        $this->assertSame(['ignored', null], [$scheduled->fresh()->status, $scheduled->fresh()->reply_due_at]);
+        $this->travel(31)->minutes();
+        $this->assertSame(0, \App\Support\GbpReviews::sendDue()); // the auto reply is not sent
+
+        $this->actingAs($this->admin)->get(route('reviews.index'))->assertDontSee('Spammy text')->assertSee('Lovely place');
+        $this->actingAs($this->admin)->get(route('reviews.index', ['status' => 'ignored']))->assertSee('Spammy text')->assertSee('Undo');
+
+        $this->actingAs($this->admin)->post(route('reviews.ignore', $scheduled))->assertSessionHas('status', 'Review is back in To reply.');
+        $this->assertSame('pending', $scheduled->fresh()->status);
+        $replied = $this->review(5, ['status' => 'replied', 'reply' => 'Thanks']);
+        $this->actingAs($this->admin)->post(route('reviews.ignore', $replied))->assertStatus(422);
+    }
 }
 

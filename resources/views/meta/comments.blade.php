@@ -2,10 +2,27 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-bold text-2xl text-gray-900 tracking-tight">Comments</h2>
-            <div class="flex gap-1 text-sm">
-                <a href="{{ route('meta.comments') }}" class="px-3 py-1.5 rounded-xl {{ $open ? 'bg-brand-600 text-white' : 'border border-gray-300 text-gray-700' }}">To reply</a>
-                <a href="{{ route('meta.comments', ['show' => 'all']) }}" class="px-3 py-1.5 rounded-xl {{ $open ? 'border border-gray-300 text-gray-700' : 'bg-brand-600 text-white' }}">All</a>
-            </div>
+            <form method="GET" class="flex flex-wrap gap-2">
+                <select name="show" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]" aria-label="Show">
+                    @foreach (['open' => 'To reply', 'replied' => 'Replied', 'ignored' => 'Ignored', 'all' => 'All'] as $key => $label)
+                        <option value="{{ $key }}" @selected($show === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @if ($brandOptions->count() > 1)
+                    <select name="client" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]" aria-label="Client">
+                        <option value="">All clients</option>
+                        @foreach ($brandOptions as $id => $name)
+                            <option value="{{ $id }}" @selected(($filters['client'] ?? null) == $id)>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <select name="platform" onchange="this.form.submit()" class="border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]" aria-label="Platform">
+                    <option value="">Facebook + Instagram</option>
+                    <option value="facebook" @selected(($filters['platform'] ?? null) === 'facebook')>Facebook</option>
+                    <option value="instagram" @selected(($filters['platform'] ?? null) === 'instagram')>Instagram</option>
+                </select>
+                <noscript><button class="px-3 py-2 border rounded-xl">Filter</button></noscript>
+            </form>
         </div>
     </x-slot>
 
@@ -32,6 +49,12 @@
                                 {{ $comment->reply }}
                                 <div class="text-xs text-gray-500">{{ $comment->replier?->name }} · {{ $comment->replied_at->diffForHumans() }}</div>
                             </div>
+                        @elseif ($comment->ignored_at)
+                            <form method="POST" action="{{ route('meta.comments.ignore', $comment) }}" class="text-xs text-gray-500">
+                                @csrf
+                                Ignored by {{ $comment->ignorer?->name ?? 'someone' }} · {{ $comment->ignored_at->diffForHumans() }}
+                                · <button class="text-brand-600 hover:underline">Undo</button>
+                            </form>
                         @else
                             <form method="POST" action="{{ route('meta.comments.reply', $comment) }}" class="space-y-2">
                                 @csrf
@@ -41,13 +64,15 @@
                                     <button class="px-4 min-h-[44px] rounded-xl bg-brand-600 text-white text-sm font-semibold">Reply</button>
                                     <button type="submit" form="ai-comment-{{ $comment->id }}" onclick="this.textContent = 'Writing…'"
                                         class="px-4 min-h-[44px] rounded-xl border border-accent-400 text-accent-600 text-sm font-semibold hover:bg-accent-50">Write with AI</button>
+                                    <button type="submit" form="ignore-comment-{{ $comment->id }}" class="px-4 min-h-[44px] rounded-xl border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">Ignore</button>
                                 </div>
                             </form>
                             <form id="ai-comment-{{ $comment->id }}" method="POST" action="{{ route('meta.comments.ai', $comment) }}" class="hidden">@csrf</form>
+                            <form id="ignore-comment-{{ $comment->id }}" method="POST" action="{{ route('meta.comments.ignore', $comment) }}" class="hidden">@csrf</form>
                         @endif
                     </div>
                 @empty
-                    <div class="px-4 py-6 text-center text-gray-500">{{ $open ? 'All comments answered.' : 'No comments yet.' }} New comments come in every 10 minutes.</div>
+                    <div class="px-4 py-6 text-center text-gray-500">{{ $show === 'open' ? 'All comments answered.' : 'No comments here.' }} New comments come in every 10 minutes.</div>
                 @endforelse
             </div>
 

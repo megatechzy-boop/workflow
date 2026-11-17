@@ -34,7 +34,7 @@ class ReviewController extends Controller
                 ->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('client_id', $ids))
                 ->when($filters['client'] ?? null, fn ($q, $id) => $q->where('client_id', $id))
                 ->when($filters['stars'] ?? null, fn ($q, $stars) => $q->where('rating', $stars))
-                ->when($status === 'open', fn ($q) => $q->where('status', '!=', 'replied'))
+                ->when($status === 'open', fn ($q) => $q->whereNotIn('status', ['replied', 'ignored']))
                 ->when(! in_array($status, ['open', 'all'], true), fn ($q) => $q->where('status', $status))
                 ->latest('reviewed_at')->paginate(30)->withQueryString(),
             'clients' => Client::whereHas('gbpLocation')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->orderBy('name')->pluck('name', 'id'),
@@ -90,6 +90,18 @@ class ReviewController extends Controller
         }
 
         return back()->with('status', 'Reply posted on Google.');
+    }
+
+    /** Ignore a review (no reply needed; a scheduled auto reply is cancelled) or bring it back to To reply */
+    public function ignore(Request $request, GbpReview $review): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($review->client_id), 403);
+        abort_if($review->status === 'replied', 422, 'This review is already answered.');
+        $ignore = $review->status !== 'ignored';
+        $review->update($ignore ? ['status' => 'ignored', 'reply_due_at' => null] : ['status' => 'pending']);
+
+        return back()->with('status', $ignore ? 'Review ignored.' : 'Review is back in To reply.');
     }
 
     /** "Write with AI": fills this review's reply box only; the team checks it and posts */

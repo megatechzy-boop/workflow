@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class GbpReview extends Model
 {
-    public const STATUSES = ['pending' => 'To reply', 'draft' => 'Approval', 'scheduled' => 'Auto reply scheduled', 'replied' => 'Replied'];
+    public const STATUSES = ['pending' => 'To reply', 'draft' => 'Approval', 'scheduled' => 'Auto reply scheduled', 'replied' => 'Replied', 'ignored' => 'Ignored'];
 
     protected $fillable = ['client_id', 'gbp_location_id', 'review_id', 'review_name', 'reviewer_name', 'rating', 'comment', 'reviewed_at',
         'status', 'draft', 'template_id', 'templated_at', 'reply_due_at', 'attempts', 'error', 'reply', 'replied_at'];
