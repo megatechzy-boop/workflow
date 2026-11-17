@@ -87,7 +87,9 @@ class MetaPublisher
             if ($post->platform === 'facebook') {
                 $post->update(['status' => 'done', 'post_id' => MetaGraph::postToFacebook($page, $format, $urls, $caption)]);
             } else {
-                if (! $post->container_id && $facebook?->status === 'done') {
+                // reel retries change one thing each: try 2 drops the cover (it comes from our server), try 3 also sends our own video link
+                $reelRetry = $format === 'reel' ? $post->container_tries : 0;
+                if (! $post->container_id && $facebook?->status === 'done' && $reelRetry < 2) {
                     try {
                         if ($format === 'reel') {
                             $source = MetaGraph::facebookVideoUrl($page, $facebook->post_id);
@@ -105,7 +107,7 @@ class MetaPublisher
                 }
                 if (! $post->container_id) {
                     $post->update(['status' => 'processing', 'container_tries' => $post->container_tries + 1,
-                        'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover ? $url($cover) : null)]);
+                        'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover && ! $reelRetry ? $url($cover) : null)]);
                 }
                 $status = MetaGraph::containerStatus($page, $post->container_id);
                 if ($status === 'FINISHED') {

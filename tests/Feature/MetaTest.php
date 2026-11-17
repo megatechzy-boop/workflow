@@ -127,6 +127,8 @@ class MetaTest extends TestCase
         $content = $this->approvedPost(['facebook_reel', 'instagram_reel'], $page);
         $content->forceFill(['post_type' => 'reel'])->save();
         $content->versions()->first()->media()->update(['kind' => 'video']);
+        Storage::disk('local')->put('contents/1/v1/cover.jpg', 'x');
+        $content->versions()->first()->media()->create(['kind' => 'cover', 'path' => 'contents/1/v1/cover.jpg', 'original_name' => 'cover.jpg', 'sort_order' => 2]);
         Http::fake([
             '*/111/videos' => Http::response(['id' => 'vid1']),
             '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']) // processing, then ready
@@ -158,7 +160,11 @@ class MetaTest extends TestCase
         $this->artisan('meta:publish');
         $this->assertSame(['failed', 3], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
         $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', $instagram->fresh()->error);
-        $this->assertCount(3, Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['video_url'] === 'https://video.xx.fbcdn.net/v1.mp4'));
+        // try 1: Facebook's copy + cover, try 2: Facebook's copy without the cover, try 3: our own video link without the cover
+        $containers = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/999/media'))->map(fn ($pair) => $pair[0])->values();
+        $this->assertSame(['https://video.xx.fbcdn.net/v1.mp4', 'https://video.xx.fbcdn.net/v1.mp4'], [$containers[0]['video_url'], $containers[1]['video_url']]);
+        $this->assertStringContainsString('/meta/media/', $containers[2]['video_url']);
+        $this->assertSame([true, false, false], $containers->map(fn ($r) => isset($r['cover_url']))->all());
     }
 
     public function test_schedule_shows_the_post_on_its_scheduled_day(): void

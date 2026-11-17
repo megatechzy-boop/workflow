@@ -54,7 +54,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Facebook / Instagram (Admin > Facebook / IG): Admin connects Facebook once (Meta app 1652918339673007,
   Standard access = only people with a role on the app); each client is linked to a Page. Approved content
   gets "Publish to Facebook + Instagram"; `meta:publish` (every minute) posts it and marks it Published.
-  An Instagram container in ERROR (e.g. Meta's "Media upload has failed" 2207076) is made again 5 min later, 3 containers in all.
+  An Instagram container in ERROR (e.g. Meta's "Media upload has failed" 2207076) is made again 5 min later, 3 containers in all
+  (reels: try 2 without the cover, try 3 also with our own video link instead of Facebook's copy).
 - `meta:sync` (every 10 min): comments on our posts → Comments inbox (SMM replies as the page); lead-form
   leads → Meta leads (grouped by client; the Customer sees only their own). Needs META_CONFIG_ID with
   comment, lead and insights permissions (config "Workflow full + insights").
