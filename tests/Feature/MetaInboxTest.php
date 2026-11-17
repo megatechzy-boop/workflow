@@ -113,4 +113,79 @@ class MetaInboxTest extends TestCase
         $this->actingAs($other)->put(route('meta.leads.update', $lead), ['status' => 'won'])->assertForbidden();
         $this->actingAs($this->smm)->get(route('meta.leads'))->assertSee('Neha Patil')->assertSee('Acme');
     }
+
+    private function lead(string $id, string $name, ?string $phone, array $extra = []): MetaLead
+    {
+        return MetaLead::create($extra + ['meta_page_id' => $this->page->id, 'client_id' => $this->client->id, 'lead_id' => $id,
+            'name' => $name, 'phone' => $phone, 'phone_key' => MetaLead::phoneKey($phone), 'fields' => ['city' => 'Pune'], 'lead_at' => now()]);
+    }
+
+    public function test_same_phone_again_is_tagged_repeat(): void
+    {
+        $this->lead('old', 'Neha', '09876543210');
+        Http::fake([
+            '*/111/leadgen_forms*' => Http::response(['data' => [['id' => 'f1', 'name' => 'Free trial']]]),
+            '*/f1/leads*' => Http::response(['data' => [
+                ['id' => 'l1', 'created_time' => now()->toIso8601String(), 'field_data' => [['name' => 'full_name', 'values' => ['Neha P']], ['name' => 'phone_number', 'values' => ['+91 98765 43210']]]],
+                ['id' => 'l2', 'created_time' => now()->toIso8601String(), 'field_data' => [['name' => 'full_name', 'values' => ['Amit']], ['name' => 'phone_number', 'values' => ['+919999988888']]]],
+            ]]),
+        ]);
+
+        $this->assertSame(2, MetaInbox::syncLeads());
+        $this->assertTrue(MetaLead::where('lead_id', 'l1')->sole()->is_repeat);
+        $this->assertFalse(MetaLead::where('lead_id', 'l2')->sole()->is_repeat);
+        $this->actingAs($this->smm)->get(route('meta.leads'))->assertSee('Repeat');
+    }
+
+    public function test_remarks_keep_history_and_set_the_follow_up(): void
+    {
+        $lead = $this->lead('l1', 'Neha', '9876543210');
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
+
+        $this->actingAs($this->smm)->post(route('meta.leads.remark', $lead), ['remark' => 'No answer', 'follow_up_on' => today()->addDay()->toDateString()])->assertRedirect();
+        $this->assertSame(['contacted', today()->addDay()->toDateString()], [$lead->fresh()->status, $lead->fresh()->follow_up_on->toDateString()]);
+        $this->travel(1)->minute();
+        $this->actingAs($customer)->post(route('meta.leads.remark', $lead), ['remark' => 'Price sent']);
+        $this->assertNull($lead->fresh()->follow_up_on);
+        $this->assertSame(['Price sent', 'No answer'], $lead->remarks()->pluck('remark')->all());
+
+        $this->actingAs($customer)->get(route('meta.leads'))->assertSee('Price sent')->assertSee('history (2)');
+        $this->actingAs($this->smm)->post(route('meta.leads.remark', $lead), ['remark' => 'x', 'follow_up_on' => today()->subDay()->toDateString()])->assertSessionHasErrors('follow_up_on');
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Zen'])->id]);
+        $this->actingAs($other)->post(route('meta.leads.remark', $lead), ['remark' => 'Hi'])->assertForbidden();
+    }
+
+    public function test_search_follow_up_filter_and_daily_reminder(): void
+    {
+        $this->lead('l1', 'Neha Patil', '+91 98765 43210', ['follow_up_on' => today()]);
+        $this->lead('l2', 'Amit Shah', '9999988888', ['follow_up_on' => today()->subDays(2)]);
+        $this->lead('l3', 'Ravi', '9111122222', ['follow_up_on' => today()->addDay()]);
+        $this->lead('l4', 'Sunil', '9333344444', ['follow_up_on' => today(), 'status' => 'won']);
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
+
+        $this->assertSame(2, MetaInbox::remindFollowUps());
+        $this->assertStringContainsString('2 lead follow-up(s) for Acme (1 missed)', $customer->notifications()->sole()->data['message']);
+        $this->assertSame(1, $this->smm->notifications()->count());
+
+        $this->actingAs($this->smm)->get(route('meta.leads', ['q' => '98765']))->assertSee('Neha Patil')->assertDontSee('Amit Shah');
+        $this->actingAs($this->smm)->get(route('meta.leads', ['q' => 'amit']))->assertSee('Amit Shah')->assertDontSee('Neha Patil');
+        $this->actingAs($this->smm)->get(route('meta.leads', ['followup' => 'today']))
+            ->assertSee('Neha Patil')->assertSee('Amit Shah')->assertDontSee('Ravi')->assertDontSee('Sunil')->assertSee('(missed)');
+    }
+
+    public function test_leads_export_as_csv_with_answers_and_remarks(): void
+    {
+        $lead = $this->lead('l1', 'Neha Patil', '9876543210');
+        $lead->remarks()->create(['remark' => 'Call back', 'user_id' => $this->smm->id]);
+        $this->lead('l2', 'Amit Shah', '9999988888', ['status' => 'lost']);
+
+        $csv = $this->actingAs($this->smm)->get(route('meta.leads.export', ['status' => 'new']))->assertOk()->streamedContent();
+        $this->assertStringContainsString('Neha Patil', $csv);
+        $this->assertStringContainsString('Call back', $csv);
+        $this->assertStringContainsString(',city', $csv);
+        $this->assertStringNotContainsString('Amit Shah', $csv);
+
+        $other = User::factory()->create(['role' => Role::Client, 'client_id' => Client::create(['name' => 'Zen'])->id]);
+        $this->assertStringNotContainsString('Neha Patil', $this->actingAs($other)->get(route('meta.leads.export'))->streamedContent());
+    }
 }

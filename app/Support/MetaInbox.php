@@ -67,10 +67,16 @@ class MetaInbox
                 foreach ($forms as $form) {
                     foreach (MetaGraph::leads($page, $form['id'], $since) as $lead) {
                         $fields = collect($lead['field_data'] ?? [])->mapWithKeys(fn ($f) => [$f['name'] => implode(', ', $f['values'] ?? [])])->all();
-                        $row = MetaLead::firstOrCreate(['lead_id' => $lead['id']], [
-                            'meta_page_id' => $page->id, 'client_id' => $client?->id, 'form_name' => $form['name'] ?? null,
+                        if (MetaLead::where('lead_id', $lead['id'])->exists()) {
+                            continue;
+                        }
+                        $phone = $fields['phone_number'] ?? $fields['phone'] ?? null;
+                        $key = MetaLead::phoneKey($phone);
+                        $row = MetaLead::create([
+                            'lead_id' => $lead['id'], 'meta_page_id' => $page->id, 'client_id' => $client?->id, 'form_name' => $form['name'] ?? null,
                             'name' => $fields['full_name'] ?? trim(($fields['first_name'] ?? '').' '.($fields['last_name'] ?? '')) ?: null,
-                            'phone' => $fields['phone_number'] ?? $fields['phone'] ?? null, 'email' => $fields['email'] ?? null,
+                            'phone' => $phone, 'email' => $fields['email'] ?? null, 'phone_key' => $key,
+                            'is_repeat' => $key && MetaLead::where('phone_key', $key)->where('client_id', $client?->id)->exists(),
                             'fields' => $fields, 'lead_at' => Carbon::parse($lead['created_time']),
                         ]);
                         $added += $row->wasRecentlyCreated ? 1 : 0;
@@ -83,12 +89,35 @@ class MetaInbox
             }
             if ($added) {
                 $new += $added;
-                $customers = $client ? User::where('role', Role::Client)->where('client_id', $client->id)->where('is_active', true)->get() : collect();
-                Notify::send(self::team($client?->id)->merge($customers), 'New leads', "$added new lead(s) for ".($client->name ?? $page->name), route('meta.leads'));
+                Notify::send(self::leadPeople($client), 'New leads', "$added new lead(s) for ".($client->name ?? $page->name), route('meta.leads'));
             }
         }
 
         return $new;
+    }
+
+    /** Daily: one note per client whose leads have a follow-up today (or a missed one) */
+    public static function remindFollowUps(): int
+    {
+        $due = MetaLead::whereNotNull('follow_up_on')->whereDate('follow_up_on', '<=', today())
+            ->whereNotIn('status', ['won', 'lost'])->get()->groupBy('client_id');
+        foreach ($due as $clientId => $leads) {
+            $client = $clientId ? Client::find($clientId) : null;
+            $missed = $leads->filter(fn ($l) => $l->follow_up_on->lt(today()))->count();
+            Notify::send(self::leadPeople($client), 'Lead follow-ups today',
+                $leads->count().' lead follow-up(s) for '.($client->name ?? 'leads').($missed ? " ($missed missed)" : ''),
+                route('meta.leads', ['followup' => 'today'] + ($clientId ? ['client' => $clientId] : [])));
+        }
+
+        return $due->flatten()->count();
+    }
+
+    /** Brand SMMs + the client's own Customer logins */
+    private static function leadPeople(?Client $client)
+    {
+        $customers = $client ? User::where('role', Role::Client)->where('client_id', $client->id)->where('is_active', true)->get() : collect();
+
+        return self::team($client?->id)->merge($customers);
     }
 
     /** Social Media Managers of the brand (or all of them when nobody has it ticked) */

@@ -42,6 +42,12 @@ Artisan::command('meta:sync', function () {
 })->purpose('Fetch new Facebook / Instagram comments and leads');
 Schedule::call(fn () => Artisan::call('meta:sync'))->name('meta-sync')->everyTenMinutes()->withoutOverlapping();
 
+// 9 am: tell the team + Customer which Meta leads have a follow-up today (or a missed one)
+Artisan::command('leads:followups', function () {
+    $this->info(MetaInbox::remindFollowUps().' lead follow-up(s) due.');
+})->purpose('Remind about Meta lead follow-ups due today');
+Schedule::call(fn () => Artisan::call('leads:followups'))->name('leads-followups')->dailyAt('09:00');
+
 // Google reviews: new ones every 15 minutes (rules in GbpReviews), due auto replies every minute
 Artisan::command('gbp:reviews', function () {
     if (! GoogleAccount::current()) {

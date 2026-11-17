@@ -72,7 +72,7 @@ class ReviewTest extends TestCase
 
     public function test_first_sync_only_imports_then_new_reviews_follow_the_rules(): void
     {
-        $this->freezeTime(); // the 10–30 min check must not drift a second
+        $this->freezeSecond(); // the 10–30 min check: no drift, and no lost microseconds when saved
         Notification::fake();
         $manager = User::factory()->create(['role' => Role::Manager]);
         $designer = User::factory()->create(['role' => Role::GraphicDesigner]);

@@ -7,10 +7,12 @@ use App\Enums\Role;
 use App\Models\Client;
 use App\Models\MetaComment;
 use App\Models\MetaLead;
+use App\Models\MetaLeadRemark;
 use App\Support\MetaGraph;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 use Throwable;
 
@@ -49,17 +51,68 @@ class MetaInboxController extends Controller
     public function leads(Request $request): View
     {
         $user = $request->user();
-        $query = $this->leadQuery($user);
-        $clientIds = (clone $query)->distinct()->pluck('client_id');
+        $clientIds = $this->leadQuery($user)->distinct()->pluck('client_id');
 
         return view('meta.leads', [
-            'leads' => $query->with('client', 'page')
-                ->when($request->query('client'), fn ($q, $id) => $q->where('client_id', $id))
-                ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
-                ->latest('lead_at')->paginate(50)->withQueryString(),
+            'leads' => $this->filtered($request)->with('client', 'page', 'remarks.user')->paginate(50)->withQueryString(),
             'clients' => Client::whereIn('id', $clientIds)->orderBy('name')->pluck('name', 'id'),
             'isCustomer' => $user->role === Role::Client,
+            'dueCount' => $this->leadQuery($user)->whereDate('follow_up_on', '<=', today())->whereNotIn('status', ['won', 'lost'])->count(),
         ]);
+    }
+
+    /** Same filters as the list, as a CSV that Excel / Google Sheets open (one column per form answer) */
+    public function exportLeads(Request $request): StreamedResponse
+    {
+        $leads = $this->filtered($request)->with('client', 'remarks.user')->get();
+        $questions = $leads->flatMap(fn ($l) => array_keys($l->fields ?? []))
+            ->reject(fn ($q) => in_array($q, ['full_name', 'first_name', 'last_name', 'phone_number', 'phone', 'email'], true))->unique()->values();
+
+        return response()->streamDownload(function () use ($leads, $questions) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel shows Hindi / Marathi correctly
+            fputcsv($out, array_merge(['Date', 'Client', 'Form', 'Name', 'Phone', 'Email', 'Status', 'Repeat', 'Next follow-up', 'Last remark', 'All remarks'],
+                $questions->map(fn ($q) => str_replace('_', ' ', $q))->all()));
+            foreach ($leads as $lead) {
+                fputcsv($out, array_merge([
+                    $lead->lead_at?->format('Y-m-d H:i'), $lead->client->name ?? '', $lead->form_name, $lead->name, $lead->phone, $lead->email,
+                    MetaLead::STATUSES[$lead->status] ?? $lead->status, $lead->is_repeat ? 'Yes' : '', $lead->follow_up_on?->format('Y-m-d'),
+                    $lead->remarks->first()?->remark,
+                    $lead->remarks->reverse()->map(fn ($r) => $r->created_at->format('d M H:i').' '.($r->user->name ?? '').': '.$r->remark)->implode(' | '),
+                ], $questions->map(fn ($q) => $lead->fields[$q] ?? '')->all()));
+            }
+            fclose($out);
+        }, 'meta-leads-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function remark(Request $request, MetaLead $lead): RedirectResponse
+    {
+        abort_unless($this->leadQuery($request->user())->whereKey($lead->id)->exists(), 403);
+        $data = $request->validate([
+            'remark' => ['required', 'string', 'max:1000'],
+            'follow_up_on' => ['nullable', 'date', 'after_or_equal:today'],
+        ]);
+        MetaLeadRemark::create($data + ['meta_lead_id' => $lead->id, 'user_id' => $request->user()->id]);
+        // the latest remark sets (or clears) the next follow-up; writing one means the lead was contacted
+        $lead->update(['follow_up_on' => $data['follow_up_on'] ?? null] + ($lead->status === 'new' ? ['status' => 'contacted'] : []));
+
+        return back()->with('status', 'Remark saved.');
+    }
+
+    /** List / export filters: client, status, search (name, phone, email), follow-up due today or missed */
+    private function filtered(Request $request)
+    {
+        $search = trim((string) $request->query('q'));
+        $digits = preg_replace('/\D/', '', $search);
+
+        return $this->leadQuery($request->user())
+            ->when($request->query('client'), fn ($q, $id) => $q->where('client_id', $id))
+            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
+            ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%")
+                ->when(strlen($digits) >= 4, fn ($w) => $w->orWhere('phone_key', 'like', '%'.substr($digits, -10).'%'))))
+            ->when($request->query('followup') === 'today', fn ($q) => $q->whereDate('follow_up_on', '<=', today())
+                ->whereNotIn('status', ['won', 'lost'])->orderBy('follow_up_on'))
+            ->latest('lead_at');
     }
 
     public function updateLead(Request $request, MetaLead $lead): RedirectResponse

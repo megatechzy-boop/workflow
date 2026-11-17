@@ -57,6 +57,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - `meta:sync` (every 10 min): comments on our posts → Comments inbox (SMM replies as the page); lead-form
   leads → Meta leads (grouped by client; the Customer sees only their own). Needs META_CONFIG_ID with
   comment, lead and insights permissions (config "Workflow full + insights").
+  Meta leads: remark history (quick buttons + text, optional next follow-up; first remark makes New → Contacted),
+  "Repeat" tag (same last-10-digit phone for the same client), search, "Follow-up today" filter (incl. missed),
+  CSV export of the filtered list; `leads:followups` at 09:00 notifies brand SMMs + the Customer.
 - Reports (Monthly, Posting, Ads, Leads) per brand + month; numbers from Meta are cached 3 hours (`MetaInsights`).
 - Sidebar is grouped (Content, Social media, Meta ads, Clients, Team, Accounts, Settings) in `Navigation::items`.
 - Meta ads: Ads (optional saved audience; optional A/B test = 2 ad sets at half budget + Meta split test), Audiences

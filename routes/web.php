@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
     Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
+    Route::get('meta-leads/export', [MetaInboxController::class, 'exportLeads'])->name('meta.leads.export');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::post('reviews/{review}/reply', [ReviewController::class, 'reply'])->name('reviews.reply');
     Route::post('reviews/{review}/ai', [ReviewController::class, 'aiReply'])->name('reviews.ai');
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('gbp-posts', GbpPostController::class)->except('show');
     Route::get('gbp-posts/{gbpPost}/image', [GbpPostController::class, 'image'])->name('gbp-posts.image');
     Route::put('meta-leads/{lead}', [MetaInboxController::class, 'updateLead'])->name('meta.leads.update');
+    Route::post('meta-leads/{lead}/remarks', [MetaInboxController::class, 'remark'])->name('meta.leads.remark');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
     Route::get('contents/{content}/download-all', [ContentController::class, 'downloadAll'])->name('contents.downloadAll');
