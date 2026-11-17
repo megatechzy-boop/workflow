@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** One content sent to one platform; meta:publish moves it queued → (processing) → done | failed */
 class MetaPost extends Model
 {
-    protected $fillable = ['content_id', 'meta_page_id', 'platform', 'status', 'container_id', 'post_id', 'error', 'attempts', 'queued_by', 'publish_at'];
+    protected $fillable = ['content_id', 'meta_page_id', 'platform', 'status', 'container_id', 'post_id', 'error', 'attempts', 'container_tries', 'queued_by', 'publish_at'];
 
     protected function casts(): array
     {

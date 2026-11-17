@@ -37,6 +37,12 @@ class MetaPublisher
         };
     }
 
+    /** Instagram containers per post: an ERROR one (often Meta's own "Media upload has failed" 2207076) is made again */
+    public const CONTAINER_TRIES = 3;
+
+    /** Minutes between those tries */
+    public const RETRY_MINUTES = 5;
+
     /** @return int how many platform posts were queued */
     /** $at: post at this time (meta:publish waits), null = right away */
     public static function queue(Content $content, User $by, ?\DateTimeInterface $at = null): int
@@ -48,7 +54,7 @@ class MetaPublisher
             if ($post->exists && $post->status !== 'failed') {
                 continue; // already queued or posted
             }
-            $post->fill(['meta_page_id' => $page->id, 'status' => 'queued', 'publish_at' => $at, 'container_id' => null, 'error' => null, 'attempts' => 0, 'queued_by' => $by->id])->save();
+            $post->fill(['meta_page_id' => $page->id, 'status' => 'queued', 'publish_at' => $at, 'container_id' => null, 'error' => null, 'attempts' => 0, 'container_tries' => 0, 'queued_by' => $by->id])->save();
             $made++;
         }
 
@@ -98,14 +104,23 @@ class MetaPublisher
                     }
                 }
                 if (! $post->container_id) {
-                    $post->update(['status' => 'processing', 'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover ? $url($cover) : null)]);
+                    $post->update(['status' => 'processing', 'container_tries' => $post->container_tries + 1,
+                        'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover ? $url($cover) : null)]);
                 }
                 $status = MetaGraph::containerStatus($page, $post->container_id);
                 if ($status === 'FINISHED') {
                     $post->update(['status' => 'done', 'post_id' => MetaGraph::publishInstagram($page, $post->container_id)]);
                 } elseif (in_array($status, ['ERROR', 'EXPIRED'], true) || $post->attempts >= 30) {
                     $why = $status === 'ERROR' ? MetaGraph::containerError($page, $post->container_id) : '';
-                    $post->update(['status' => 'failed', 'error' => mb_substr("Instagram could not process the media ($status).".($why ? " $why" : ''), 0, 1000)]);
+                    $error = "Instagram could not process the media ($status).".($why ? " $why" : '');
+                    if ($status === 'ERROR' && $post->container_tries < self::CONTAINER_TRIES) {
+                        // a failed container never recovers: make a new one in a few minutes
+                        $at = now()->addMinutes(self::RETRY_MINUTES);
+                        $post->update(['status' => 'queued', 'container_id' => null, 'attempts' => 0, 'publish_at' => $at,
+                            'error' => mb_substr("Try {$post->container_tries} of ".self::CONTAINER_TRIES." failed, trying again at {$at->format('h:i A')}. $error", 0, 1000)]);
+                    } else {
+                        $post->update(['status' => 'failed', 'error' => mb_substr($error, 0, 1000)]);
+                    }
                 }
             }
         } catch (Throwable $e) {

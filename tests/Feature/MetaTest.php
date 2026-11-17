@@ -129,9 +129,13 @@ class MetaTest extends TestCase
         $content->versions()->first()->media()->update(['kind' => 'video']);
         Http::fake([
             '*/111/videos' => Http::response(['id' => 'vid1']),
-            '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']), // processing, then ready
+            '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']) // processing, then ready
+                ->whenEmpty(Http::response(['source' => 'https://video.xx.fbcdn.net/v1.mp4'])),
             '*/999/media' => Http::response(['id' => 'container1']),
-            '*/container1*' => Http::sequence()->push(['status_code' => 'ERROR'])->push(['status' => 'Error: unsupported format 2207026']),
+            '*/container1*' => Http::sequence()
+                ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: Media upload has failed with error code 2207076'])
+                ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: Media upload has failed with error code 2207076'])
+                ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: unsupported format 2207026']),
         ]);
 
         $this->actingAs($this->admin)->post(route('contents.meta', $content));
@@ -140,7 +144,21 @@ class MetaTest extends TestCase
 
         $this->artisan('meta:publish');
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['video_url'] === 'https://video.xx.fbcdn.net/v1.mp4');
-        $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', MetaPost::where('platform', 'instagram')->sole()->error);
+
+        // a failed container is made again 5 minutes later (3 containers in all), then the post fails with Instagram's reason
+        $instagram = MetaPost::where('platform', 'instagram')->sole();
+        $this->assertSame(['queued', null, 1], [$instagram->status, $instagram->container_id, $instagram->container_tries]);
+        $this->assertStringStartsWith('Try 1 of 3 failed', $instagram->error);
+        $this->artisan('meta:publish'); // not yet
+        $this->assertSame(1, $instagram->fresh()->container_tries);
+        $this->travel(6)->minutes();
+        $this->artisan('meta:publish');
+        $this->assertSame(['queued', 2], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
+        $this->travel(6)->minutes();
+        $this->artisan('meta:publish');
+        $this->assertSame(['failed', 3], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
+        $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', $instagram->fresh()->error);
+        $this->assertCount(3, Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['video_url'] === 'https://video.xx.fbcdn.net/v1.mp4'));
     }
 
     public function test_schedule_shows_the_post_on_its_scheduled_day(): void
