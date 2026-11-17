@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Content;
 use App\Models\GbpReview;
+use App\Models\MetaComment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -118,6 +119,33 @@ class CaptionAi
             $about, 'reply');
 
         return $json['reply'];
+    }
+
+    /** Reply to a Facebook / Instagram comment on our post, as the page, in the comment's own language */
+    public static function commentReply(MetaComment $comment): string
+    {
+        $client = $comment->client;
+        $content = $comment->metaPost?->content;
+        $caption = $content?->versions()->where('number', $content->current_version)->value('caption');
+
+        $about = collect([
+            'Brand' => $client?->name ?? $comment->metaPost?->page?->name,
+            'Brand phone' => $client?->phone,
+            'Platform' => ucfirst($comment->platform),
+            'Our post caption' => $caption,
+            'Commenter' => $comment->author,
+            'Comment' => $comment->message,
+        ])->filter()->map(fn ($v, $k) => "$k: $v")->implode("\n");
+
+        $json = self::ask('You reply to comments on a brand\'s Facebook / Instagram post, as the brand.'
+            .' Reply in the same language and script as the comment (English, Hindi, Marathi or Hinglish).'
+            .' 1-2 short, friendly sentences that answer what they wrote, using the post caption for facts.'
+            .' If they ask for a price, timing or details that are not given, invite them to send a message'
+            .($client?->phone ? ' or call the brand phone given' : '').'. Never invent prices, offers or claims.'
+            .($client?->is_healthcare ? ' This is a healthcare brand: no medical advice, promises or patient details.' : '')
+            .' No hashtags, at most 1 emoji. Reply with JSON only: {"reply": "..."}', $about, 'reply');
+
+        return Str::limit($json['reply'], 2000, '');
     }
 
     /** One Groq chat call that must return JSON with a non-empty $field */

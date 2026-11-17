@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\MetaComment;
 use App\Models\MetaLead;
 use App\Models\MetaLeadRemark;
+use App\Support\CaptionAi;
 use App\Support\MetaGraph;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,6 +47,26 @@ class MetaInboxController extends Controller
         $comment->update(['reply' => $data['reply'], 'replied_at' => now(), 'replied_by' => $user->id]);
 
         return back()->with('status', 'Reply posted.');
+    }
+
+    /** AI draft of a comment reply: fills the box only, the SMM checks and posts it */
+    public function aiReply(Request $request, MetaComment $comment): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::PublishContent) && $user->canSeeBrand($comment->client_id), 403);
+        if (! config('services.groq.key')) {
+            return back()->with('status', 'AI is not set up yet (GROQ_API_KEY in the server .env).');
+        }
+
+        try {
+            $reply = CaptionAi::commentReply($comment);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('status', 'AI could not write a reply: '.\Illuminate\Support\Str::limit($e->getMessage(), 200));
+        }
+
+        return back()->withInput(['reply' => $reply, 'ai_comment' => $comment->id])->with('status', 'AI reply ready. Check it, edit if needed, then Reply.');
     }
 
     public function leads(Request $request): View

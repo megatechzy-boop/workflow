@@ -20,6 +20,11 @@ class MetaComment extends Model
         return $this->belongsTo(MetaPost::class);
     }
 
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function replier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'replied_by');

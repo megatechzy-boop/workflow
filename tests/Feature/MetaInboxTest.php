@@ -75,6 +75,26 @@ class MetaInboxTest extends TestCase
         $this->actingAs($this->smm)->get(route('meta.comments'))->assertDontSee('Timings?');
     }
 
+    public function test_ai_writes_a_comment_reply_in_the_comments_language(): void
+    {
+        $post = $this->publishedPost('instagram', '777');
+        $this->client->update(['phone' => '9800000000']);
+        $comment = MetaComment::create(['meta_post_id' => $post->id, 'client_id' => $this->client->id, 'platform' => 'instagram', 'comment_id' => 'i1',
+            'author' => 'Riya', 'message' => 'Fees kitni hai?', 'commented_at' => now()]);
+        config(['services.groq.key' => 'test-key']);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => '{"reply": "Hi Riya! Details ke liye DM karein."}']]]])]);
+
+        $this->actingAs($this->smm)->post(route('meta.comments.ai', $comment))
+            ->assertSessionHas('_old_input', ['reply' => 'Hi Riya! Details ke liye DM karein.', 'ai_comment' => $comment->id]);
+        Http::assertSent(fn (Request $r) => str_contains($r['messages'][0]['content'], 'same language and script as the comment')
+            && str_contains($r['messages'][0]['content'], 'call the brand phone') && str_contains($r['messages'][1]['content'], 'Comment: Fees kitni hai?'));
+        $this->assertNull($comment->fresh()->replied_at); // nothing posted until Reply
+
+        $this->actingAs($this->smm)->withSession(['_old_input' => ['reply' => 'Hi Riya!', 'ai_comment' => $comment->id]])
+            ->get(route('meta.comments'))->assertSee('Write with AI')->assertSee('Hi Riya!');
+        $this->actingAs(User::factory()->create(['role' => Role::GraphicDesigner]))->post(route('meta.comments.ai', $comment))->assertForbidden();
+    }
+
     public function test_comments_respect_brands(): void
     {
         $this->publishedPost('facebook', '111_222');

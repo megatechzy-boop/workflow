@@ -33,11 +33,17 @@
                                 <div class="text-xs text-gray-500">{{ $comment->replier?->name }} · {{ $comment->replied_at->diffForHumans() }}</div>
                             </div>
                         @else
-                            <form method="POST" action="{{ route('meta.comments.reply', $comment) }}" class="flex gap-2">
+                            <form method="POST" action="{{ route('meta.comments.reply', $comment) }}" class="space-y-2">
                                 @csrf
-                                <input name="reply" required maxlength="2000" placeholder="Reply as the page…" class="flex-1 border-gray-300 rounded-xl shadow-sm text-sm">
-                                <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">Reply</button>
+                                <textarea name="reply" required maxlength="2000" rows="2" placeholder="Reply as the page…"
+                                    class="block w-full border-gray-300 rounded-xl shadow-sm text-sm">{{ old('ai_comment') == $comment->id ? old('reply') : '' }}</textarea>
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="px-4 min-h-[44px] rounded-xl bg-brand-600 text-white text-sm font-semibold">Reply</button>
+                                    <button type="submit" form="ai-comment-{{ $comment->id }}" onclick="this.textContent = 'Writing…'"
+                                        class="px-4 min-h-[44px] rounded-xl border border-accent-400 text-accent-600 text-sm font-semibold hover:bg-accent-50">Write with AI</button>
+                                </div>
                             </form>
+                            <form id="ai-comment-{{ $comment->id }}" method="POST" action="{{ route('meta.comments.ai', $comment) }}" class="hidden">@csrf</form>
                         @endif
                     </div>
                 @empty

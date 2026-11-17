@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
     Route::post('site-code/{client}/conversions', [PixelController::class, 'conversion'])->name('ads.pixel.conversion');
     Route::get('comments', [MetaInboxController::class, 'comments'])->name('meta.comments');
     Route::post('comments/{comment}/reply', [MetaInboxController::class, 'reply'])->name('meta.comments.reply');
+    Route::post('comments/{comment}/ai', [MetaInboxController::class, 'aiReply'])->name('meta.comments.ai');
     Route::get('meta-leads', [MetaInboxController::class, 'leads'])->name('meta.leads');
     Route::get('meta-leads/export', [MetaInboxController::class, 'exportLeads'])->name('meta.leads.export');
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');

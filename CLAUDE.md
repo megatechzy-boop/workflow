@@ -21,7 +21,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Customer row check: rows can be ticked and approved together; a Reel whose client video is not ready can be
   "Video later" (calendar still gets approved, no task for it) and is approved on the approved calendar later, which makes its task.
   Approvals list: client filter + tick and approve together (SMM step or Customer step); revisions stay one by one.
-- AI only for captions: "Generate with AI" on a post (SMM) fills caption + hashtags from the calendar row via Groq
+- AI for drafts only (team checks and posts): "Write with AI" on Comments and Reviews replies; "Generate with AI" on a post (SMM) fills caption + hashtags from the calendar row via Groq
   (free plan, `GROQ_API_KEY`, model `GROQ_MODEL`), in one of the client's ticked "Caption languages" (picked next to the button) and following its "Caption style" (Clients > Edit, wins over the default
   8-12 full lines / 120-200 words, search friendly: hook with the searched words + city, 3-5 natural keywords, CTA, max 3 emojis,
   8-15 topic/niche/city hashtags). Owner's rule: at least 6 lines and 80 words; a shorter answer is asked once more.
