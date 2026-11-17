@@ -121,7 +121,7 @@ class MetaTest extends TestCase
         $this->assertSame('queued', MetaPost::sole()->status);
     }
 
-    public function test_instagram_reel_uses_facebooks_video_copy_and_shows_instagrams_reason(): void
+    public function test_instagram_reel_is_uploaded_then_retried_and_shows_instagrams_reason(): void
     {
         $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
         $content = $this->approvedPost(['facebook_reel', 'instagram_reel'], $page);
@@ -130,22 +130,20 @@ class MetaTest extends TestCase
         Storage::disk('local')->put('contents/1/v1/cover.jpg', 'x');
         $content->versions()->first()->media()->create(['kind' => 'cover', 'path' => 'contents/1/v1/cover.jpg', 'original_name' => 'cover.jpg', 'sort_order' => 2]);
         Http::fake([
+            'rupload.facebook.com/*' => Http::response(['success' => true, 'message' => 'Upload successful.']),
             '*/111/videos' => Http::response(['id' => 'vid1']),
-            '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']) // processing, then ready
-                ->whenEmpty(Http::response(['source' => 'https://video.xx.fbcdn.net/v1.mp4'])),
-            '*/999/media' => Http::response(['id' => 'container1']),
+            '*/vid1*' => Http::sequence()->push([])->push(['source' => 'https://video.xx.fbcdn.net/v1.mp4']), // processing, then ready
+            '*/999/media' => Http::response(['id' => 'container1', 'uri' => 'https://rupload.facebook.com/ig-api-upload/v21.0/upload1']),
             '*/container1*' => Http::sequence()
                 ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: Media upload has failed with error code 2207076'])
-                ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: Media upload has failed with error code 2207076'])
+                ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: Media upload has failed with error code 2207077'])
                 ->push(['status_code' => 'ERROR'])->push(['status' => 'Error: unsupported format 2207026']),
         ]);
 
         $this->actingAs($this->admin)->post(route('contents.meta', $content));
-        $this->artisan('meta:publish'); // Facebook posted; Instagram waits while Facebook still processes the video
-        $this->assertSame('queued', MetaPost::where('platform', 'instagram')->sole()->status);
-
-        $this->artisan('meta:publish');
-        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/999/media') && $r['video_url'] === 'https://video.xx.fbcdn.net/v1.mp4');
+        $this->artisan('meta:publish'); // Facebook posted, then Instagram gets the video bytes (no link to fetch)
+        Http::assertSent(fn (Request $r) => $r->url() === 'https://rupload.facebook.com/ig-api-upload/v21.0/upload1'
+            && $r->hasHeader('Authorization', 'OAuth page-token') && $r->hasHeader('offset', '0') && $r->hasHeader('file_size', '1'));
 
         // a failed container is made again 5 minutes later (3 containers in all), then the post fails with Instagram's reason
         $instagram = MetaPost::where('platform', 'instagram')->sole();
@@ -157,14 +155,18 @@ class MetaTest extends TestCase
         $this->artisan('meta:publish');
         $this->assertSame(['queued', 2], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
         $this->travel(6)->minutes();
+        $this->artisan('meta:publish'); // try 3 waits while Facebook still processes its copy
+        $this->assertSame('queued', $instagram->fresh()->status);
         $this->artisan('meta:publish');
         $this->assertSame(['failed', 3], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
         $this->assertSame('Instagram could not process the media (ERROR). Error: unsupported format 2207026', $instagram->fresh()->error);
-        // try 1: Facebook's copy + cover, try 2: Facebook's copy without the cover, try 3: our own video link without the cover
+
+        // tries 1-2: upload (try 1 with the cover), try 3: Facebook's copy as a link, no cover
         $containers = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/999/media'))->map(fn ($pair) => $pair[0])->values();
-        $this->assertSame(['https://video.xx.fbcdn.net/v1.mp4', 'https://video.xx.fbcdn.net/v1.mp4'], [$containers[0]['video_url'], $containers[1]['video_url']]);
-        $this->assertStringContainsString('/meta/media/', $containers[2]['video_url']);
+        $this->assertSame(['resumable', 'resumable', null], $containers->map(fn ($r) => $r['upload_type'] ?? null)->all());
+        $this->assertSame('https://video.xx.fbcdn.net/v1.mp4', $containers[2]['video_url']);
         $this->assertSame([true, false, false], $containers->map(fn ($r) => isset($r['cover_url']))->all());
+        $this->assertCount(2, Http::recorded(fn (Request $r) => str_contains($r->url(), 'rupload.facebook.com')));
     }
 
     public function test_schedule_shows_the_post_on_its_scheduled_day(): void

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\MetaPage;
+use GuzzleHttp\Psr7\Utils;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -96,6 +97,31 @@ class MetaGraph
         $children = array_map(fn ($url) => self::post($ig, $token + ['image_url' => $url, 'is_carousel_item' => 'true'])['id'], $urls);
 
         return self::post($ig, $token + ['media_type' => 'CAROUSEL', 'children' => implode(',', $children), 'caption' => $caption])['id'];
+    }
+
+    /**
+     * Instagram reel by resumable upload: our server sends the video bytes to Meta, so Instagram fetches
+     * no link (its fetch of our server or Facebook's CDN fails with 2207076 / 2207077 for some videos).
+     * Returns the container id (then status / publish as usual).
+     */
+    public static function uploadInstagramReel(MetaPage $page, string $file, string $caption, ?string $coverUrl = null): string
+    {
+        $made = self::post("/{$page->ig_user_id}/media", ['access_token' => $page->access_token, 'media_type' => 'REELS',
+            'upload_type' => 'resumable', 'caption' => $caption] + array_filter(['cover_url' => $coverUrl]));
+        $uri = $made['uri'] ?? 'https://rupload.facebook.com/ig-api-upload/'.basename(config('services.meta.graph')).'/'.$made['id'];
+
+        $stream = Utils::streamFor(fopen($file, 'r')); // streamed, not loaded into memory
+        try {
+            $response = Http::withHeaders(['Authorization' => 'OAuth '.$page->access_token, 'offset' => '0', 'file_size' => (string) filesize($file)])
+                ->withBody($stream, 'application/octet-stream')->timeout(600)->post($uri);
+        } finally {
+            $stream->close();
+        }
+        if ($response->failed() || ! $response->json('success')) {
+            throw new RuntimeException('Instagram video upload failed: '.($response->json('debug_info.message') ?? $response->json('error.message') ?? $response->status()));
+        }
+
+        return $made['id'];
     }
 
     /** Full-size CDN links of the photos in a Facebook post, in post order (one for a photo, several for a carousel) */

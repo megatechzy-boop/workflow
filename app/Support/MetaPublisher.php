@@ -6,6 +6,7 @@ use App\Enums\ContentStatus;
 use App\Models\Content;
 use App\Models\MetaPost;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Throwable;
 
@@ -87,9 +88,11 @@ class MetaPublisher
             if ($post->platform === 'facebook') {
                 $post->update(['status' => 'done', 'post_id' => MetaGraph::postToFacebook($page, $format, $urls, $caption)]);
             } else {
-                // reel retries change one thing each: try 2 drops the cover (it comes from our server), try 3 also sends our own video link
-                $reelRetry = $format === 'reel' ? $post->container_tries : 0;
-                if (! $post->container_id && $facebook?->status === 'done' && $reelRetry < 2) {
+                // Reels: tries 1-2 upload the video bytes (try 2 without the cover, which Instagram fetches from our server),
+                // try 3 gives Instagram Facebook's copy of the video as a link
+                $reelTry = $format === 'reel' ? $post->container_tries : 0;
+                $upload = $format === 'reel' && $reelTry < 2 && ($video = $media->firstWhere('kind', 'video'));
+                if (! $post->container_id && ! $upload && $facebook?->status === 'done') {
                     try {
                         if ($format === 'reel') {
                             $source = MetaGraph::facebookVideoUrl($page, $facebook->post_id);
@@ -106,8 +109,10 @@ class MetaPublisher
                     }
                 }
                 if (! $post->container_id) {
-                    $post->update(['status' => 'processing', 'container_tries' => $post->container_tries + 1,
-                        'container_id' => MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $cover && ! $reelRetry ? $url($cover) : null)]);
+                    $coverUrl = $cover && $reelTry === 0 ? $url($cover) : null;
+                    $post->update(['status' => 'processing', 'container_tries' => $post->container_tries + 1, 'container_id' => $upload
+                        ? MetaGraph::uploadInstagramReel($page, Storage::disk('local')->path($video->path), $caption, $coverUrl)
+                        : MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $coverUrl)]);
                 }
                 $status = MetaGraph::containerStatus($page, $post->container_id);
                 if ($status === 'FINISHED') {
