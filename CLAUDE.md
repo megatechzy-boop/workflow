@@ -26,6 +26,10 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   8-12 full lines / 120-200 words, search friendly: hook with the searched words + city, 3-5 natural keywords, CTA, max 3 emojis,
   8-15 topic/niche/city hashtags). Owner's rule: at least 6 lines and 80 words; a shorter answer is asked once more.
   Default model `openai/gpt-oss-120b`. Nothing is saved until the SMM saves.
+- Change after approval ("Need a change?" on an Approved / Scheduled post, not once it is live on FB / IG; cancels its FB / IG schedule):
+  "Revision" (brand SMM, Admin or the brand's Customer) = full round again (Designer V2 → SMM → Customer);
+  "Send back for changes" (SMM / Admin, small fix like a logo or number) = Designer V2 → the SMM's approval is final (`contents.minor_fix`).
+  Designers / Editors replace files only before the SMM's review.
 - No caption, no scheduling: the manual "Scheduled" step and Facebook / Instagram publish (now or scheduled) need a caption on the current version.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
 - Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.

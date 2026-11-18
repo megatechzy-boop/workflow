@@ -17,7 +17,7 @@ class ContentComment extends Model
     /** Items in the Fixed checklist: plain comments + revisions */
     public function isChecklistItem(): bool
     {
-        return in_array($this->action, ['comment', 'revision', 'customer_revision'], true) && filled($this->body);
+        return in_array($this->action, ['comment', 'revision', 'customer_revision', 'small_fix'], true) && filled($this->body);
     }
 
     public function fixer(): BelongsTo

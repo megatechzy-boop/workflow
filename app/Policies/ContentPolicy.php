@@ -54,6 +54,36 @@ class ContentPolicy
         return $content->status->awaitingReview() && $this->upload($user, $content->task);
     }
 
+    /**
+     * "Revision" on an approved / scheduled post (full round again: SMM, then Customer):
+     * the brand's SMM (approve permission), Admin, or the brand's Customer. Not once it is live anywhere.
+     */
+    public function reopen(User $user, Content $content): bool
+    {
+        if (! $this->reopenable($content)) {
+            return false;
+        }
+        if ($user->role === Role::Client) {
+            return $user->client_id === $content->task->item->calendar->client_id;
+        }
+
+        return $user->hasPermission(Permission::ApproveContent) && $user->canSeeBrand($content->task->item->calendar->client_id);
+    }
+
+    /** "Send back for changes" (small fix like a missing logo or number): SMM / Admin; the SMM's approval of the fix is final */
+    public function sendBack(User $user, Content $content): bool
+    {
+        return $this->reopenable($content) && $user->role !== Role::Client
+            && $user->hasPermission(Permission::ApproveContent) && $user->canSeeBrand($content->task->item->calendar->client_id);
+    }
+
+    /** Approved or Scheduled, and nothing posted (or being posted) on Facebook / Instagram yet */
+    private function reopenable(Content $content): bool
+    {
+        return in_array($content->status, [ContentStatus::Approved, ContentStatus::Scheduled], true)
+            && ! \App\Models\MetaPost::where('content_id', $content->id)->whereIn('status', ['done', 'processing'])->exists();
+    }
+
     /** Caption + hashtags belong to the SMM (approve or publish permission) */
     public function editCaption(User $user, Content $content): bool
     {

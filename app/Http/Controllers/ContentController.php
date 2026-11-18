@@ -11,6 +11,7 @@ use App\Models\Content;
 use App\Models\ContentComment;
 use App\Models\ContentMedia;
 use App\Models\ContentVersion;
+use App\Models\MetaPost;
 use App\Models\PointEntry;
 use App\Models\Task;
 use App\Models\User;
@@ -169,8 +170,9 @@ class ContentController extends Controller
         $readyForCustomer = [];
         foreach (Content::with('task.item.calendar.client')->whereKey($data['ids'])->get() as $content) {
             if (Gate::allows('review', $content)) {
+                $toCustomer = ! $content->task->item->calendar->client->is_internal && ! $content->minor_fix;
                 $this->smmReview($request, $content, 'approved', null, false);
-                if (! $content->task->item->calendar->client->is_internal) {
+                if ($toCustomer) {
                     $readyForCustomer[$content->task->item->calendar->client_id][] = $content;
                 }
             } elseif (Gate::allows('customerReview', $content)) {
@@ -194,21 +196,24 @@ class ContentController extends Controller
     {
         $data = ['action' => $action, 'body' => $body];
 
-        DB::transaction(function () use ($request, $content, $data) {
+        // a small fix sent back after approval: the SMM's approval is final (no Customer step)
+        $final = $content->task->item->calendar->client->is_internal || $content->minor_fix;
+
+        DB::transaction(function () use ($request, $content, $data, $final) {
             $content->update(['status' => match ($data['action']) {
                 // after the SMM the Customer gives final approval; internal brands have no Customer step
-                'approved' => $content->task->item->calendar->client->is_internal ? ContentStatus::Approved : ContentStatus::ClientReview,
+                'approved' => $final ? ContentStatus::Approved : ContentStatus::ClientReview,
                 'revision' => ContentStatus::RevisionRequired,
                 'rejected' => ContentStatus::Rejected,
-            }]);
+            }] + ($data['action'] === 'revision' ? [] : ['minor_fix' => false]));
             $this->log($request, $content, $data['action'], $data['body'] ?? null);
         });
 
         $url = route('contents.show', $content);
-        $label = ['approved' => 'Approved by SMM, now with the Customer', 'revision' => 'Revision required', 'rejected' => 'Rejected'][$data['action']];
+        $label = ['approved' => $final ? 'Approved' : 'Approved by SMM, now with the Customer', 'revision' => 'Revision required', 'rejected' => 'Rejected'][$data['action']];
         Notify::send([$content->task->assignee], "Content: $label", $this->title($content).($data['body'] ? ' — '.$data['body'] : ''), $url);
         Notify::send(Notify::mentioned($data['body'] ?? null), 'You were mentioned', $request->user()->name.': '.$data['body'], $url);
-        if ($notifyCustomers && $data['action'] === 'approved' && ! $content->task->item->calendar->client->is_internal) {
+        if ($notifyCustomers && $data['action'] === 'approved' && ! $final) {
             Notify::send($this->customers($content), 'Content ready for your approval', $this->title($content).' is ready for your approval.', $url);
         }
     }
@@ -306,6 +311,51 @@ class ContentController extends Controller
             : ['fixed_at' => now(), 'fixed_by' => $request->user()->id]);
 
         return back();
+    }
+
+    /** "Revision" on an approved / scheduled post: back to the Designer / Editor, then SMM and Customer again */
+    public function reopen(Request $request, Content $content): RedirectResponse
+    {
+        Gate::authorize('reopen', $content);
+
+        return $this->sendBackToCreator($request, $content, false);
+    }
+
+    /** "Send back for changes": a small fix (logo, number…); the SMM's approval of the new version is final */
+    public function sendBack(Request $request, Content $content): RedirectResponse
+    {
+        Gate::authorize('sendBack', $content);
+
+        return $this->sendBackToCreator($request, $content, true);
+    }
+
+    private function sendBackToCreator(Request $request, Content $content, bool $minor): RedirectResponse
+    {
+        $body = $request->validate(['body' => ['required', 'string', 'max:5000']],
+            ['body.required' => 'Write what needs to change.'])['body'];
+        $isCustomer = $request->user()->role === Role::Client;
+
+        DB::transaction(function () use ($request, $content, $minor, $body, $isCustomer) {
+            // the old files must not go out: drop the scheduled (or failed) Facebook / Instagram posts
+            MetaPost::where('content_id', $content->id)->whereIn('status', ['queued', 'failed'])->delete();
+            $content->update(['status' => ContentStatus::RevisionRequired, 'minor_fix' => $minor]);
+            $this->log($request, $content, $minor ? 'small_fix' : ($isCustomer ? 'customer_revision' : 'revision'), $body);
+        });
+
+        $url = route('contents.show', $content);
+        Notify::send([$content->task->assignee], $minor ? 'Small fix needed' : 'Revision required',
+            $this->title($content).' — '.$body, $url);
+        if ($isCustomer) {
+            Notify::send([$content->approver], 'Customer requested changes', $this->title($content).' — '.$body, $url);
+        }
+
+        if ($isCustomer) { // the post is hidden from the Customer until the new version is ready
+            return redirect()->route('contents.index')->with('popup', 'Thank you! The team will send you a new version.');
+        }
+
+        return back()->with('status', $minor
+            ? 'Sent back for the fix. Its schedule is cancelled; after the new version your approval is final.'
+            : 'Sent back for revision. Its schedule is cancelled.');
     }
 
     /** Approved => Scheduled => Published (manual buttons) */

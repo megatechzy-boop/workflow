@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Content extends Model
 {
-    protected $fillable = ['post_type', 'approver_id', 'status', 'current_version'];
+    protected $fillable = ['post_type', 'approver_id', 'status', 'current_version', 'minor_fix'];
 
     protected function casts(): array
     {
-        return ['status' => ContentStatus::class];
+        return ['status' => ContentStatus::class, 'minor_fix' => 'boolean'];
     }
 
     /** "carousel" (new: one upload for all platforms) or legacy "linkedin_carousel" => PostType::Carousel */

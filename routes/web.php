@@ -86,6 +86,8 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/caption-ai', [ContentController::class, 'aiCaption'])->name('contents.captionAi');
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
+    Route::post('contents/{content}/reopen', [ContentController::class, 'reopen'])->name('contents.reopen');
+    Route::post('contents/{content}/send-back', [ContentController::class, 'sendBack'])->name('contents.sendBack');
     Route::post('contents/{content}/meta', [MetaController::class, 'publish'])->name('contents.meta');
     Route::delete('contents/{content}/meta', [MetaController::class, 'unschedule'])->name('contents.meta.unschedule');
     Route::post('meta-posts/{metaPost}/boost', [MetaController::class, 'boost'])->name('contents.boost');

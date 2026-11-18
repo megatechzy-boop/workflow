@@ -140,7 +140,7 @@
                                     <button name="action" value="revision" class="px-3 py-2 rounded-md bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400">Revision</button>
                                     <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" onclick="return confirm('Reject this content? This is final.')">Reject</button>
                                 </div>
-                                <p class="text-xs text-gray-500">After approval the content goes to the Customer for final approval.</p>
+                                <p class="text-xs text-gray-500">{{ $content->minor_fix ? 'Small fix after approval: your approval is final (no Customer step).' : 'After approval the content goes to the Customer for final approval.' }}</p>
                             </form>
                         </div>
                     @endcan
@@ -159,6 +159,40 @@
                             </form>
                         </div>
                     @endcan
+
+                    {{-- Change after approval: Revision (full round, also the Customer) or a small fix (SMM approval is final) --}}
+                    @if (auth()->user()->can('reopen', $content) || auth()->user()->can('sendBack', $content))
+                        @php($canFix = auth()->user()->can('sendBack', $content))
+                        <details class="card p-4 border border-orange-200" @if ($errors->has('body') && old('change')) open @endif>
+                            <summary class="cursor-pointer font-semibold text-gray-800 min-h-[44px] flex items-center">Need a change?</summary>
+                            <form method="POST" class="space-y-3 mt-2" x-data="{ kind: @js(old('change', $canFix ? 'fix' : 'revision')) }"
+                                :action="kind === 'fix' ? @js(route('contents.sendBack', $content)) : @js(route('contents.reopen', $content))"
+                                action="{{ $canFix ? route('contents.sendBack', $content) : route('contents.reopen', $content) }}"
+                                onsubmit="return confirm('Send this post back? Its Facebook / Instagram schedule will be cancelled.')">
+                                @csrf
+                                @if ($canFix)
+                                    <div class="space-y-2 text-sm">
+                                        <label class="flex items-start gap-2 min-h-[44px]">
+                                            <input type="radio" name="change" value="fix" x-model="kind" class="mt-1">
+                                            <span><span class="font-semibold">Send back for changes</span> — small fix (logo missing, number to add). Your approval of the new version is final; no Customer step.</span>
+                                        </label>
+                                        <label class="flex items-start gap-2 min-h-[44px]">
+                                            <input type="radio" name="change" value="revision" x-model="kind" class="mt-1">
+                                            <span><span class="font-semibold">Revision</span> — bigger change. The new version goes to you and then to the Customer again.</span>
+                                        </label>
+                                    </div>
+                                @else
+                                    <input type="hidden" name="change" value="revision">
+                                    <p class="text-sm text-gray-600">Ask for a revision: the team makes a new version and sends it to you again for approval.</p>
+                                @endif
+                                <textarea name="body" rows="3" required maxlength="5000" placeholder="What needs to change?" aria-label="What needs to change"
+                                    class="block w-full border-gray-300 rounded-xl shadow-sm text-sm">{{ old('change') ? old('body') : '' }}</textarea>
+                                @if (old('change'))<x-input-error :messages="$errors->get('body')" />@endif
+                                <button class="px-4 min-h-[44px] rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400"
+                                    @if ($canFix) x-text="kind === 'fix' ? 'Send back for changes' : 'Request revision'" @endif>{{ $canFix ? 'Send back for changes' : 'Request revision' }}</button>
+                            </form>
+                        </details>
+                    @endif
 
                     @can('markStatus', $content)
                         <form method="POST" action="{{ route('contents.status', $content) }}" class="card p-4">
@@ -368,11 +402,11 @@
                         @endcan
 
                         <ul class="space-y-3 text-sm">
-                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved', 'replaced' => 'Replaced files', 'customer_revision' => 'Customer requested changes', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
+                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved', 'replaced' => 'Replaced files', 'customer_revision' => 'Customer requested changes', 'small_fix' => 'Sent back for a small fix', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
                             {{-- Customers only see customer comments, never internal team notes --}}
                             @php($timeline = auth()->user()->role === App\Enums\Role::Client ? $content->comments->filter(fn ($c) => $c->user->role === App\Enums\Role::Client) : $content->comments)
                             @forelse ($timeline->reverse() as $c)
-                                <li class="border-l-4 pl-3 {{ in_array($c->action, ['revision', 'customer_revision'], true) ? 'border-orange-400' : ($c->action === 'comment' ? 'border-gray-200' : 'border-brand-200') }}">
+                                <li class="border-l-4 pl-3 {{ in_array($c->action, ['revision', 'customer_revision', 'small_fix'], true) ? 'border-orange-400' : ($c->action === 'comment' ? 'border-gray-200' : 'border-brand-200') }}">
                                     <div class="text-xs text-gray-500">
                                         <strong class="text-gray-800">{{ $c->user->name }}</strong>
                                         · V{{ $c->version->number }} · {{ $c->created_at->format('d M, h:i A') }}
