@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\UploadRedirectAsJson::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
+        $middleware->validateCsrfTokens(except: ['webhooks/*']); // Meta posts here, checked by signature
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,

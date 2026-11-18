@@ -28,6 +28,8 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\MetaController;
 use App\Http\Controllers\MetaInboxController;
+use App\Http\Controllers\WhatsAppController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -45,6 +47,9 @@ Route::view('privacy', 'legal.privacy')->name('privacy');
 // Meta fetches post media from short-lived signed links (no login)
 Route::get('meta/media/{media}', [MetaController::class, 'media'])->middleware('signed')->name('meta.media');
 Route::get('gbp/media/{post}', [GbpPostController::class, 'media'])->middleware('signed')->name('gbp.media');
+// WhatsApp Cloud API webhook (Meta signs each POST with the app secret)
+Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook');
+Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->middleware('throttle:600,1');
 Route::get('enquiry', [LeadController::class, 'form'])->name('enquiry.form');
 Route::post('enquiry', [LeadController::class, 'submit'])->middleware('throttle:5,1')->name('enquiry.submit');
 Route::get('enquiry/thanks', [LeadController::class, 'thanks'])->name('enquiry.thanks');
@@ -118,6 +123,13 @@ Route::middleware('auth')->group(function () {
     Route::get('contents/{content}/download-all', [ContentController::class, 'downloadAll'])->name('contents.downloadAll');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
+    Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+    Route::post('whatsapp/new', [WhatsAppController::class, 'newChat'])->name('whatsapp.new');
+    Route::get('whatsapp/file/{message}', [WhatsAppController::class, 'media'])->name('whatsapp.media');
+    Route::get('whatsapp/{chat}', [WhatsAppController::class, 'show'])->name('whatsapp.show');
+    Route::get('whatsapp/{chat}/poll', [WhatsAppController::class, 'poll'])->name('whatsapp.poll');
+    Route::post('whatsapp/{chat}/send', [WhatsAppController::class, 'send'])->name('whatsapp.send');
+    Route::post('whatsapp/{chat}/template', [WhatsAppController::class, 'template'])->name('whatsapp.template');
     Route::get('schedule', [ScheduleController::class, 'index'])->name('schedule');
     Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     Route::get('reports/posting', [ReportController::class, 'posting'])->name('reports.posting');
@@ -185,6 +197,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('meta', [MetaController::class, 'index'])->name('meta.index');
     Route::get('meta/connect', [MetaController::class, 'connect'])->name('meta.connect');
     Route::get('meta/callback', [MetaController::class, 'callback'])->name('meta.callback');
+    Route::get('whatsapp', [WhatsAppController::class, 'settings'])->name('whatsapp.settings');
+    Route::post('whatsapp/connect', [WhatsAppController::class, 'connect'])->name('whatsapp.connect');
     Route::get('google', [GoogleController::class, 'index'])->name('google.index');
     Route::get('google/connect', [GoogleController::class, 'connect'])->name('google.connect');
     Route::post('google/refresh', [GoogleController::class, 'refresh'])->name('google.refresh');

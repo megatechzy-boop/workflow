@@ -15,6 +15,7 @@ enum Permission: string
     case ViewAllTasks = 'view_all_tasks';
     case UploadAnyContent = 'upload_any_content';
     case ViewPrices = 'view_prices';
+    case WhatsAppChat = 'whatsapp_chat';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum Permission: string
             self::ViewAllTasks => 'View all tasks, approvals and points',
             self::UploadAnyContent => 'Upload content on any task',
             self::ViewPrices => 'See package prices',
+            self::WhatsAppChat => 'WhatsApp inbox (chat with clients on the company number)',
         };
     }
 
@@ -36,7 +38,7 @@ enum Permission: string
     public static function defaults(): array
     {
         return [
-            Role::Manager->value => [self::ManageClients, self::ManageCalendars, self::ApproveCalendar, self::AssignTasks, self::PublishContent, self::ViewAllTasks, self::UploadAnyContent, self::ViewPrices],
+            Role::Manager->value => [self::ManageClients, self::ManageCalendars, self::ApproveCalendar, self::AssignTasks, self::PublishContent, self::ViewAllTasks, self::UploadAnyContent, self::ViewPrices, self::WhatsAppChat],
             Role::SocialMediaManager->value => [self::ManageCalendars, self::AssignTasks, self::ApproveContent, self::PublishContent, self::ViewAllTasks],
             Role::GraphicDesigner->value => [],
             Role::VideoEditor->value => [],

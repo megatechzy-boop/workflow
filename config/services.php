@@ -32,6 +32,14 @@ return [
         'graph' => 'https://graph.facebook.com/v21.0',
     ],
 
+    // WhatsApp Cloud API on the Mega Techzy number (coexistence with the WhatsApp Business app). Token = system user token, only in the server .env
+    'whatsapp' => [
+        'token' => env('WHATSAPP_TOKEN'),
+        'waba_id' => env('WHATSAPP_WABA_ID'),
+        'phone_id' => env('WHATSAPP_PHONE_ID'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'), // any long random text, also typed in the Meta webhook settings
+    ],
+
     // Google Business Profile (OAuth client of Cloud project megatechzy-workflow; secret only in the server .env)
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),

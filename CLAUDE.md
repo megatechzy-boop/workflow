@@ -89,6 +89,14 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Reports > Google: profile views (Search / Maps), calls, directions, website clicks from the Business Profile Performance
   API (must be enabled in the Cloud project; cached 3 hours, Google is 2–3 days late) + the month's reviews and GBP posts.
 
+- WhatsApp (top-level "WhatsApp", permission "WhatsApp inbox": Ops Manager by default, others via Users > Edit): the Mega Techzy
+  number in coexistence (WhatsApp Business app + Cloud API on one number; phone + up to 4 WhatsApp Web stay in use). System user
+  token + WABA / phone IDs + webhook verify token only in the `.env` (no Embedded Signup). Webhook `/webhooks/whatsapp` (signed with
+  META_APP_SECRET) takes messages, statuses, smb_message_echoes (sent from phone/Web, shown as "WhatsApp app / Web"), history and
+  smb_app_state_sync (phone's contact names). Free text / PDF / photo only within 24 h of the customer's last message; otherwise
+  (and for "New WhatsApp" to a number) an approved template, + PDF/photo when its header has one. "WhatsApp Web" button opens the
+  chat in a scanned browser. One push per waiting chat to everyone with the permission. Settings > WhatsApp: "Connect webhook" (+ one-time history sync).
+
 ## Next up
 
 Phase 2: monthly checklist for non-post services (GBP posts, reports, strategy calls).

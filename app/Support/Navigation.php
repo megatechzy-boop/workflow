@@ -12,6 +12,7 @@ use App\Models\Lead;
 use App\Models\MetaComment;
 use App\Models\MetaLead;
 use App\Models\User;
+use App\Models\WhatsAppChat;
 
 /** One menu definition for the desktop sidebar, the phone tab bar and the phone "More" sheet */
 class Navigation
@@ -30,6 +31,10 @@ class Navigation
 
         $add('', 'Home', 'dashboard', 'home', 'dashboard');
         $add('', 'Chat', 'chat.index', 'chat', 'chat.*', array_sum(ChatMessage::unreadCounts($user)));
+
+        if ($user->hasPermission(Permission::WhatsAppChat)) {
+            $add('', 'WhatsApp', 'whatsapp.index', 'phone', ['whatsapp.index', 'whatsapp.show'], WhatsAppChat::where('unread', '>', 0)->count());
+        }
 
         $add('Content', 'Calendars', 'calendars.index', 'calendar', 'calendars.*');
         if ($seesTasks) {
@@ -90,6 +95,7 @@ class Navigation
             $add('Accounts', 'Expenses', 'admin.expenses.index', 'clipboard', 'admin.expenses.*');
             $add('Settings', 'Facebook / IG', 'admin.meta.index', 'send', 'admin.meta.*');
             $add('Settings', 'Google Business', 'admin.google.index', 'building', 'admin.google.*');
+            $add('Settings', 'WhatsApp', 'admin.whatsapp.settings', 'phone', 'admin.whatsapp.*');
             $add('Settings', 'Review templates', 'admin.review-templates.index', 'star', 'admin.review-templates.*');
         }
 
