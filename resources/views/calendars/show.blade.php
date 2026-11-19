@@ -40,11 +40,17 @@
                     </form>
                 @endcan
                 @can('delete', $calendar)
-                    <form method="POST" action="{{ route('calendars.destroy', $calendar) }}" onsubmit="return confirm('Delete the whole calendar?')">
+                    @php($rows = $calendar->items->count())
+                    <form method="POST" action="{{ route('calendars.destroy', $calendar) }}"
+                        onsubmit="return confirm(@js($calendar->status === App\Enums\CalendarStatus::Draft ? 'Delete the whole calendar?'
+                            : 'Delete this '.$calendar->status->label().' calendar with '.$rows.' post(s)? Its tasks, uploaded designs, approvals and Facebook / Instagram schedules are removed too. This cannot be undone.'))">
                         @csrf @method('DELETE')
                         <button class="text-sm text-red-600 hover:underline">Delete calendar</button>
                     </form>
                 @endcan
+                @if (auth()->user()->isAdmin() && $calendar->status !== App\Enums\CalendarStatus::Draft && App\Policies\CalendarPolicy::hasPublished($calendar))
+                    <span class="text-xs text-gray-500">Can't delete: a post of this calendar is already published.</span>
+                @endif
             </div>
 
             @can('reviewItems', $calendar)

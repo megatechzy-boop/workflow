@@ -137,7 +137,14 @@ class CalendarController extends Controller
     {
         Gate::authorize('delete', $calendar);
 
-        $calendar->delete();
+        // tasks, posts, versions and FB / IG queue go with the rows (cascade); uploaded files and unsent Google posts are removed here
+        $contentIds = \App\Models\Content::whereHas('task.item', fn ($q) => $q->where('calendar_id', $calendar->id))->pluck('id');
+        $files = \App\Models\ContentMedia::whereHas('version', fn ($q) => $q->whereIn('content_id', $contentIds))->pluck('path');
+        DB::transaction(function () use ($calendar, $contentIds) {
+            \App\Models\GbpPost::whereIn('content_id', $contentIds)->where('status', '!=', 'published')->delete();
+            $calendar->delete();
+        });
+        \Illuminate\Support\Facades\Storage::disk('local')->delete($files->flatMap(fn ($p) => [$p, $p.'.jpg'])->all()); // + the JPEG copy made for Instagram
 
         return redirect()->route('calendars.index')->with('status', 'Calendar deleted.');
     }

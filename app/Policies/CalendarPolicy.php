@@ -47,9 +47,23 @@ class CalendarPolicy
         return $user->hasPermission(Permission::ManageCalendars) && $calendar->status === CalendarStatus::Draft;
     }
 
+    /** Draft: whoever may edit it. Any later status: Admin only, and never once a post of it is published */
     public function delete(User $user, Calendar $calendar): bool
     {
-        return $this->update($user, $calendar);
+        if ($this->update($user, $calendar)) {
+            return true;
+        }
+
+        return $user->isAdmin() && ! self::hasPublished($calendar);
+    }
+
+    /** A post of this calendar is Published, or live on Facebook / Instagram */
+    public static function hasPublished(Calendar $calendar): bool
+    {
+        $contents = \App\Models\Content::whereHas('task.item', fn ($q) => $q->where('calendar_id', $calendar->id));
+
+        return (clone $contents)->where('status', \App\Enums\ContentStatus::Published)->exists()
+            || \App\Models\MetaPost::whereIn('content_id', $contents->select('id'))->whereIn('status', ['done', 'processing'])->exists();
     }
 
     public function submit(User $user, Calendar $calendar): bool
