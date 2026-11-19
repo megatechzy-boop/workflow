@@ -109,7 +109,7 @@
                                 <td class="px-3 py-4 text-blue-800">{{ $loop->iteration }}</td>
                                 <td class="px-3 py-4">{!! $item->post_date ? e($item->post_date->format('d M l')) : '<span class="text-accent-600 font-semibold">No date</span>' !!}</td>
                                 <td class="px-3 py-4">{{ $item->typeLabel() }}</td>
-                                <td class="px-4 py-4 whitespace-pre-line">{{ $item->creative_copy }}</td>
+                                <td class="px-4 py-4 whitespace-pre-line">@if ($item->is_quick)<span class="inline-block mb-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-accent-100 text-accent-600">Quick post</span><br>@endif{{ $item->creative_copy }}</td>
                                 <td class="px-4 py-4 whitespace-pre-line">{{ $item->visual_brief }}</td>
                                 <td class="px-3 py-4 whitespace-pre-line">{{ $item->brief }}</td>
                                 <td class="px-3 py-4">

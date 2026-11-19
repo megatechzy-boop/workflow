@@ -2,9 +2,14 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-bold text-2xl text-gray-900 tracking-tight">Content Calendars</h2>
-            @can('create', App\Models\Calendar::class)
-                <a href="{{ route('calendars.create') }}" class="inline-flex items-center px-4 py-2 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 min-h-[44px]">+ New Calendar</a>
-            @endcan
+            <div class="flex flex-wrap gap-2">
+                @if (auth()->user()->hasPermission(App\Enums\Permission::QuickPost))
+                    <a href="{{ route('contents.quick') }}" class="inline-flex items-center px-4 py-2 border border-brand-600 rounded-xl text-sm font-semibold text-brand-700 hover:bg-brand-50 min-h-[44px]">+ Quick post</a>
+                @endif
+                @can('create', App\Models\Calendar::class)
+                    <a href="{{ route('calendars.create') }}" class="inline-flex items-center px-4 py-2 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 min-h-[44px]">+ New Calendar</a>
+                @endcan
+            </div>
         </div>
     </x-slot>
 
@@ -14,7 +19,26 @@
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
 
+            {{-- Month tabs: one month at a time (default = the coming month); a dot = a calendar still waiting --}}
+            @if ($months->isNotEmpty())
+                <nav class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0" aria-label="Month">
+                    @foreach ($months as $m)
+                        <a href="{{ request()->fullUrlWithQuery(['month' => $m['key'], 'page' => null]) }}" @if ($month === $m['key']) aria-current="page" @endif
+                            class="shrink-0 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-full border text-sm font-semibold whitespace-nowrap
+                                {{ $month === $m['key'] ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
+                            {{ $m['label'] }}
+                            <span class="{{ $month === $m['key'] ? 'text-white/80' : 'text-gray-500' }}">{{ $m['count'] }}</span>
+                            @if ($m['waiting'])<span class="w-2 h-2 rounded-full bg-accent-500" title="Waiting for approval"></span>@endif
+                        </a>
+                    @endforeach
+                    <a href="{{ request()->fullUrlWithQuery(['month' => 'all', 'page' => null]) }}" @if ($month === 'all') aria-current="page" @endif
+                        class="shrink-0 inline-flex items-center px-4 min-h-[44px] rounded-full border text-sm font-semibold
+                            {{ $month === 'all' ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">All</a>
+                </nav>
+            @endif
+
             <form method="GET" class="flex flex-wrap gap-2">
+                <input type="hidden" name="month" value="{{ $month }}">
                 @if ($clients->isNotEmpty())
                     <select name="client_id" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
                         <option value="">All clients</option>

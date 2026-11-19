@@ -16,6 +16,7 @@ enum Permission: string
     case UploadAnyContent = 'upload_any_content';
     case ViewPrices = 'view_prices';
     case WhatsAppChat = 'whatsapp_chat';
+    case QuickPost = 'quick_post';
 
     public function label(): string
     {
@@ -31,6 +32,7 @@ enum Permission: string
             self::UploadAnyContent => 'Upload content on any task',
             self::ViewPrices => 'See package prices',
             self::WhatsAppChat => 'WhatsApp inbox (chat with clients on the company number)',
+            self::QuickPost => 'Quick post: upload and publish without a calendar or Customer approval',
         };
     }
 

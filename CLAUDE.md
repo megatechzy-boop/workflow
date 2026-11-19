@@ -30,6 +30,9 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   "Revision" (brand SMM, Admin or the brand's Customer) = full round again (Designer V2 → SMM → Customer);
   "Send back for changes" (SMM / Admin, small fix like a logo or number) = Designer V2 → the SMM's approval is final (`contents.minor_fix`).
   Designers / Editors replace files only before the SMM's review.
+- Quick post (permission "Quick post", Admin gives it in Roles / Users > Edit; button on Calendars + Schedule): the SMM uploads a ready photo /
+  carousel / reel + caption for a brand and date → Approved at once (no designer task, no Customer approval), added to that month's
+  calendar (made Approved if none) as a row marked "Quick post", then published with the normal FB / IG buttons.
 - No caption, no scheduling: the manual "Scheduled" step and Facebook / Instagram publish (now or scheduled) need a caption on the current version.
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
 - Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.
@@ -37,6 +40,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Designers/Editors never see caption, hashtags or approver, and only see formats for their role.
   In Calendars and Schedule they see only the rows whose task is assigned to them.
 - Draft calendars are visible only to their creator, Admin and Ops Manager.
+- Calendars list = month tabs (count + a dot when one waits for someone), opening on the coming month (else this month, else the newest); "All" shows every month.
 - Admin > Users: team members get "Brands"; auto-assign and the default approver follow them. A Social
   Media Manager with brands sees only those brands (calendars, approvals, schedule, chat, assets, reports).
 - Internal brand (Clients > Edit, e.g. Mega Techzy): no Customer step; Ops approval assigns tasks, SMM approval = Approved.

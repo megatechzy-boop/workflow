@@ -2,6 +2,9 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-bold text-2xl text-gray-900 tracking-tight flex items-center gap-2"><x-icon name="grid" class="w-7 h-7 text-brand-600" /> Schedule · {{ $month->format('F Y') }}</h2>
+            @if (auth()->user()->hasPermission(App\Enums\Permission::QuickPost))
+                <a href="{{ route('contents.quick') }}" class="inline-flex items-center px-4 min-h-[44px] border border-brand-600 rounded-xl text-sm font-semibold text-brand-700 hover:bg-brand-50">+ Quick post</a>
+            @endif
             <form method="GET" class="flex flex-wrap items-center gap-2">
                 <a href="{{ route('schedule', ['month' => $month->copy()->subMonth()->format('Y-m'), 'client' => $clientId]) }}" class="px-2 py-1 rounded border text-sm" aria-label="Previous month"><x-icon name="chevron-left" class="w-4 h-4" /></a>
                 <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" aria-label="Month">

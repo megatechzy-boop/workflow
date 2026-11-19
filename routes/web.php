@@ -85,6 +85,8 @@ Route::middleware('auth')->group(function () {
     Route::post('contents/{content}/caption', [ContentController::class, 'updateCaption'])->name('contents.caption');
     Route::post('contents/{content}/caption-ai', [ContentController::class, 'aiCaption'])->name('contents.captionAi');
     Route::post('contents/{content}/customer-review', [ContentController::class, 'customerReview'])->name('contents.customerReview');
+    Route::get('quick-post', [ContentController::class, 'quickCreate'])->name('contents.quick');
+    Route::post('quick-post', [ContentController::class, 'quickStore'])->name('contents.quickStore');
     Route::post('contents/{content}/status', [ContentController::class, 'markStatus'])->name('contents.status');
     Route::post('contents/{content}/reopen', [ContentController::class, 'reopen'])->name('contents.reopen');
     Route::post('contents/{content}/send-back', [ContentController::class, 'sendBack'])->name('contents.sendBack');

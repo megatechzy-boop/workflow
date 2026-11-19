@@ -402,7 +402,7 @@
                         @endcan
 
                         <ul class="space-y-3 text-sm">
-                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved', 'replaced' => 'Replaced files', 'customer_revision' => 'Customer requested changes', 'small_fix' => 'Sent back for a small fix', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
+                            @php($actionLabels = ['submitted' => 'Uploaded', 'approved' => 'Approved by SMM', 'revision' => 'Requested revision', 'rejected' => 'Rejected', 'customer_approved' => 'Customer approved', 'replaced' => 'Replaced files', 'customer_revision' => 'Customer requested changes', 'small_fix' => 'Sent back for a small fix', 'quick_post' => 'Quick post (no calendar, no Customer approval)', 'scheduled' => 'Marked Scheduled', 'published' => 'Marked Published'])
                             {{-- Customers only see customer comments, never internal team notes --}}
                             @php($timeline = auth()->user()->role === App\Enums\Role::Client ? $content->comments->filter(fn ($c) => $c->user->role === App\Enums\Role::Client) : $content->comments)
                             @forelse ($timeline->reverse() as $c)

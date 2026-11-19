@@ -12,11 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CalendarItem extends Model
 {
-    protected $fillable = ['post_date', 'post_types', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks', 'client_status', 'client_comment'];
+    protected $fillable = ['post_date', 'post_types', 'creative_copy', 'visual_brief', 'brief', 'reference_link', 'remarks', 'client_status', 'client_comment', 'is_quick'];
 
     protected function casts(): array
     {
-        return ['post_date' => 'date', 'post_types' => 'array'];
+        return ['post_date' => 'date', 'post_types' => 'array', 'is_quick' => 'boolean'];
     }
 
     /** All options: ['linkedin_post' => 'LinkedIn Post', ...] (there is no YouTube Carousel) */

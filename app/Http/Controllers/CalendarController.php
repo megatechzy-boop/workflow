@@ -26,12 +26,11 @@ class CalendarController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        $isCustomer = $user->role === Role::Client;
 
-        $calendars = Calendar::query()
-            ->with('client')
-            ->withCount('items')
+        $base = Calendar::query()
             // Customers only see their own calendars, after submission
-            ->when($user->role === Role::Client, fn ($q) => $q
+            ->when($isCustomer, fn ($q) => $q
                 ->where('client_id', $user->client_id)
                 ->whereIn('status', [CalendarStatus::ApproverApproved, CalendarStatus::ClientApproved]))
             ->tap(User::draftFilter($user))
@@ -40,14 +39,34 @@ class CalendarController extends Controller
             // Designers/Editors: only calendars with a post assigned to them
             ->when($user->seesOnlyOwnRows(), fn ($q) => $q->whereHas('items.task', fn ($t) => $t->where('assigned_to', $user->id)))
             ->when($request->client_id, fn ($q, $id) => $q->where('client_id', $id))
-            ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->orderByDesc('month')
+            ->when($request->status, fn ($q, $s) => $q->where('status', $s));
+
+        // Month tabs: count per month + a dot where a calendar still waits for someone
+        $waiting = $isCustomer ? [CalendarStatus::ApproverApproved->value] : [CalendarStatus::Submitted->value, CalendarStatus::ApproverApproved->value];
+        $months = (clone $base)->get(['month', 'status'])
+            ->groupBy(fn ($c) => $c->month->format('Y-m'))
+            ->map(fn ($group, $key) => ['key' => $key, 'label' => $group->first()->month->format('M Y'), 'count' => $group->count(),
+                'waiting' => $group->contains(fn ($c) => in_array($c->status->value, $waiting, true))])
+            ->sortKeysDesc();
+
+        // default tab: the coming month (planning), else this month, else the newest one
+        $month = $request->query('month');
+        if (! $month || ($month !== 'all' && ! $months->has($month))) {
+            $month = collect([now()->addMonthNoOverflow()->format('Y-m'), now()->format('Y-m')])->first(fn ($m) => $months->has($m))
+                ?? $months->keys()->first() ?? 'all';
+        }
+
+        $calendars = $base->with('client')->withCount('items')
+            ->when($month !== 'all', fn ($q) => $q->whereBetween('month', [Carbon::parse($month.'-01')->startOfDay(), Carbon::parse($month.'-01')->endOfMonth()]))
+            ->orderByDesc('month')->orderBy('id')
             ->paginate(20)
             ->withQueryString();
 
         return view('calendars.index', [
             'calendars' => $calendars,
-            'clients' => $user->role === Role::Client ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(),
+            'months' => $months,
+            'month' => $month,
+            'clients' => $isCustomer ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(),
             'statuses' => CalendarStatus::cases(),
         ]);
     }

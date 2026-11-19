@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ContentStatus;
+use App\Enums\CalendarStatus;
 use App\Enums\Permission;
 use App\Enums\PostType;
 use App\Enums\Role;
+use App\Models\Calendar;
 use App\Models\Client;
 use App\Models\Content;
 use App\Models\ContentComment;
@@ -19,6 +21,7 @@ use App\Support\CaptionAi;
 use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -108,6 +111,59 @@ class ContentController extends Controller
         Notify::send([$content->approver], 'Content needs approval', $this->title($content).' is waiting for your review.', route('contents.show', $content));
 
         return redirect()->route('contents.show', $content)->with('status', 'Content uploaded and sent to the Approver.');
+    }
+
+    /** Quick post (Admin gives the permission): the SMM uploads a ready post, no calendar flow, no Customer approval */
+    public function quickCreate(Request $request): View
+    {
+        abort_unless($request->user()->hasPermission(Permission::QuickPost), 403);
+
+        return view('contents.quick', ['clients' => $this->quickClients($request->user())]);
+    }
+
+    public function quickStore(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(Permission::QuickPost), 403);
+        $meta = $request->validate([
+            'client_id' => ['required', Rule::in($this->quickClients($user)->pluck('id'))],
+            'post_type' => ['required', Rule::in([PostType::Post->value, PostType::Carousel->value, PostType::Reel->value])],
+            'platforms' => ['required', 'array', 'min:1'],
+            'platforms.*' => [Rule::in(['instagram', 'facebook'])],
+            'post_date' => ['required', 'date', 'after_or_equal:today'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'caption' => ['required', 'string', 'max:2200'],
+            'hashtags' => ['nullable', 'string', 'max:1000'],
+        ], ['caption.required' => 'Write the caption: a post without one cannot be published.']);
+        $type = PostType::from($meta['post_type']);
+        $files = $request->validate($this->versionRules($type));
+
+        $content = DB::transaction(function () use ($request, $user, $meta, $type, $files) {
+            $date = Carbon::parse($meta['post_date']);
+            // the post joins its month's calendar (made for it when there is none) so packages, reports and the schedule count it
+            $month = $date->copy()->startOfMonth()->startOfDay();
+            $calendar = Calendar::where('client_id', $meta['client_id'])->whereDate('month', $month)->first()
+                ?? Calendar::create(['client_id' => $meta['client_id'], 'month' => $month, 'status' => CalendarStatus::ClientApproved, 'created_by' => $user->id]);
+            $item = $calendar->items()->create([
+                'post_date' => $date->toDateString(), 'is_quick' => true, 'client_status' => 'approved',
+                'post_types' => array_map(fn ($p) => $p.'_'.$type->value, array_values(array_unique($meta['platforms']))),
+                'creative_copy' => $meta['title'] ?: 'Quick post',
+            ]);
+            $task = $item->task()->create(['assigned_to' => $user->id, 'assigned_by' => $user->id, 'deadline' => $date->toDateString(),
+                'status' => 'submitted', 'submitted_at' => now()]);
+            $content = $task->contents()->create(['post_type' => $type->value, 'approver_id' => $user->id, 'status' => ContentStatus::Approved, 'current_version' => 1]);
+            $this->storeVersion($request, $content, 1, $files + ['caption' => $meta['caption'], 'hashtags' => $meta['hashtags'] ?? null]);
+            $this->log($request, $content, 'quick_post', null);
+
+            return $content;
+        });
+
+        return redirect()->route('contents.show', $content)->with('status', 'Quick post ready. Publish it now or pick a time below.');
+    }
+
+    private function quickClients(User $user)
+    {
+        return Client::where('is_active', true)->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->orderBy('name')->get(['id', 'name']);
     }
 
     public function show(Request $request, Content $content): View
