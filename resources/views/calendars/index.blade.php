@@ -19,10 +19,10 @@
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
 
-            {{-- Month tabs: one month at a time (default = the coming month); a dot = a calendar still waiting --}}
+            {{-- Month tabs: last / this / next month (+ the one after), old to new; other months in "More months"; a dot = a calendar still waiting --}}
             @if ($months->isNotEmpty())
-                <nav class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0" aria-label="Month">
-                    @foreach ($months as $m)
+                <nav class="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0" aria-label="Month">
+                    @foreach ($tabs->sortKeys() as $m)
                         <a href="{{ request()->fullUrlWithQuery(['month' => $m['key'], 'page' => null]) }}" @if ($month === $m['key']) aria-current="page" @endif
                             class="shrink-0 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-full border text-sm font-semibold whitespace-nowrap
                                 {{ $month === $m['key'] ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
@@ -31,6 +31,22 @@
                             @if ($m['waiting'])<span class="w-2 h-2 rounded-full bg-accent-500" title="Waiting for approval"></span>@endif
                         </a>
                     @endforeach
+                    @if ($older->isNotEmpty())
+                        @php($inOlder = $older->has($month))
+                        <form method="GET" class="shrink-0">
+                            @foreach (request()->except(['month', 'page']) as $key => $value)
+                                @if (is_string($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif
+                            @endforeach
+                            <select name="month" onchange="this.form.submit()" aria-label="More months"
+                                class="rounded-full text-sm font-semibold min-h-[44px] {{ $inOlder ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700' }}">
+                                <option value="" @selected(! $inOlder) disabled>More months ({{ $older->count() }})</option>
+                                @foreach ($older as $m)
+                                    <option value="{{ $m['key'] }}" @selected($month === $m['key'])>{{ $m['label'] }} · {{ $m['count'] }}{{ $m['waiting'] ? ' · waiting' : '' }}</option>
+                                @endforeach
+                            </select>
+                            <noscript><button class="px-3 py-2 border rounded-xl">Go</button></noscript>
+                        </form>
+                    @endif
                     <a href="{{ request()->fullUrlWithQuery(['month' => 'all', 'page' => null]) }}" @if ($month === 'all') aria-current="page" @endif
                         class="shrink-0 inline-flex items-center px-4 min-h-[44px] rounded-full border text-sm font-semibold
                             {{ $month === 'all' ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">All</a>

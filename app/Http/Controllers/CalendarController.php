@@ -56,6 +56,14 @@ class CalendarController extends Controller
                 ?? $months->keys()->first() ?? 'all';
         }
 
+        // tabs: last, this, next and the one after (when they have calendars); every other month sits in a dropdown
+        $near = collect([-1, 0, 1, 2])->map(fn ($n) => now()->startOfMonth()->addMonthsNoOverflow($n)->format('Y-m'))->filter(fn ($m) => $months->has($m));
+        if ($near->isEmpty()) {
+            $near = $months->keys()->take(3); // nothing around today: the newest months
+        }
+        $tabs = $months->only($near->all());
+        $older = $months->except($near->all());
+
         $calendars = $base->with('client')->withCount('items')
             ->when($month !== 'all', fn ($q) => $q->whereBetween('month', [Carbon::parse($month.'-01')->startOfDay(), Carbon::parse($month.'-01')->endOfMonth()]))
             ->orderByDesc('month')->orderBy('id')
@@ -65,6 +73,8 @@ class CalendarController extends Controller
         return view('calendars.index', [
             'calendars' => $calendars,
             'months' => $months,
+            'tabs' => $tabs,
+            'older' => $older,
             'month' => $month,
             'clients' => $isCustomer ? collect() : Client::orderBy('name')->when($user->brandLimit(), fn ($q, $ids) => $q->whereIn('id', $ids))->get(),
             'statuses' => CalendarStatus::cases(),
