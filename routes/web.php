@@ -148,6 +148,7 @@ Route::middleware('auth')->group(function () {
     Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
     Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
     Route::get('assets/{asset}/download', [AssetController::class, 'download'])->name('assets.download');
+    Route::patch('assets/{asset}', [AssetController::class, 'rename'])->name('assets.rename');
     Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
 
     Route::post('attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.checkIn');

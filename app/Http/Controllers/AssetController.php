@@ -125,6 +125,23 @@ class AssetController extends Controller
         return response()->download(Storage::disk('local')->path($asset->path), $asset->original_name);
     }
 
+    /** New file name (the extension stays) */
+    public function rename(Request $request, Asset $asset): RedirectResponse
+    {
+        abort_unless($asset->canRename($request->user()), 403);
+        $name = trim($request->validate(['name' => ['required', 'string', 'max:200']])['name']);
+        $name = trim(preg_replace('~[\\\\/:*?"<>|\x00-\x1F]+~', ' ', $name)); // no characters a file name cannot hold
+        if ($name === '') {
+            return back()->withErrors(['name' => 'Type a name.']);
+        }
+        if ($asset->extension() !== '' && str_ends_with(mb_strtolower($name), mb_strtolower($asset->extension()))) {
+            $name = mb_substr($name, 0, -mb_strlen($asset->extension())); // typed with the extension: not twice
+        }
+        $asset->update(['original_name' => mb_substr($name, 0, 240).$asset->extension()]);
+
+        return back()->with('status', 'File renamed.');
+    }
+
     /** The uploader or an Admin can delete */
     public function destroy(Request $request, Asset $asset): RedirectResponse
     {

@@ -60,6 +60,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   days ÷ working days (half day ½, leave/no check-in 0), Billing (one bill per client per month at
   package price, due on the 5th, or one-off invoices), payments give receipts, Expenses + month profit.
   Invoice/receipt numbers continue the old Refrens series (A00324 / A00039); PDF made in the browser.
+- Assets: "Rename" on each file (uploader, Admin or any team member of the brand; a Customer only their own files); the extension stays.
 - Public forms (no login): `/enquiry` → Leads (Clients permission; "Won" makes the client);
   `/onboarding/{token}` per client → client brief (Clients or Calendars permission). Never ask for passwords.
 

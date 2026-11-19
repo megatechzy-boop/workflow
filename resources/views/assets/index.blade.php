@@ -41,8 +41,27 @@
                                 <video src="{{ route('assets.show', $asset) }}" preload="metadata" controls class="w-full h-full object-cover"></video>
                             @endif
                         </div>
-                        <div class="p-2 text-xs space-y-1 flex-1">
-                            <div class="font-medium text-gray-800 truncate" title="{{ $asset->original_name }}">{{ $asset->original_name }}</div>
+                        <div class="p-2 text-xs space-y-1 flex-1" x-data="{ edit: false }">
+                            <div x-show="! edit" class="flex items-center gap-1 min-w-0">
+                                <span class="font-medium text-gray-800 truncate" title="{{ $asset->original_name }}">{{ $asset->original_name }}</span>
+                                @if ($asset->canRename(auth()->user()))
+                                    <button type="button" @click="edit = true; $nextTick(() => $refs.name.select())" class="shrink-0 text-brand-600 hover:underline">Rename</button>
+                                @endif
+                            </div>
+                            @if ($asset->canRename(auth()->user()))
+                                <form x-show="edit" x-cloak method="POST" action="{{ route('assets.rename', $asset) }}" class="space-y-1" @keydown.escape="edit = false">
+                                    @csrf @method('PATCH')
+                                    <div class="flex items-center gap-1">
+                                        <input x-ref="name" name="name" value="{{ $asset->baseName() }}" required maxlength="200" aria-label="New file name"
+                                            class="min-w-0 flex-1 border-gray-300 rounded-lg text-xs py-1">
+                                        <span class="text-gray-500 shrink-0">{{ $asset->extension() }}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="px-2 py-1 rounded-lg bg-brand-600 text-white font-semibold">Save</button>
+                                        <button type="button" @click="edit = false" class="px-2 py-1 text-gray-600">Cancel</button>
+                                    </div>
+                                </form>
+                            @endif
                             <div class="text-gray-500">{{ $asset->sizeLabel() }} · {{ $asset->uploader->name }} · {{ $asset->created_at->format('d M') }}</div>
                             @if ($asset->item)
                                 <div class="text-purple-700">Post: {{ $asset->item->post_date?->format('d M') ?? 'no date' }}</div>
