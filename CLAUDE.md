@@ -37,6 +37,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - One content format per calendar row; platforms can be several. A same-day Post and Reel are two rows.
 - Draft rows may have no date (import or form); every row needs a date before the calendar is submitted.
 - Roles: Admin, Operation Manager (`manager`), Social Media Manager, Graphic Designer, Video Editor, Customer (`client`).
+- Task page: "Files for this post" shows the row's files (Customer / team uploads: picture or video player + Download) above the upload box;
+  the Tasks list tags rows that have files. The Designer / Editor of a row can always open its files.
 - Designers/Editors never see caption, hashtags or approver, and only see formats for their role.
   In Calendars and Schedule they see only the rows whose task is assigned to them.
 - Draft calendars are visible only to their creator, Admin and Ops Manager.

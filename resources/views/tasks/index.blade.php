@@ -37,6 +37,7 @@
                             <div class="min-w-0">
                                 <div class="font-semibold truncate">{{ $item->calendar->client->name }}</div>
                                 <div class="text-sm text-gray-600 truncate">{{ $item->typeLabel() }} · post {{ $item->post_date->format('d M') }}</div>
+                                @if ($item->assets_count)<span class="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-purple-700"><x-icon name="paperclip" class="w-3.5 h-3.5" /> {{ $item->assets_count }} file(s) for this post</span>@endif
                             </div>
                             <span class="shrink-0 text-xs font-semibold px-2 py-1 rounded-full {{ $task->isOverdue() ? 'bg-red-100 text-red-700' : ($task->deadline->isToday() ? 'bg-accent-100 text-accent-600' : 'bg-gray-100 text-gray-700') }}">
                                 {{ $task->isOverdue() ? 'Late' : ($task->deadline->isToday() ? 'Today' : $task->deadline->format('d M')) }}
@@ -77,7 +78,7 @@
                                 </td>
                                 <td class="px-4 py-3">{{ $item->calendar->client->name }}</td>
                                 <td class="px-4 py-3 whitespace-nowrap">{{ $item->post_date->format('d M') }}</td>
-                                <td class="px-4 py-3">{{ $item->typeLabel() }}</td>
+                                <td class="px-4 py-3">{{ $item->typeLabel() }}@if ($item->assets_count)<span class="flex items-center gap-1 mt-1 text-xs font-semibold text-purple-700 whitespace-nowrap"><x-icon name="paperclip" class="w-3.5 h-3.5" /> {{ $item->assets_count }} file(s)</span>@endif</td>
                                 <td class="px-4 py-3 max-w-xs">{{ Str::limit($item->creative_copy, 80) }}</td>
                                 @if ($members->isNotEmpty())<td class="px-4 py-3">{{ $task->assignee->name }}</td>@endif
                                 <td class="px-4 py-3">{{ ucfirst($task->status) }}</td>

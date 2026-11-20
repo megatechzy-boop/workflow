@@ -34,6 +34,33 @@
                 @endif
             </div>
 
+            {{-- Files the Customer / team attached to this calendar row: watch, download, edit, then upload below --}}
+            @if ($item->assets->isNotEmpty())
+                <div class="card p-6">
+                    <h3 class="font-semibold text-lg text-gray-800">Files for this post ({{ $item->assets->count() }})</h3>
+                    <p class="text-sm text-gray-500 mb-4">Download, edit, then upload the final file below.</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        @foreach ($item->assets as $asset)
+                            <div class="rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+                                <div class="aspect-square bg-gray-100 flex items-center justify-center">
+                                    @if ($asset->isImage())
+                                        <img src="{{ route('assets.show', $asset) }}" alt="{{ $asset->original_name }}" loading="lazy" class="w-full h-full object-cover">
+                                    @else
+                                        <x-video-tile :src="route('assets.show', $asset)" :thumb="$asset->thumb_path ? route('assets.thumb', $asset) : null"
+                                            :save="route('assets.thumb.store', $asset)" :name="$asset->original_name" />
+                                    @endif
+                                </div>
+                                <div class="p-2 text-xs space-y-1">
+                                    <div class="font-medium text-gray-800 truncate" title="{{ $asset->original_name }}">{{ $asset->original_name }}</div>
+                                    <div class="text-gray-500">{{ $asset->sizeLabel() }} · {{ $asset->uploader->name }} · {{ $asset->created_at->format('d M') }}</div>
+                                    <a href="{{ route('assets.download', $asset) }}" class="inline-flex items-center gap-1 text-brand-600 font-semibold hover:underline"><x-icon name="download" class="w-4 h-4" /> Download</a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             {{-- One upload per format (Post / Carousel / Reel) for all its platforms --}}
             {{-- Only formats relevant to the viewer's role (Designer: Post/Carousel, Editor: Reel) --}}
             @foreach ($item->formatsFor(auth()->user()->role) as $format)

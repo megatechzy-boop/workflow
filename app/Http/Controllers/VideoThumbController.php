@@ -19,14 +19,14 @@ class VideoThumbController extends Controller
 {
     public function showAsset(Request $request, Asset $asset): BinaryFileResponse
     {
-        abort_unless(Asset::canAccessBrand($request->user(), $asset->client_id), 403);
+        abort_unless($asset->canOpen($request->user()), 403);
 
         return $this->show($asset);
     }
 
     public function storeAsset(Request $request, Asset $asset): Response
     {
-        abort_unless(Asset::canAccessBrand($request->user(), $asset->client_id) && $asset->isVideo(), 403);
+        abort_unless($asset->canOpen($request->user()) && $asset->isVideo(), 403);
 
         return $this->store($request, $asset, "thumbs/asset-{$asset->id}.jpg");
     }

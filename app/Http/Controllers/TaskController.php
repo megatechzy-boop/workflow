@@ -25,7 +25,7 @@ class TaskController extends Controller
         abort_unless($canSeeAll || $user->role->isCreator(), 403);
 
         $tasks = Task::query()
-            ->with(['item.calendar.client', 'assignee'])
+            ->with(['item.calendar.client', 'assignee', 'item' => fn ($q) => $q->withCount('assets')])
             ->when(! $canSeeAll, fn ($q) => $q->where('assigned_to', $user->id))
             ->when($canSeeAll ? $request->member : null, fn ($q, $id) => $q->where('assigned_to', $id))
             ->when($request->client, fn ($q, $id) => $q->whereHas('item.calendar', fn ($c) => $c->where('client_id', $id)))
@@ -47,7 +47,7 @@ class TaskController extends Controller
         $user = $request->user();
         abort_unless($task->assigned_to === $user->id || $user->hasPermission(Permission::ViewAllTasks) || $user->hasPermission(Permission::ApproveContent), 403);
 
-        $task->load(['item.calendar.client', 'assignee', 'contents.approver']);
+        $task->load(['item.calendar.client', 'item.assets.uploader', 'assignee', 'contents.approver']);
 
         return view('tasks.show', ['task' => $task]);
     }

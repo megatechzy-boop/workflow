@@ -17,6 +17,13 @@ class Asset extends Model
         return $user->role === Role::Client ? $user->client_id === $clientId : $user->canSeeBrand($clientId);
     }
 
+    /** See / download one file: anyone of the brand, or the Designer / Editor whose task is this file's calendar row */
+    public function canOpen(User $user): bool
+    {
+        return self::canAccessBrand($user, $this->client_id)
+            || ($this->calendar_item_id && Task::where('calendar_item_id', $this->calendar_item_id)->where('assigned_to', $user->id)->exists());
+    }
+
     /** Rename: the uploader, Admin, or any team member of the brand (a Customer only their own files) */
     public function canRename(User $user): bool
     {

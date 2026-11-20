@@ -148,14 +148,14 @@ class AssetController extends Controller
     /** Preview (image/video inline) */
     public function show(Request $request, Asset $asset): BinaryFileResponse
     {
-        abort_unless(Asset::canAccessBrand($request->user(), $asset->client_id), 403);
+        abort_unless($asset->canOpen($request->user()), 403);
 
         return response()->file(Storage::disk('local')->path($asset->path));
     }
 
     public function download(Request $request, Asset $asset): BinaryFileResponse
     {
-        abort_unless(Asset::canAccessBrand($request->user(), $asset->client_id), 403);
+        abort_unless($asset->canOpen($request->user()), 403);
 
         return response()->download(Storage::disk('local')->path($asset->path), $asset->original_name);
     }
