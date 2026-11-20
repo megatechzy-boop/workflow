@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CalendarStatus;
+use App\Enums\ContentStatus;
+use App\Enums\PostType;
 use App\Enums\Role;
 use App\Models\Calendar;
 use App\Models\CalendarItem;
@@ -128,19 +130,53 @@ class CalendarController extends Controller
             return redirect()->route('calendars.index')->with('popup', $why);
         }
 
-        $calendar->load(['client.package', 'creator', 'items.task.assignee', 'items.assets', 'reviews.user']);
+        $calendar->load(['client.package', 'creator', 'items.task.assignee', 'items.task.contents:id,task_id,status', 'items.assets', 'reviews.user']);
         $user = request()->user();
         if ($user->seesOnlyOwnRows()) {
             $calendar->setRelation('items', $calendar->items->filter(fn ($i) => $i->task?->assigned_to === $user->id)->values());
         }
+        // Task columns: on approved calendars, for everyone except Customers
+        $showTasks = $calendar->status === CalendarStatus::ClientApproved && $user->role !== Role::Client;
 
         return view('calendars.show', [
             'calendar' => $calendar,
-            // Task columns: on approved calendars, for everyone except Customers
-            'showTasks' => $calendar->status === CalendarStatus::ClientApproved && $user->role !== Role::Client,
+            'showTasks' => $showTasks,
+            ...$this->rowFilters($calendar, $showTasks, $user),
             // All Designers/Editors; the view filters them per post format
             'members' => $user->can('assign', $calendar) ? User::creators() : collect(),
         ]);
+    }
+
+    /** Row filters on a calendar: format, Customer check, work stage and (team) assignee; Sr. No. keeps the row's place */
+    private function rowFilters(Calendar $calendar, bool $showTasks, User $user): array
+    {
+        $items = $calendar->items;
+        $work = ['no_task' => 'No task yet', 'not_started' => 'Not started', 'with_smm' => 'Files uploaded (SMM to check)',
+            'changes' => 'Changes asked', 'with_customer' => 'With Customer', 'approved' => 'Approved', 'scheduled' => 'Scheduled', 'published' => 'Published'];
+        $stage = fn (CalendarItem $i) => ! $i->task ? ['no_task'] : ($i->task->contents->isEmpty() ? ['not_started'] : $i->task->contents->map(fn ($c) => match ($c->status) {
+            ContentStatus::Submitted, ContentStatus::Resubmitted => 'with_smm',
+            ContentStatus::RevisionRequired, ContentStatus::Rejected => 'changes',
+            ContentStatus::ClientReview => 'with_customer',
+            ContentStatus::Approved => 'approved',
+            ContentStatus::Scheduled => 'scheduled',
+            ContentStatus::Published => 'published',
+        })->all());
+        $options = [
+            'format' => collect(PostType::cases())->filter(fn ($t) => $items->contains(fn ($i) => in_array($t, $i->formats(), true)))->mapWithKeys(fn ($t) => [$t->value => $t->label()])->all(),
+            'check' => array_filter(['waiting' => 'Waiting for Customer', 'approved' => 'Approved', 'revision' => 'Revision', 'later' => 'Video later'],
+                fn ($k) => $items->contains(fn ($i) => ($i->client_status ?? 'waiting') === $k), ARRAY_FILTER_USE_KEY),
+            'work' => $showTasks ? array_filter($work, fn ($k) => $items->contains(fn ($i) => in_array($k, $stage($i), true)), ARRAY_FILTER_USE_KEY) : [],
+            'person' => $showTasks && ! $user->seesOnlyOwnRows() ? $items->pluck('task.assignee')->filter()->unique('id')->sortBy('name')->mapWithKeys(fn ($u) => [$u->id => $u->name])->all() : [],
+        ];
+        $picked = collect(request()->only(array_keys($options)))->filter(fn ($v, $k) => is_string($v) && array_key_exists($v, $options[$k]));
+
+        $srNo = $items->values()->mapWithKeys(fn ($i, $n) => [$i->id => $n + 1]);
+        $rows = $items->filter(fn (CalendarItem $i) => (! $picked->has('format') || in_array(PostType::from($picked['format']), $i->formats(), true))
+            && (! $picked->has('check') || ($i->client_status ?? 'waiting') === $picked['check'])
+            && (! $picked->has('work') || in_array($picked['work'], $stage($i), true))
+            && (! $picked->has('person') || (string) $i->task?->assigned_to === $picked['person']))->values();
+
+        return ['rows' => $rows, 'srNo' => $srNo, 'filterOptions' => $options, 'filters' => $picked->all()];
     }
 
     public function destroy(Calendar $calendar): RedirectResponse

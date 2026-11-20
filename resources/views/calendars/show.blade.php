@@ -40,10 +40,10 @@
                     </form>
                 @endcan
                 @can('delete', $calendar)
-                    @php($rows = $calendar->items->count())
+                    @php($postCount = $calendar->items->count())
                     <form method="POST" action="{{ route('calendars.destroy', $calendar) }}"
                         onsubmit="return confirm(@js($calendar->status === App\Enums\CalendarStatus::Draft ? 'Delete the whole calendar?'
-                            : 'Delete this '.$calendar->status->label().' calendar with '.$rows.' post(s)? Its tasks, uploaded designs, approvals and Facebook / Instagram schedules are removed too. This cannot be undone.'))">
+                            : 'Delete this '.$calendar->status->label().' calendar with '.$postCount.' post(s)? Its tasks, uploaded designs, approvals and Facebook / Instagram schedules are removed too. This cannot be undone.'))">
                         @csrf @method('DELETE')
                         <button class="text-sm text-red-600 hover:underline">Delete calendar</button>
                     </form>
@@ -72,7 +72,30 @@
             @endcan
 
             {{-- Bulk approve: the ticks in the "Customer check" column point at this form --}}
-            @php($bulkRows = auth()->user()->can('reviewItems', $calendar) ? $calendar->items : (auth()->user()->can('approveLater', $calendar) ? $calendar->items->where('client_status', 'later') : collect()))
+            {{-- Row filters: only the choices this calendar has; Sr. No. stays the row's number in the full calendar --}}
+            @php($filterLabels = ['format' => 'Format', 'check' => 'Customer check', 'work' => 'Work', 'person' => 'Assigned to'])
+            @if (collect($filterOptions)->contains(fn ($o) => count($o) > 1) || $filters)
+                <form method="GET" class="flex flex-wrap items-center gap-2 text-sm" aria-label="Filter rows">
+                    @foreach ($filterOptions as $key => $choices)
+                        @if (count($choices) > 1 || isset($filters[$key]))
+                            <select name="{{ $key }}" onchange="this.form.submit()" aria-label="{{ $filterLabels[$key] }}"
+                                class="border-gray-300 rounded-xl shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm min-h-[44px] {{ isset($filters[$key]) ? 'border-brand-500 ring-1 ring-brand-500' : '' }}">
+                                <option value="">{{ $filterLabels[$key] }}: all</option>
+                                @foreach ($choices as $value => $label)
+                                    <option value="{{ $value }}" @selected(($filters[$key] ?? null) === (string) $value)>{{ $filterLabels[$key] }}: {{ $label }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                    @endforeach
+                    <noscript><button class="px-3 py-2 rounded-xl border border-gray-300">Filter</button></noscript>
+                    @if ($filters)
+                        <span class="text-gray-600">Showing {{ $rows->count() }} of {{ $calendar->items->count() }} rows</span>
+                        <a href="{{ route('calendars.show', $calendar) }}" class="text-brand-600 hover:underline">Clear filters</a>
+                    @endif
+                </form>
+            @endif
+
+            @php($bulkRows = auth()->user()->can('reviewItems', $calendar) ? $rows : (auth()->user()->can('approveLater', $calendar) ? $rows->where('client_status', 'later') : collect()))
             @if ($bulkRows->isNotEmpty())
                 <form id="rows-bulk" method="POST" action="{{ route('calendars.items.reviewBulk', $calendar) }}" class="flex flex-wrap items-center gap-3 p-3 rounded bg-white border border-gray-200"
                       onsubmit="if (!document.querySelector('input[form=rows-bulk]:checked')) { alert('Tick at least one row.'); return false }">
@@ -110,9 +133,9 @@
                         </tr>
                     </thead>
                     <tbody class="text-center align-middle">
-                        @forelse ($calendar->items as $item)
+                        @forelse ($rows as $item)
                             <tr>
-                                <td class="px-3 py-4 text-blue-800">{{ $loop->iteration }}</td>
+                                <td class="px-3 py-4 text-blue-800">{{ $srNo[$item->id] }}</td>
                                 <td class="px-3 py-4">{!! $item->post_date ? e($item->post_date->format('d M l')) : '<span class="text-accent-600 font-semibold">No date</span>' !!}</td>
                                 <td class="px-3 py-4">{{ $item->typeLabel() }}</td>
                                 <td class="px-4 py-4 whitespace-pre-line">@if ($item->is_quick)<span class="inline-block mb-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-accent-100 text-accent-600">Quick post</span><br>@endif{{ $item->creative_copy }}</td>
@@ -211,7 +234,7 @@
                                 @endcan
                             </tr>
                         @empty
-                            <tr><td colspan="11" class="px-4 py-6 text-center text-gray-500">No posts yet. Start with "+ Add Post".</td></tr>
+                            <tr><td colspan="11" class="px-4 py-6 text-center text-gray-500">{{ $filters ? 'No rows match these filters.' : 'No posts yet. Start with "+ Add Post".' }}</td></tr>
                         @endforelse
                     </tbody>
                 </table>

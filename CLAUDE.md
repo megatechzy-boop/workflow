@@ -44,6 +44,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   (its tasks, posts, uploaded files, FB / IG queue and unsent GBP posts go with it).
 - Calendars list = month tabs for last / this / next month (+ the one after) when they have calendars (count + a dot when one waits for someone),
   other months in a "More months" dropdown, "All" = every month; opens on the coming month (else this month, else the newest).
+- Inside a calendar: row filters Format, Customer check, Work stage and Assigned to (the last two only with task columns, not for the Customer;
+  only choices that the calendar has); Sr. No. keeps the row's number in the full calendar.
 - Admin > Users: team members get "Brands"; auto-assign and the default approver follow them. A Social
   Media Manager with brands sees only those brands (calendars, approvals, schedule, chat, assets, reports).
 - Internal brand (Clients > Edit, e.g. Mega Techzy): no Customer step; Ops approval assigns tasks, SMM approval = Approved.
