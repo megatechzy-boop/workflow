@@ -23,20 +23,27 @@ export function sendWithProgress(url, data, { method = 'POST', headers = {}, onP
 }
 
 function overlay(fileLabel) {
+    // Full screen on purpose: a phone stops the upload when the person switches tab / app or locks the screen
     const box = document.createElement('div');
-    box.className = 'fixed inset-x-0 bottom-0 z-50 p-4 pb-safe sm:inset-auto sm:right-6 sm:bottom-6 sm:w-96';
-    box.setAttribute('role', 'status');
+    box.className = 'fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/70 backdrop-blur-sm';
+    box.setAttribute('role', 'alertdialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-live', 'polite');
     box.innerHTML = `
-        <div class="card p-4 shadow-xl space-y-3">
-            <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <div class="font-semibold text-gray-900" data-title>Uploading…</div>
-                    <div class="text-xs text-gray-500 truncate" data-file></div>
-                </div>
-                <button type="button" data-cancel class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
+        <div class="card w-full max-w-lg p-6 shadow-2xl space-y-5">
+            <div class="min-w-0 text-center space-y-1">
+                <div class="text-xl font-bold text-gray-900" data-title>Uploading…</div>
+                <div class="text-sm text-gray-500 truncate" data-file></div>
             </div>
-            <div class="h-2.5 rounded-full bg-gray-100 overflow-hidden"><div data-bar class="h-full w-0 bg-brand-600 transition-[width] duration-200"></div></div>
-            <div class="flex justify-between text-xs text-gray-600 tabular-nums"><span data-size></span><span data-pct>0%</span></div>
+            <div class="text-center text-5xl font-bold text-brand-600 tabular-nums" data-pct>0%</div>
+            <div class="h-4 rounded-full bg-gray-100 overflow-hidden"><div data-bar class="h-full w-0 bg-brand-600 transition-[width] duration-200"></div></div>
+            <div class="text-center text-sm text-gray-600 tabular-nums" data-size></div>
+            <div data-warn class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 text-center">
+                <strong>Keep this page open.</strong> Do not switch tab or app, and do not lock the phone until it reaches 100%: the upload stops.
+            </div>
+            <div class="text-center">
+                <button type="button" data-cancel class="px-4 min-h-[44px] rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel upload</button>
+            </div>
         </div>`;
     box.querySelector('[data-file]').textContent = fileLabel; // file names stay text
     document.body.append(box);
@@ -57,10 +64,34 @@ function overlay(fileLabel) {
         fail(message) {
             q('[data-title]').textContent = message;
             q('[data-title]').classList.add('text-red-600');
+            q('[data-warn]').remove();
             q('[data-cancel]').textContent = 'Close';
         },
         onCancel(fn) { q('[data-cancel]').addEventListener('click', fn); },
         remove: () => box.remove(),
+    };
+}
+
+/** While an upload runs: the screen stays on (Wake Lock, where the browser has it) and leaving the page asks first */
+function keepAwake() {
+    let lock = null, done = false;
+    const ask = async () => {
+        try { lock = await navigator.wakeLock?.request('screen'); } catch (err) { /* not allowed here */ }
+        if (done) lock?.release().catch(() => {}); // finished while the lock was being asked for
+    };
+    const back = () => { if (document.visibilityState === 'visible') ask(); }; // the lock ends when the page is hidden
+    const leave = (e) => { e.preventDefault(); e.returnValue = ''; };
+    ask();
+    document.addEventListener('visibilitychange', back);
+    window.addEventListener('beforeunload', leave);
+    return {
+        release() {
+            done = true;
+            document.removeEventListener('visibilitychange', back);
+            window.removeEventListener('beforeunload', leave);
+            lock?.release().catch(() => {});
+            lock = null;
+        },
     };
 }
 
@@ -87,9 +118,10 @@ document.addEventListener('submit', async (e) => {
     const buttons = [...form.querySelectorAll('button, [type=submit]')];
     buttons.forEach((b) => (b.disabled = true));
     let request = null, cancelled = false, finished = false;
-    const reset = () => { buttons.forEach((b) => (b.disabled = false)); ui.remove(); };
+    const guard = keepAwake();
+    const reset = () => { guard.release(); buttons.forEach((b) => (b.disabled = false)); ui.remove(); };
     ui.onCancel(() => { if (finished) { reset(); return; } cancelled = true; request?.abort(); });
-    const stop = (message) => { finished = true; buttons.forEach((b) => (b.disabled = false)); ui.fail(message); };
+    const stop = (message) => { finished = true; guard.release(); buttons.forEach((b) => (b.disabled = false)); ui.fail(message); };
 
     let redirect = null;
     for (const [index, file] of files.entries()) {
@@ -108,7 +140,7 @@ document.addEventListener('submit', async (e) => {
             xhr = await request;
         } catch (err) {
             if (cancelled) {
-                if (redirect) { window.location.href = redirect; return; } // show the files already sent
+                if (redirect) { guard.release(); window.location.href = redirect; return; } // show the files already sent
                 reset();
                 return;
             }
@@ -125,5 +157,6 @@ document.addEventListener('submit', async (e) => {
         redirect = json.redirect;
         if (json.errors) break; // validation message waits on that page
     }
+    guard.release();
     window.location.href = redirect;
 });
