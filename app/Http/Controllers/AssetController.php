@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ContentStatus;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Asset;
 use App\Models\CalendarItem;
 use App\Models\Client;
+use App\Models\ContentMedia;
 use App\Models\User;
 use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
@@ -34,14 +36,45 @@ class AssetController extends Controller
         }
         $client = $isCustomer ? $brands->first() : ($brands->firstWhere('id', (int) $request->client) ?? $brands->first());
 
+        // Published posts' files (final version), in their own folders: videos (reels) and photos (posts + carousel slides)
+        $published = fn (string $kind) => ContentMedia::query()
+            ->select('content_media.*', 'items.post_date as post_date', 'contents.post_type as post_type', 'contents.id as post_id')
+            ->join('content_versions as versions', 'versions.id', '=', 'content_media.content_version_id')
+            ->join('contents', fn ($j) => $j->on('contents.id', '=', 'versions.content_id')->on('versions.number', '=', 'contents.current_version'))
+            ->join('tasks', 'tasks.id', '=', 'contents.task_id')
+            ->join('calendar_items as items', 'items.id', '=', 'tasks.calendar_item_id')
+            ->join('calendars', 'calendars.id', '=', 'items.calendar_id')
+            ->where('calendars.client_id', $client->id)
+            ->where('contents.status', ContentStatus::Published->value)
+            ->where('content_media.kind', $kind);
+        $folders = ['files' => Asset::where('client_id', $client->id)->count(), 'videos' => $published('video')->count(), 'photos' => $published('image')->count()];
+        $folder = in_array($request->folder, ['videos', 'photos'], true) ? $request->folder : 'files';
+        // Brand files split by kind: All / Photos / Videos (raw footage)
+        $kinds = ['photos' => Asset::where('client_id', $client->id)->where('mime', 'like', 'image/%')->count(),
+            'videos' => Asset::where('client_id', $client->id)->where('mime', 'like', 'video/%')->count()];
+        $kind = in_array($request->kind, ['photos', 'videos'], true) ? $request->kind : null;
+
+        if (in_array($folder, ['videos', 'photos'], true)) {
+            $query = $published($folder === 'videos' ? 'video' : 'image');
+            $months = (clone $query)->pluck('post_date')->filter()->map(fn ($d) => substr((string) $d, 0, 7))->unique()->sortDesc()->values();
+            $month = $months->contains($request->month) ? $request->month : null;
+            $media = $query
+                ->when($month, fn ($q) => $q->whereBetween('items.post_date', [$month.'-01', \Illuminate\Support\Carbon::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59']))
+                ->orderByDesc('items.post_date')->orderByDesc('contents.id')->orderBy('content_media.sort_order')
+                ->paginate(40)->withQueryString();
+
+            return view('assets.index', compact('brands', 'client', 'folders', 'folder', 'media', 'months', 'month'));
+        }
+
         $assets = Asset::with(['uploader', 'item'])
             ->where('client_id', $client->id)
             ->when($request->item, fn ($q, $id) => $q->where('calendar_item_id', $id))
+            ->when($kind, fn ($q, $k) => $q->where('mime', 'like', ($k === 'photos' ? 'image' : 'video').'/%'))
             ->latest()
             ->paginate(40)
             ->withQueryString();
 
-        return view('assets.index', compact('brands', 'client', 'assets'));
+        return view('assets.index', compact('brands', 'client', 'assets', 'folders', 'folder', 'kinds', 'kind'));
     }
 
     public function store(Request $request): RedirectResponse

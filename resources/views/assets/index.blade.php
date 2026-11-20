@@ -14,6 +14,27 @@
                 <div class="p-3 rounded bg-green-50 text-green-800 text-sm">{{ session('status') }}</div>
             @endif
 
+            {{-- Folders: the brand's own files, and the files of its Published posts (videos / photos apart) --}}
+            <nav class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0" aria-label="Folder">
+                @foreach (['files' => 'Brand files', 'videos' => 'Published videos', 'photos' => 'Published photos'] as $key => $label)
+                    <a href="{{ route('assets.index', ['client' => $client->id] + ($key === 'files' ? [] : ['folder' => $key])) }}" @if ($folder === $key) aria-current="page" @endif
+                        class="shrink-0 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-full border text-sm font-semibold whitespace-nowrap
+                            {{ $folder === $key ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50' }}">
+                        <x-icon :name="$key === 'videos' ? 'film' : ($key === 'photos' ? 'photo' : 'folder')" class="w-4 h-4" />
+                        {{ $label }} <span class="{{ $folder === $key ? 'text-white/80' : 'text-gray-500' }}">{{ $folders[$key] }}</span>
+                    </a>
+                @endforeach
+            </nav>
+
+            @if ($folder === 'files')
+                <div class="flex gap-1 p-1 rounded-xl bg-gray-100 w-fit text-sm" role="tablist" aria-label="File type">
+                    @foreach ([null => 'All', 'photos' => 'Photos', 'videos' => 'Videos'] as $key => $label)
+                        <a href="{{ route('assets.index', array_filter(['client' => $client->id, 'kind' => $key ?: null, 'item' => request('item')])) }}" role="tab" aria-selected="{{ $kind === ($key ?: null) ? 'true' : 'false' }}"
+                            class="px-4 min-h-[40px] inline-flex items-center gap-1 rounded-lg font-semibold {{ $kind === ($key ?: null) ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600' }}">
+                            {{ $label }} <span class="text-gray-500 font-normal">{{ $key ? $kinds[$key] : $folders['files'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
             <form method="POST" action="{{ route('assets.store') }}" enctype="multipart/form-data" data-split-upload class="card p-4 flex flex-wrap items-end gap-3">
                 @csrf
                 <input type="hidden" name="client_id" value="{{ $client->id }}">
@@ -83,6 +104,52 @@
             </div>
 
             {{ $assets->links() }}
+            @else
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-sm text-gray-600">Final files of every Published post, newest first. They update by themselves; nothing to upload here.</p>
+                    @if ($months->count() > 1)
+                        <form method="GET">
+                            <input type="hidden" name="client" value="{{ $client->id }}">
+                            <input type="hidden" name="folder" value="{{ $folder }}">
+                            <select name="month" onchange="this.form.submit()" aria-label="Month" class="border-gray-300 rounded-xl shadow-sm text-sm min-h-[44px]">
+                                <option value="">All months</option>
+                                @foreach ($months as $m)
+                                    <option value="{{ $m }}" @selected($month === $m)>{{ \Illuminate\Support\Carbon::parse($m.'-01')->format('M Y') }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    @forelse ($media as $m)
+                        <div class="bg-white shadow-sm rounded-lg overflow-hidden flex flex-col">
+                            <div class="aspect-square bg-gray-100 flex items-center justify-center">
+                                @if ($m->kind === 'video')
+                                    <video src="{{ route('media.show', $m) }}" preload="metadata" controls class="w-full h-full object-cover"></video>
+                                @else
+                                    <img src="{{ route('media.show', $m) }}" alt="{{ $m->original_name }}" loading="lazy" class="w-full h-full object-cover">
+                                @endif
+                            </div>
+                            <div class="p-2 text-xs space-y-1 flex-1">
+                                <div class="font-medium text-gray-800">
+                                    {{ $m->post_date ? \Illuminate\Support\Carbon::parse($m->post_date)->format('d M Y') : 'No date' }}
+                                    · {{ ucfirst($m->post_type) }}@if ($m->post_type === 'carousel') slide {{ $m->sort_order }}@endif
+                                </div>
+                                <div class="text-gray-500 truncate" title="{{ $m->original_name }}">{{ $m->original_name }}</div>
+                            </div>
+                            <div class="px-2 pb-2 flex items-center gap-3 text-xs">
+                                <a href="{{ route('media.download', $m) }}" class="text-brand-600 hover:underline inline-flex items-center gap-1"><x-icon name="download" class="w-4 h-4" /> Download</a>
+                                <a href="{{ route('contents.show', $m->post_id) }}" class="text-gray-600 hover:underline">Open post</a>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="col-span-full text-center text-gray-500 py-8">No published {{ $folder }} yet.</p>
+                    @endforelse
+                </div>
+
+                {{ $media->links() }}
+            @endif
         </div>
     </div>
 </x-app-layout>
