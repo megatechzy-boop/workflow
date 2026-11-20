@@ -55,7 +55,7 @@ class Asset extends Model
     protected static function booted(): void
     {
         // Delete the file together with the record
-        static::deleted(fn (Asset $a) => Storage::disk('local')->delete($a->path));
+        static::deleted(fn (Asset $a) => Storage::disk('local')->delete(array_filter([$a->path, $a->thumb_path])));
     }
 
     public function client(): BelongsTo

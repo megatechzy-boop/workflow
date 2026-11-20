@@ -62,6 +62,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   Invoice/receipt numbers continue the old Refrens series (A00324 / A00039); PDF made in the browser.
 - Assets per brand = 3 folders: Brand files (uploads; All / Photos / Videos tabs inside), Published videos, Published photos (the final version's files of Published posts,
   read from the posts, newest first, month filter, Download + Open post; reel covers left out). The Customer sees their own brand's.
+- Assets grid: videos show a picture and load only on Play (`x-video-tile`, `resources/js/video-tile.js`); no ffmpeg on the host, so the first
+  browser that shows a video without a picture takes a frame (one video at a time) and saves it (`thumb_path`); a reel's cover is used when it has one.
 - Assets: "Rename" on each file (uploader, Admin or any team member of the brand; a Customer only their own files); the extension stays.
 - Public forms (no login): `/enquiry` → Leads (Clients permission; "Won" makes the client);
   `/onboarding/{token}` per client → client brief (Clients or Calendars permission). Never ask for passwords.

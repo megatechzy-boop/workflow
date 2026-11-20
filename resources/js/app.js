@@ -3,6 +3,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import { sendWithProgress } from './upload-progress';
 import './file-drop';
+import './video-tile';
 
 window.Alpine = Alpine;
 window.sendWithProgress = sendWithProgress; // chat file / voice note

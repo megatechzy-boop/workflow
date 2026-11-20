@@ -124,6 +124,8 @@ Route::middleware('auth')->group(function () {
     Route::post('meta-leads/{lead}/remarks', [MetaInboxController::class, 'remark'])->name('meta.leads.remark');
     Route::get('media/{media}', [ContentController::class, 'media'])->name('media.show');
     Route::get('media/{media}/download', [ContentController::class, 'download'])->name('media.download');
+    Route::get('media/{media}/thumb', [\App\Http\Controllers\VideoThumbController::class, 'showMedia'])->name('media.thumb');
+    Route::post('media/{media}/thumb', [\App\Http\Controllers\VideoThumbController::class, 'storeMedia'])->name('media.thumb.store');
     Route::get('contents/{content}/download-all', [ContentController::class, 'downloadAll'])->name('contents.downloadAll');
     Route::post('contents/{content}/comments/{comment}/fixed', [ContentController::class, 'toggleFixed'])->name('contents.comments.fixed');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
@@ -148,6 +150,8 @@ Route::middleware('auth')->group(function () {
     Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
     Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
     Route::get('assets/{asset}/download', [AssetController::class, 'download'])->name('assets.download');
+    Route::get('assets/{asset}/thumb', [\App\Http\Controllers\VideoThumbController::class, 'showAsset'])->name('assets.thumb');
+    Route::post('assets/{asset}/thumb', [\App\Http\Controllers\VideoThumbController::class, 'storeAsset'])->name('assets.thumb.store');
     Route::patch('assets/{asset}', [AssetController::class, 'rename'])->name('assets.rename');
     Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
 

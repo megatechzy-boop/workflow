@@ -59,7 +59,8 @@
                             @if ($asset->isImage())
                                 <img src="{{ route('assets.show', $asset) }}" alt="{{ $asset->original_name }}" loading="lazy" class="w-full h-full object-cover">
                             @elseif ($asset->isVideo())
-                                <video src="{{ route('assets.show', $asset) }}" preload="metadata" controls class="w-full h-full object-cover"></video>
+                                <x-video-tile :src="route('assets.show', $asset)" :thumb="$asset->thumb_path ? route('assets.thumb', $asset) : null"
+                                    :save="route('assets.thumb.store', $asset)" :name="$asset->original_name" />
                             @endif
                         </div>
                         <div class="p-2 text-xs space-y-1 flex-1" x-data="{ edit: false }">
@@ -126,7 +127,8 @@
                         <div class="bg-white shadow-sm rounded-lg overflow-hidden flex flex-col">
                             <div class="aspect-square bg-gray-100 flex items-center justify-center">
                                 @if ($m->kind === 'video')
-                                    <video src="{{ route('media.show', $m) }}" preload="metadata" controls class="w-full h-full object-cover"></video>
+                                    <x-video-tile :src="route('media.show', $m)" :name="$m->original_name" :save="route('media.thumb.store', $m)"
+                                        :thumb="$m->thumb_path ? route('media.thumb', $m) : (isset($covers[$m->content_version_id]) ? route('media.show', $covers[$m->content_version_id]) : null)" />
                                 @else
                                     <img src="{{ route('media.show', $m) }}" alt="{{ $m->original_name }}" loading="lazy" class="w-full h-full object-cover">
                                 @endif

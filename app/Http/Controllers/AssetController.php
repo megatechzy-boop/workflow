@@ -62,8 +62,10 @@ class AssetController extends Controller
                 ->when($month, fn ($q) => $q->whereBetween('items.post_date', [$month.'-01', \Illuminate\Support\Carbon::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59']))
                 ->orderByDesc('items.post_date')->orderByDesc('contents.id')->orderBy('content_media.sort_order')
                 ->paginate(40)->withQueryString();
+            // A reel's cover is its video's picture
+            $covers = ContentMedia::whereIn('content_version_id', $media->pluck('content_version_id'))->where('kind', 'cover')->pluck('id', 'content_version_id');
 
-            return view('assets.index', compact('brands', 'client', 'folders', 'folder', 'media', 'months', 'month'));
+            return view('assets.index', compact('brands', 'client', 'folders', 'folder', 'media', 'months', 'month', 'covers'));
         }
 
         $assets = Asset::with(['uploader', 'item'])
