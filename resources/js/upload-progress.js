@@ -54,7 +54,10 @@ function overlay(fileLabel) {
             q('[data-bar]').style.width = pct + '%';
             q('[data-pct]').textContent = pct + '%';
             q('[data-size]').textContent = mb(loaded) + ' of ' + mb(total);
-            if (pct >= 100) q('[data-title]').textContent = q('[data-title]').textContent.replace('Uploading', 'Saving');
+            if (pct >= 100) {
+                q('[data-title]').textContent = q('[data-title]').textContent.replace('Uploading', 'Saving');
+                q('[data-size]').textContent = 'The server is saving the file. A big video can take 1-2 minutes, please wait.';
+            }
         },
         step(n, total, name) {
             q('[data-title]').textContent = 'Uploading ' + n + ' of ' + total + '…';
