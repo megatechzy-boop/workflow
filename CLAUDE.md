@@ -78,6 +78,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   An Instagram container in ERROR (e.g. Meta's "Media upload has failed" 2207076) is made again 5 min later, 3 containers in all
   Reels: tries 1-2 send the video bytes to Instagram (resumable upload, no link to fetch; try 2 without the cover),
   try 3 gives Instagram Facebook's processed copy as a link (helps phone videos such as HEVC .mov).
+  A reel whose upload itself fails (e.g. "Request processing failed") also moves on to the next try, not Failed at once.
 - `meta:sync` (every 10 min): comments on our posts → Comments inbox (SMM replies as the page; filters To reply / Replied /
   Ignored / All, client, platform; "Ignore" + Undo for spam; Reviews have Ignore + Undo too, which cancels a scheduled auto reply); lead-form
   leads → Meta leads (grouped by client; the Customer sees only their own). Needs META_CONFIG_ID with

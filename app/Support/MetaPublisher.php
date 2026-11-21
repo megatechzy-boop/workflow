@@ -110,9 +110,23 @@ class MetaPublisher
                 }
                 if (! $post->container_id) {
                     $coverUrl = $cover && $reelTry === 0 ? $url($cover) : null;
-                    $post->update(['status' => 'processing', 'container_tries' => $post->container_tries + 1, 'container_id' => $upload
-                        ? MetaGraph::uploadInstagramReel($page, Storage::disk('local')->path($video->path), $caption, $coverUrl)
-                        : MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $coverUrl)]);
+                    $try = $post->container_tries + 1;
+                    try {
+                        $containerId = $upload
+                            ? MetaGraph::uploadInstagramReel($page, Storage::disk('local')->path($video->path), $caption, $coverUrl)
+                            : MetaGraph::createInstagramContainer($page, $format, $urls, $caption, $coverUrl);
+                    } catch (Throwable $e) {
+                        // a reel Instagram did not take (e.g. the upload's "Request processing failed"): next try in a few minutes
+                        if ($format !== 'reel' || $try >= self::CONTAINER_TRIES) {
+                            throw $e;
+                        }
+                        $at = now()->addMinutes(self::RETRY_MINUTES);
+                        $post->update(['status' => 'queued', 'container_tries' => $try, 'attempts' => 0, 'publish_at' => $at,
+                            'error' => mb_substr("Try $try of ".self::CONTAINER_TRIES." failed, trying again at {$at->format('h:i A')}. {$e->getMessage()}", 0, 1000)]);
+
+                        return;
+                    }
+                    $post->update(['status' => 'processing', 'container_tries' => $try, 'container_id' => $containerId]);
                 }
                 $status = MetaGraph::containerStatus($page, $post->container_id);
                 if ($status === 'FINISHED') {

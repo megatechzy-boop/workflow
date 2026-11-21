@@ -169,6 +169,39 @@ class MetaTest extends TestCase
         $this->assertCount(2, Http::recorded(fn (Request $r) => str_contains($r->url(), 'rupload.facebook.com')));
     }
 
+    public function test_failed_reel_upload_is_tried_again_then_facebooks_copy_is_used(): void
+    {
+        $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
+        $content = $this->approvedPost(['facebook_reel', 'instagram_reel'], $page);
+        $content->forceFill(['post_type' => 'reel'])->save();
+        $content->versions()->first()->media()->update(['kind' => 'video']);
+        Http::fake([
+            'rupload.facebook.com/*' => Http::response(['debug_info' => ['message' => 'Request processing failed']], 500),
+            '*/111/videos' => Http::response(['id' => 'vid1']),
+            '*/vid1*' => Http::response(['source' => 'https://video.xx.fbcdn.net/v1.mp4']),
+            '*/999/media_publish' => Http::response(['id' => 'ig1']),
+            '*/999/media' => Http::response(['id' => 'container1', 'uri' => 'https://rupload.facebook.com/ig-api-upload/v21.0/upload1']),
+            '*/container1*' => Http::response(['status_code' => 'FINISHED']),
+        ]);
+
+        $this->actingAs($this->admin)->post(route('contents.meta', $content));
+        $this->artisan('meta:publish'); // try 1: upload fails, not Failed yet
+        $instagram = MetaPost::where('platform', 'instagram')->sole();
+        $this->assertSame(['queued', 1], [$instagram->status, $instagram->container_tries]);
+        $this->assertStringStartsWith('Try 1 of 3 failed', $instagram->error);
+        $this->assertStringContainsString('Request processing failed', $instagram->error);
+
+        $this->travel(6)->minutes();
+        $this->artisan('meta:publish'); // try 2: upload fails again
+        $this->assertSame(['queued', 2], [$instagram->fresh()->status, $instagram->fresh()->container_tries]);
+
+        $this->travel(6)->minutes();
+        $this->artisan('meta:publish'); // try 3: Facebook's copy as a link
+        $this->assertSame(['done', 'ig1', 3], [$instagram->fresh()->status, $instagram->fresh()->post_id, $instagram->fresh()->container_tries]);
+        $this->assertSame(ContentStatus::Published, $content->fresh()->status);
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/999/media') && ($r['video_url'] ?? null) === 'https://video.xx.fbcdn.net/v1.mp4');
+    }
+
     public function test_schedule_shows_the_post_on_its_scheduled_day(): void
     {
         $page = MetaPage::create(['page_id' => '111', 'name' => 'Acme Yoga', 'access_token' => 'page-token', 'ig_user_id' => '999', 'ig_username' => 'acmeyoga']);
