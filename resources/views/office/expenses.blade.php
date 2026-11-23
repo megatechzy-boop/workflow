@@ -55,7 +55,7 @@
                             <span class="block text-xs text-gray-500">{{ App\Models\Expense::CATEGORIES[$expense->category] ?? $expense->category }}</span>
                         </span>
                         <span class="font-semibold">₹{{ number_format($expense->amount) }}</span>
-                        <form method="POST" action="{{ route('admin.expenses.destroy', $expense) }}" onsubmit="return confirm('Delete this expense?')">
+                        <form method="POST" action="{{ route('admin.expenses.destroy', $expense) }}" data-confirm="Delete this expense?">
                             @csrf @method('DELETE')
                             <button class="p-1 text-gray-400 hover:text-red-600" aria-label="Delete {{ $expense->title }}"><x-icon name="x" class="w-4 h-4" /></button>
                         </form>

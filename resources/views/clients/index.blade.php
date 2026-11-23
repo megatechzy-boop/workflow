@@ -60,7 +60,7 @@
                                         <a href="{{ route('clients.brief', $client) }}" class="text-brand-600 hover:underline">Brief</a>
                                     @endif
                                     <a href="{{ route('clients.edit', $client) }}" class="text-brand-600 hover:underline">Edit</a>
-                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Delete this client?')">
+                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" data-confirm="Delete this client?">
                                         @csrf @method('DELETE')
                                         <button class="text-red-600 hover:underline">Delete</button>
                                     </form>

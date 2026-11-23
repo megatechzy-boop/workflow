@@ -4,8 +4,11 @@ import Alpine from 'alpinejs';
 import { sendWithProgress } from './upload-progress';
 import './file-drop';
 import './video-tile';
+import { appAlert, appConfirm } from './confirm-dialog';
 
 window.Alpine = Alpine;
+window.appAlert = appAlert;
+window.appConfirm = appConfirm;
 window.sendWithProgress = sendWithProgress; // chat file / voice note
 
 // Carousel => PDF (LinkedIn). jsPDF loads only on click.

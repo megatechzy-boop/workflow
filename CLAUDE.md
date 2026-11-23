@@ -56,6 +56,8 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Notifications are required: every role (Admin too), phone and laptop, sees a full-screen
   gate (`layouts/_push-gate`) until push is allowed on that device.
 - Design: clean light (+ dark mode), logo colours teal `#0A7A6C` and amber `#F5A800`, icons not emojis, phone first (PWA).
+- No browser popups: ask with `data-confirm="…"` on a form or submit button, and tell with `appAlert('…')`
+  (`resources/js/confirm-dialog.js`, a centered dialog; a question starting with Delete / Remove / Reject gets a red button). Never `confirm()` / `alert()`.
 
 - Packages (Admin > Packages, from the PDF): each client has one. Price only for Admin, roles with
   "See package prices" (Ops Manager by default) and the client's own Customer. Calendar page shows

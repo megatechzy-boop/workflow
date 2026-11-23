@@ -28,7 +28,7 @@
             @php($approvable = $contents->filter(fn ($c) => auth()->user()->can('review', $c) || auth()->user()->can('customerReview', $c)))
             @if ($approvable->isNotEmpty())
                 <form id="bulk-form" method="POST" action="{{ route('contents.bulkApprove') }}" class="flex flex-wrap items-center gap-3 card p-3"
-                      onsubmit="if (!document.querySelector('input[name=&quot;ids[]&quot;]:checked')) { alert('Tick at least one post.'); return false }">
+                      onsubmit="if (!document.querySelector('input[name=&quot;ids[]&quot;]:checked')) { appAlert('Tick at least one post.'); return false }">
                     @csrf
                     <label class="flex items-center gap-2 text-sm font-medium">
                         <input type="checkbox" class="rounded border-gray-300 text-brand-600"

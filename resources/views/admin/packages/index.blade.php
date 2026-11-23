@@ -36,7 +36,7 @@
                             <span class="text-gray-500">{{ $package->clients_count }} {{ Str::plural('client', $package->clients_count) }}</span>
                             <span class="space-x-3">
                                 <a href="{{ route('admin.packages.edit', $package) }}" class="text-brand-600 hover:underline">Edit</a>
-                                <form method="POST" action="{{ route('admin.packages.destroy', $package) }}" class="inline" onsubmit="return confirm('Delete this package?')">
+                                <form method="POST" action="{{ route('admin.packages.destroy', $package) }}" class="inline" data-confirm="Delete this package?">
                                     @csrf @method('DELETE')
                                     <button class="text-red-600 hover:underline">Delete</button>
                                 </form>

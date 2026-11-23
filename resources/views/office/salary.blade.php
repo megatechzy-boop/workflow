@@ -45,7 +45,7 @@
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
                                     @if ($row['payment'])
                                         <span class="text-green-700">Paid {{ $row['payment']->paid_at->format('d M') }}</span>
-                                        <form method="POST" action="{{ route('admin.salary.unpay', [$user, 'month' => $month->format('Y-m')]) }}" class="inline" onsubmit="return confirm('Remove this payment?')">
+                                        <form method="POST" action="{{ route('admin.salary.unpay', [$user, 'month' => $month->format('Y-m')]) }}" class="inline" data-confirm="Remove this payment?">
                                             @csrf @method('DELETE')
                                             <button class="ms-2 text-xs text-gray-500 hover:underline">Undo</button>
                                         </form>

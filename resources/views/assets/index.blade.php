@@ -92,7 +92,7 @@
                         <div class="px-2 pb-2 flex items-center gap-3 text-xs">
                             <a href="{{ route('assets.download', $asset) }}" class="text-brand-600 hover:underline inline-flex items-center gap-1"><x-icon name="download" class="w-4 h-4" /> Download</a>
                             @if ($asset->uploaded_by === auth()->id() || auth()->user()->isAdmin())
-                                <form method="POST" action="{{ route('assets.destroy', $asset) }}" onsubmit="return confirm('Delete this file?')">
+                                <form method="POST" action="{{ route('assets.destroy', $asset) }}" data-confirm="Delete this file?">
                                     @csrf @method('DELETE')
                                     <button class="text-red-600 hover:underline">Delete</button>
                                 </form>

@@ -59,7 +59,7 @@
                                 @endif
                                 @if ($post->editable())
                                     <a href="{{ route('gbp-posts.edit', $post) }}" class="text-sm text-brand-600 hover:underline">{{ $post->status === 'failed' ? 'Fix & retry' : 'Edit' }}</a>
-                                    <form method="POST" action="{{ route('gbp-posts.destroy', $post) }}" onsubmit="return confirm('Delete this post?')">
+                                    <form method="POST" action="{{ route('gbp-posts.destroy', $post) }}" data-confirm="Delete this post?">
                                         @csrf
                                         @method('DELETE')
                                         <button class="text-sm text-red-600 hover:underline">Delete</button>

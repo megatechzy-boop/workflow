@@ -65,7 +65,7 @@
                                 </form>
                             @endif
                             @if ($invoice->payments->isEmpty())
-                                <form method="POST" action="{{ route('admin.billing.destroy', $invoice) }}" onsubmit="return confirm('Delete bill {{ $invoice->number }}?')">
+                                <form method="POST" action="{{ route('admin.billing.destroy', $invoice) }}" data-confirm="Delete bill {{ $invoice->number }}?">
                                     @csrf @method('DELETE')
                                     <button class="px-4 py-2 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50">Delete bill</button>
                                 </form>
@@ -79,7 +79,7 @@
                                 <x-icon name="tick" class="w-4 h-4 text-green-600" />
                                 ₹{{ number_format($payment->amount) }} · {{ $payment->method }} · {{ $payment->date->format('d M') }}
                                 <a href="{{ route('admin.billing.receipt', $payment) }}" class="text-brand-600 hover:underline">Receipt {{ $payment->number }}</a>
-                                <form x-show="edit" x-cloak method="POST" action="{{ route('admin.billing.receipt.destroy', $payment) }}" onsubmit="return confirm('Remove receipt {{ $payment->number }}?')">
+                                <form x-show="edit" x-cloak method="POST" action="{{ route('admin.billing.receipt.destroy', $payment) }}" data-confirm="Remove receipt {{ $payment->number }}?">
                                     @csrf @method('DELETE')
                                     <button class="text-red-600 hover:underline">Remove</button>
                                 </form>

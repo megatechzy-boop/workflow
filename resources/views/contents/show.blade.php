@@ -138,7 +138,7 @@
                                 <div class="flex flex-wrap gap-2">
                                     <button name="action" value="approved" class="px-3 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-500">Approve</button>
                                     <button name="action" value="revision" class="px-3 py-2 rounded-md bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400">Revision</button>
-                                    <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" onclick="return confirm('Reject this content? This is final.')">Reject</button>
+                                    <button name="action" value="rejected" class="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-500" data-confirm="Reject this content? This is final.">Reject</button>
                                 </div>
                                 <p class="text-xs text-gray-500">{{ $content->minor_fix ? 'Small fix after approval: your approval is final (no Customer step).' : 'After approval the content goes to the Customer for final approval.' }}</p>
                             </form>
@@ -168,7 +168,7 @@
                             <form method="POST" class="space-y-3 mt-2" x-data="{ kind: @js(old('change', $canFix ? 'fix' : 'revision')) }"
                                 :action="kind === 'fix' ? @js(route('contents.sendBack', $content)) : @js(route('contents.reopen', $content))"
                                 action="{{ $canFix ? route('contents.sendBack', $content) : route('contents.reopen', $content) }}"
-                                onsubmit="return confirm('Send this post back? Its Facebook / Instagram schedule will be cancelled.')">
+                                data-confirm="Send this post back? Its Facebook / Instagram schedule will be cancelled.">
                                 @csrf
                                 @if ($canFix)
                                     <div class="space-y-2 text-sm">
@@ -232,7 +232,7 @@
                                     <details class="ms-2">
                                         <summary class="cursor-pointer text-sm text-brand-600">Boost this post</summary>
                                         <form method="POST" action="{{ route('contents.boost', $metaPost) }}" class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600"
-                                            onsubmit="return confirm('Start a paid ad on the client\'s ad account?')">
+                                            data-confirm="Start a paid ad on the client's ad account?">
                                             @csrf
                                             <label>Budget ₹/day<input type="number" name="daily_budget" min="100" value="300" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
                                             <label>Days<input type="number" name="days" min="1" max="30" value="7" class="mt-1 block w-full border-gray-300 rounded-xl text-sm" required></label>
@@ -344,7 +344,7 @@
                             <summary class="cursor-pointer font-semibold text-gray-800">Wrong file? Replace V{{ $content->current_version }}</summary>
                             <p class="text-xs text-gray-500 mt-2">Allowed until the SMM reviews it. The version number stays the same; the old files are removed.</p>
                             <form method="POST" action="{{ route('contents.replace', $content) }}" enctype="multipart/form-data" class="space-y-3 mt-3"
-                                onsubmit="return confirm('Replace the current files? The old files will be deleted.')">
+                                data-confirm="Replace the current files? The old files will be deleted.">
                                 @csrf
                                 @include('contents._upload-fields', ['type' => $type])
                                 <x-primary-button>Replace files</x-primary-button>

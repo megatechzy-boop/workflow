@@ -45,7 +45,7 @@
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-xs {{ ['active' => 'bg-green-100 text-green-800', 'paused' => 'bg-gray-100 text-gray-700', 'failed' => 'bg-red-100 text-red-700'][$ad->status] }}">{{ ucfirst($ad->status) }}</span>
                         @if ($ad->ad_id)
-                            <form method="POST" action="{{ route('ads.status', $ad) }}" @if ($ad->status !== 'active') onsubmit="return confirm('Start this ad? The client\'s ad account will be charged.')" @endif>
+                            <form method="POST" action="{{ route('ads.status', $ad) }}" @if ($ad->status !== 'active') data-confirm="Start this ad? The client's ad account will be charged." @endif>
                                 @csrf
                                 <input type="hidden" name="status" value="{{ $ad->status === 'active' ? 'paused' : 'active' }}">
                                 <button class="px-3 py-1.5 rounded-xl text-xs font-semibold {{ $ad->status === 'active' ? 'border border-gray-300 text-gray-700' : 'bg-brand-600 text-white' }}">{{ $ad->status === 'active' ? 'Pause' : 'Start' }}</button>

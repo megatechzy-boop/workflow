@@ -42,8 +42,8 @@
                 @can('delete', $calendar)
                     @php($postCount = $calendar->items->count())
                     <form method="POST" action="{{ route('calendars.destroy', $calendar) }}"
-                        onsubmit="return confirm(@js($calendar->status === App\Enums\CalendarStatus::Draft ? 'Delete the whole calendar?'
-                            : 'Delete this '.$calendar->status->label().' calendar with '.$postCount.' post(s)? Its tasks, uploaded designs, approvals and Facebook / Instagram schedules are removed too. This cannot be undone.'))">
+                        data-confirm="{{ $calendar->status === App\Enums\CalendarStatus::Draft ? 'Delete the whole calendar?'
+                            : 'Delete this '.$calendar->status->label().' calendar with '.$postCount.' post(s)? Its tasks, uploaded designs, approvals and Facebook / Instagram schedules are removed too. This cannot be undone.' }}">
                         @csrf @method('DELETE')
                         <button class="text-sm text-red-600 hover:underline">Delete calendar</button>
                     </form>
@@ -98,7 +98,7 @@
             @php($bulkRows = auth()->user()->can('reviewItems', $calendar) ? $rows : (auth()->user()->can('approveLater', $calendar) ? $rows->where('client_status', 'later') : collect()))
             @if ($bulkRows->isNotEmpty())
                 <form id="rows-bulk" method="POST" action="{{ route('calendars.items.reviewBulk', $calendar) }}" class="flex flex-wrap items-center gap-3 p-3 rounded bg-white border border-gray-200"
-                      onsubmit="if (!document.querySelector('input[form=rows-bulk]:checked')) { alert('Tick at least one row.'); return false }">
+                      onsubmit="if (!document.querySelector('input[form=rows-bulk]:checked')) { appAlert('Tick at least one row.'); return false }">
                     @csrf
                     <label class="flex items-center gap-2 text-sm font-medium">
                         <input type="checkbox" class="rounded border-gray-300 text-brand-600"
@@ -226,7 +226,7 @@
                                 @can('update', $calendar)
                                     <td class="px-3 py-4 whitespace-nowrap space-x-2">
                                         <a href="{{ route('calendars.items.edit', [$calendar, $item]) }}" class="text-brand-600 hover:underline">Edit</a>
-                                        <form method="POST" action="{{ route('calendars.items.destroy', [$calendar, $item]) }}" class="inline" onsubmit="return confirm('Delete this post?')">
+                                        <form method="POST" action="{{ route('calendars.items.destroy', [$calendar, $item]) }}" class="inline" data-confirm="Delete this post?">
                                             @csrf @method('DELETE')
                                             <button class="text-red-600 hover:underline">Delete</button>
                                         </form>

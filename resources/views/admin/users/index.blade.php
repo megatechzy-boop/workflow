@@ -64,7 +64,7 @@
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                                     <a href="{{ route('admin.users.edit', $user) }}" class="text-brand-600 hover:underline">Edit</a>
                                     @unless ($user->is(auth()->user()))
-                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" onsubmit="return confirm('Delete this user?')">
+                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" data-confirm="Delete this user?">
                                             @csrf @method('DELETE')
                                             <button class="text-red-600 hover:underline">Delete</button>
                                         </form>

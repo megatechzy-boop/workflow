@@ -87,7 +87,7 @@
                             @if ($audience->error)<div class="text-xs text-red-600 mt-1">{{ $audience->error }}</div>@endif
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-xs {{ $audience->status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700' }}">{{ ucfirst($audience->status) }}</span>
-                        <form method="POST" action="{{ route('ads.audiences.destroy', $audience) }}" onsubmit="return confirm('Delete this audience here and on Meta?')">
+                        <form method="POST" action="{{ route('ads.audiences.destroy', $audience) }}" data-confirm="Delete this audience here and on Meta?">
                             @csrf @method('DELETE')
                             <button class="text-xs text-red-600 hover:underline">Delete</button>
                         </form>
