@@ -58,6 +58,7 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Design: clean light (+ dark mode), logo colours teal `#0A7A6C` and amber `#F5A800`, icons not emojis, phone first (PWA).
 - No browser popups: ask with `data-confirm="…"` on a form or submit button, and tell with `appAlert('…')`
   (`resources/js/confirm-dialog.js`, a centered dialog; a question starting with Delete / Remove / Reject gets a red button). Never `confirm()` / `alert()`.
+- A form refused with 403 / 419 / 422 (old tab, second tap, session ran out) goes back to its page with a `popup` (bootstrap/app.php); GET pages and JSON calls keep their plain status
 
 - Packages (Admin > Packages, from the PDF): each client has one. Price only for Admin, roles with
   "See package prices" (Ops Manager by default) and the client's own Customer. Calendar page shows
