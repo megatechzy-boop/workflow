@@ -66,6 +66,11 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   days ÷ working days (half day ½, leave/no check-in 0), Billing (one bill per client per month at
   package price, due on the 5th, or one-off invoices), payments give receipts, Expenses + month profit.
   Invoice/receipt numbers continue the old Refrens series (A00324 / A00039); PDF made in the browser.
+  Billing flow (`App\Support\Billing`): `billing:monthly` on the 1st at 09:00 makes each package client's bill "Not sent":
+  package line + last month's Meta ads spend of its ad account (when linked) + "Previous balance" lines of older sent bills
+  still unpaid (no GST on those). The Admin is told, edits it (Edit bill: ad spend, extras, amounts) and sends it (Send / Send all /
+  Save & send); only then the Customer sees it and is told, and the old bills become "Moved" (no payments or reminders there).
+  `billing:reminders` at 10:00: 2 days before the due date, on it, then every 3 days overdue, + an Admin summary.
 - Assets per brand = 3 folders: Brand files (uploads; All / Photos / Videos tabs inside), Published videos, Published photos (the final version's files of Published posts,
   read from the posts, newest first, month filter, Download + Open post; reel covers left out). The Customer sees their own brand's.
 - Assets grid: videos show a picture and load only on Play (`x-video-tile`, `resources/js/video-tile.js`); no ffmpeg on the host, so the first

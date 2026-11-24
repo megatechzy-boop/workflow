@@ -70,6 +70,15 @@ class MetaInsights
         });
     }
 
+    /** Whole ad account's spend within the dates (every ad, also ones made in Ads Manager); null when Meta refuses */
+    public static function accountSpend(string $userToken, string $accountId, Carbon $from, Carbon $to): ?float
+    {
+        $row = self::try(fn () => MetaGraph::get("/$accountId/insights", ['access_token' => $userToken, 'fields' => 'spend', 'level' => 'account',
+            'time_range' => json_encode(['since' => $from->toDateString(), 'until' => $to->toDateString()])]));
+
+        return $row === null ? null : (float) ($row['data'][0]['spend'] ?? 0);
+    }
+
     private static function try(callable $call): ?array
     {
         try {

@@ -19,7 +19,12 @@
         </div>
         <div style="text-align:right">
             <div style="font-size:18px;font-weight:700;color:#0A7A6C">{{ $biz['name'] }}</div>
-            <span class="stamp {{ $invoice->paid_at ? 'paid' : 'unpaid' }}" style="margin-top:8px">{{ $invoice->paid_at ? 'PAID' : 'UNPAID' }}</span>
+            @if (! $invoice->paid_at && $invoice->isMoved())
+                {{-- Its balance is a "Previous balance" line of a later bill: pay that one --}}
+                <span class="stamp unpaid" style="margin-top:8px">BALANCE MOVED TO {{ $invoice->carriedTo->number }}</span>
+            @else
+                <span class="stamp {{ $invoice->paid_at ? 'paid' : 'unpaid' }}" style="margin-top:8px">{{ $invoice->paid_at ? 'PAID' : 'UNPAID' }}</span>
+            @endif
         </div>
     </div>
 
@@ -64,6 +69,9 @@
         <div style="width:260px">
             @if ($invoice->gst_rate > 0)
                 <div class="row"><span>Sub Total</span><span>₹ {{ number_format($invoice->subtotal(), 2) }}</span></div>
+                @if ($invoice->carriedIn() > 0)
+                    <div class="row muted"><span>GST on new items only</span><span></span></div>
+                @endif
                 <div class="row"><span>GST ({{ $invoice->gst_rate + 0 }}%)</span><span>₹ {{ number_format($invoice->gstAmount(), 2) }}</span></div>
             @endif
             <div class="row total" style="border-top:1px solid #e5e7eb;padding-top:6px;margin-top:4px"><span>Total (INR)</span><span>₹ {{ number_format($invoice->amount, 2) }}</span></div>

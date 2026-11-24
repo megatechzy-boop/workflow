@@ -227,7 +227,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
     Route::get('billing/create', [BillingController::class, 'create'])->name('billing.create');
     Route::post('billing', [BillingController::class, 'store'])->name('billing.store');
+    Route::post('billing/send-all', [BillingController::class, 'sendAll'])->name('billing.sendAll');
     Route::get('billing/{invoice}', [BillingController::class, 'show'])->name('billing.show');
+    Route::get('billing/{invoice}/edit', [BillingController::class, 'edit'])->name('billing.edit');
+    Route::put('billing/{invoice}', [BillingController::class, 'update'])->name('billing.update');
+    Route::post('billing/{invoice}/send', [BillingController::class, 'send'])->name('billing.send');
     Route::delete('billing/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy');
     Route::put('billing/{invoice}/amount', [BillingController::class, 'amount'])->name('billing.amount');
     Route::post('billing/{invoice}/payments', [BillingController::class, 'pay'])->name('billing.pay');

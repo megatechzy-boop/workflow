@@ -75,7 +75,7 @@ class DashboardController extends Controller
             'cards' => $cards, 'myPackage' => $this->customerPackage($user), 'attendance' => $attendance,
             // Customer: their bills, newest first
             'myBills' => $user->role === Role::Client && $user->client_id
-                ? Invoice::with('payments')->where('client_id', $user->client_id)->orderByDesc('invoice_date')->orderByDesc('id')->limit(12)->get()
+                ? Invoice::with('payments', 'carriedTo')->where('client_id', $user->client_id)->whereNotNull('sent_at')->orderByDesc('invoice_date')->orderByDesc('id')->limit(12)->get()
                 : collect(),
             'todo' => $user->role === Role::Client ? [] : $this->todaysWork($user),
             'week' => $planner ? $this->week($user) : null,

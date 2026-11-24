@@ -62,6 +62,25 @@ Artisan::command('gbp:replies', function () {
 })->purpose('Send Google review auto replies that are due');
 Schedule::call(fn () => Artisan::call('gbp:replies'))->name('gbp-replies')->everyMinute()->withoutOverlapping();
 
+// 1st of the month, 9 am: monthly bills (package + last month's ad spend + previous balance), not sent: the Admin checks and sends
+Artisan::command('billing:monthly', function () {
+    $month = Carbon\CarbonImmutable::now()->startOfMonth();
+    $made = App\Support\Billing::makeMonthly($month);
+    if ($made) {
+        App\Support\Notify::send(App\Models\User::where('role', App\Enums\Role::Admin)->get(), 'Bills ready to send',
+            "$made monthly ".str('bill')->plural($made).' for '.$month->format('F').' are made. Check them (add ad spend or extras), then send.',
+            route('admin.billing.index', ['month' => $month->format('Y-m')]));
+    }
+    $this->info("$made bill(s) made.");
+})->purpose('Make this month\'s client bills (not sent yet)');
+Schedule::call(fn () => Artisan::call('billing:monthly'))->name('billing-monthly')->monthlyOn(1, '09:00');
+
+// 10 am: payment reminders to Customers (2 days before the due date, on it, then every 3 days while overdue) + Admin summary
+Artisan::command('billing:reminders', function () {
+    $this->info(App\Support\Billing::remind().' bill reminder(s) sent.');
+})->purpose('Remind Customers about unpaid bills');
+Schedule::call(fn () => Artisan::call('billing:reminders'))->name('billing-reminders')->dailyAt('10:00');
+
 // GBP posts that are due (3 tries, then Failed + team alert)
 Artisan::command('gbp:posts', function () {
     $this->info(GbpPublisher::publishDue().' GBP post(s) processed.');

@@ -158,7 +158,7 @@ class OfficeTest extends TestCase
     {
         $acme = Client::create(['name' => 'Acme']);
         $other = Client::create(['name' => 'Other']);
-        $invoice = Invoice::create(['client_id' => $acme->id, 'due_date' => '2026-11-05', 'items' => [['name' => 'Growth package', 'qty' => 1, 'rate' => 15000]]]);
+        $invoice = Invoice::create(['client_id' => $acme->id, 'due_date' => '2026-11-05', 'sent_at' => now(), 'items' => [['name' => 'Growth package', 'qty' => 1, 'rate' => 15000]]]);
         $payment = $invoice->payments()->create(['date' => '2026-10-30', 'method' => 'UPI', 'amount' => 5000]);
         $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $acme->id]);
         $stranger = User::factory()->create(['role' => Role::Client, 'client_id' => $other->id]);

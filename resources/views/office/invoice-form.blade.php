@@ -52,7 +52,9 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <x-primary-button>Create invoice</x-primary-button>
+                    <x-primary-button>Save</x-primary-button>
+                    <button name="send" value="1" class="px-4 py-2 min-h-[44px] rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700"
+                        data-confirm="Save and send this invoice to the customer? They get a message and an email.">Save &amp; send</button>
                     <a href="{{ route('admin.billing.index') }}" class="text-sm text-gray-600 hover:underline">Cancel</a>
                 </div>
             </form>

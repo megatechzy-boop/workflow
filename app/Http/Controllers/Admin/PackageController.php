@@ -55,7 +55,11 @@ class PackageController extends Controller
             ->get();
 
         foreach ($bills as $bill) {
-            $bill->items = [['name' => $package->name.' package', 'detail' => $bill->month->format('F Y'), 'qty' => 1, 'rate' => $package->price]];
+            // Only the package line changes (ad spend, extras and a previous balance stay); old bills: the first line
+            $items = $bill->items;
+            $at = collect($items)->search(fn ($i) => ($i['kind'] ?? null) === 'package');
+            $items[$at === false ? 0 : $at] = ['name' => $package->name.' package', 'detail' => $bill->month->format('F Y'), 'qty' => 1, 'rate' => $package->price, 'kind' => 'package'];
+            $bill->items = $items;
             $bill->package_name = $package->name;
             $bill->amount = $bill->subtotal() + $bill->gstAmount();
             $bill->save();

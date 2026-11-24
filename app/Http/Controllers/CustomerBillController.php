@@ -28,5 +28,6 @@ class CustomerBillController extends Controller
     {
         $user = $request->user();
         abort_unless($user->client_id !== null && $user->client_id === $invoice->client_id, 403);
+        abort_unless((bool) $invoice->sent_at, 404); // not sent yet: the Admin is still checking it
     }
 }
