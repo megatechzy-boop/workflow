@@ -190,6 +190,10 @@ class ContentTest extends TestCase
         $this->actingAs($customer)->get("/contents/{$content->id}")->assertForbidden(); // hidden before SMM approval
         $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'approved']);
         $this->assertSame(ContentStatus::ClientReview, $content->fresh()->status);
+        // A second tap / old tab: a popup on the post, not a 403 page, and nothing changes
+        $this->actingAs($this->approver)->post("/contents/{$content->id}/review", ['action' => 'revision', 'body' => 'x'])
+            ->assertRedirect(route('contents.show', $content))->assertSessionHas('popup');
+        $this->assertSame(ContentStatus::ClientReview, $content->fresh()->status);
 
         // another brand's customer cannot review; internal comments are hidden from the customer
         $other = User::factory()->create(['role' => Role::Client, 'client_id' => \App\Models\Client::create(['name' => 'Other'])->id]);

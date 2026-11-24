@@ -205,6 +205,11 @@ class ContentController extends Controller
 
     public function review(Request $request, Content $content): RedirectResponse
     {
+        // Already reviewed (double tap, an old tab, or a refresh) by its SMM / Admin: a popup instead of a 403 page
+        $user = $request->user();
+        if (! $content->status->awaitingReview() && ($content->approver_id === $user->id || $user->isAdmin())) {
+            return redirect()->route('contents.show', $content)->with('popup', 'This post was already reviewed ('.$content->status->label().'). Nothing more to do here.');
+        }
         Gate::authorize('review', $content);
 
         $data = $request->validate([
