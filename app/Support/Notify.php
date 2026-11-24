@@ -12,16 +12,17 @@ class Notify
     /**
      * Notify users (skipping the actor and inactive users).
      * If email fails (SMTP not set) the request must not break: in-app is stored first, mail errors are only logged.
+     * $mail false: bell + push only, no email.
      */
-    public static function send(iterable $users, string $title, string $message, string $url): void
+    public static function send(iterable $users, string $title, string $message, string $url, bool $mail = true): void
     {
         $actorId = auth()->id();
 
         collect($users)->filter()->unique('id')
             ->reject(fn (User $u) => $u->id === $actorId || ! $u->is_active)
-            ->each(function (User $user) use ($title, $message, $url) {
+            ->each(function (User $user) use ($title, $message, $url, $mail) {
                 try {
-                    $user->notify(new WorkflowNotification($title, $message, $url));
+                    $user->notify(new WorkflowNotification($title, $message, $url, $mail));
                 } catch (\Throwable $e) {
                     report($e);
                 }

@@ -17,12 +17,13 @@ class WorkflowNotification extends Notification
         public string $title,
         public string $message,
         public string $url,
+        public bool $mail = true, // false: bell + push only
     ) {}
 
     public function via(object $notifiable): array
     {
         // push last: the channel skips users without a subscribed device
-        return ['database', 'mail', WebPushChannel::class];
+        return array_values(array_filter(['database', $this->mail ? 'mail' : null, WebPushChannel::class]));
     }
 
     public function toMail(object $notifiable): MailMessage

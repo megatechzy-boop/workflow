@@ -214,6 +214,24 @@ class MetaInboxTest extends TestCase
             ->assertSee('Neha Patil')->assertSee('Amit Shah')->assertDontSee('Ravi')->assertDontSee('Sunil')->assertSee('(missed)');
     }
 
+    public function test_team_gets_lead_emails_only_for_mega_techzy(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $customer = User::factory()->create(['role' => Role::Client, 'client_id' => $this->client->id]);
+        $this->lead('l1', 'Neha Patil', '9876543210', ['follow_up_on' => today()]);
+        MetaInbox::remindFollowUps();
+
+        $via = fn (User $u) => \Illuminate\Support\Facades\Notification::sent($u, \App\Notifications\WorkflowNotification::class)->sole()->via($u);
+        $this->assertNotContains('mail', $via($this->smm)); // a client brand: bell + push for the team
+        $this->assertContains('database', $via($this->smm));
+        $this->assertContains('mail', $via($customer)); // the brand's own Customer still gets the email
+
+        \Illuminate\Support\Facades\Notification::fake();
+        $this->client->update(['is_internal' => true]); // Mega Techzy's own leads
+        MetaInbox::remindFollowUps();
+        $this->assertContains('mail', $via($this->smm));
+    }
+
     public function test_leads_export_as_csv_with_answers_and_remarks(): void
     {
         $lead = $this->lead('l1', 'Neha Patil', '9876543210');

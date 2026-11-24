@@ -89,7 +89,7 @@ class MetaInbox
             }
             if ($added) {
                 $new += $added;
-                Notify::send(self::leadPeople($client), 'New leads', "$added new lead(s) for ".($client->name ?? $page->name), route('meta.leads'));
+                self::tellLeadPeople($client, 'New leads', "$added new lead(s) for ".($client->name ?? $page->name), route('meta.leads'));
             }
         }
 
@@ -104,7 +104,7 @@ class MetaInbox
         foreach ($due as $clientId => $leads) {
             $client = $clientId ? Client::find($clientId) : null;
             $missed = $leads->filter(fn ($l) => $l->follow_up_on->lt(today()))->count();
-            Notify::send(self::leadPeople($client), 'Lead follow-ups today',
+            self::tellLeadPeople($client, 'Lead follow-ups today',
                 $leads->count().' lead follow-up(s) for '.($client->name ?? 'leads').($missed ? " ($missed missed)" : ''),
                 route('meta.leads', ['followup' => 'today'] + ($clientId ? ['client' => $clientId] : [])));
         }
@@ -112,12 +112,16 @@ class MetaInbox
         return $due->flatten()->count();
     }
 
-    /** Brand SMMs + the client's own Customer logins */
-    private static function leadPeople(?Client $client)
+    /**
+     * Brand SMMs + the client's own Customer logins. The team gets an email only for Mega Techzy's own
+     * (internal brand) leads; client brands' leads reach the team by bell + push. Customers always get the email.
+     */
+    private static function tellLeadPeople(?Client $client, string $title, string $message, string $url): void
     {
         $customers = $client ? User::where('role', Role::Client)->where('client_id', $client->id)->where('is_active', true)->get() : collect();
 
-        return self::team($client?->id)->merge($customers);
+        Notify::send($customers, $title, $message, $url);
+        Notify::send(self::team($client?->id), $title, $message, $url, (bool) $client?->is_internal);
     }
 
     /** Social Media Managers of the brand (or all of them when nobody has it ticked) */
