@@ -8,8 +8,10 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
 - Replies in short, simple Hinglish. App text and code stay in English.
 - Commit and deploy only when the owner says so (they usually batch it: "commit, deploy baad me ek sath").
 - Never put secrets (API keys, VAPID private key, passwords) in chat or in git; the owner pastes them into the server `.env`.
-- Cron: one cPanel job runs `php artisan schedule:run` every minute (added 2026-10-30); the 9 am task
-  digest (`tasks:remind`) is scheduled in `routes/console.php`. Ask before adding other cron jobs.
+- Hosting: BigRock VPS with HestiaCP since 2026-11-28 (see `docs/DEV-NOTES.md`). Deploy = push `main`;
+  the server pulls it within a minute. Do not fire many requests at the old cPanel host: its firewall blocks the IP.
+- Cron: `php artisan schedule:run` every minute on the VPS; jobs are scheduled in `routes/console.php`
+  (the 9 am task digest is `tasks:remind`). Ask before adding other cron jobs.
 - Before building, push back on parts that are not needed; keep changes small and tested (`php artisan test`).
 
 ## Product rules (decided with the owner)
@@ -125,6 +127,10 @@ https://workflow.megatechzy.com. Setup, deploy steps and open items: `docs/DEV-N
   smb_app_state_sync (phone's contact names). Free text / PDF / photo only within 24 h of the customer's last message; otherwise
   (and for "New WhatsApp" to a number) an approved template, + PDF/photo when its header has one. "WhatsApp Web" button opens the
   chat in a scanned browser. One push per waiting chat to everyone with the permission. Settings > WhatsApp: "Connect webhook" (+ one-time history sync).
+  A number that is Offline in WhatsApp Manager (#133010 "Account not registered") is linked with "Link WhatsApp Business app number"
+  (Embedded Signup, `featureType` whatsapp_business_app_onboarding, config `WHATSAPP_SIGNUP_CONFIG_ID`; Meta allows it only for a Tech Provider app):
+  the code's business token subscribes the account and asks for contacts + history at once; the page then says which WABA / phone IDs go in the `.env`.
+  The Meta app must be Published (it is since 2026-11-26), or Meta sends no real webhooks.
 
 ## Next up
 

@@ -19,20 +19,25 @@ php artisan serve
 ```
 
 Phone push locally: copy the three `VAPID_*` lines from the server `.env`
-(`/home2/megatechzy/workflow/.env`) into the local `.env`. Never commit them.
+(`/home/megavtech/web/workflow.megatechzy.com/private/app/.env`) into the local `.env`. Never commit them.
 
-## Deploy (cPanel, no SSH)
+## Deploy (VPS, since 2026-11-28)
 
-- App folder on the server: `/home2/megatechzy/workflow`
-  (`/home2/megatechzy/workflow.megatechzy.com` is an old, unused install).
+- Server: BigRock VPS `64.247.186.254`, HestiaCP (panel `https://server.megatechzy.com:8083`, user `megavtech`),
+  Ubuntu 22.04, PHP 8.5, MariaDB. SSH as root with a key.
+- App folder: `/home/megavtech/web/workflow.megatechzy.com/private/app` (a git clone of `main`);
+  the site's `public_html` is a symlink to `private/app/public`. DB `megavtech_workflow`.
+- Deploy = push `main`. A cron runs `private/deploy.sh` every minute: when `origin/main` moved it does
+  `artisan down`, `git reset --hard origin/main`, `composer install --no-dev` (only if `composer.lock`
+  changed), `migrate --force`, `optimize:clear`, `artisan up`. Log: `private/deploy.log`.
 - Build assets locally (`npm run build`) and commit `public/build` (no Node on the server).
-- Push `main`, then cPanel > Git Version Control > Update from Remote > Deploy HEAD Commit.
-  `.cpanel.yml` copies the files, runs `migrate --force` and `optimize:clear`.
-- Only when `composer.lock` changes: `composer install --no-dev` into a separate
-  checkout of the `deploy-vendor` branch, push it, update `~/repositories/workflow-vendor`
-  in cPanel, copy its `vendor` to `~/workflow/vendor_new`, then rename
-  `vendor` -> `vendor_old` and `vendor_new` -> `vendor`. Then deploy `main`.
-- The host sometimes shows "One moment, please…": reload and wait.
+- Cron (Hestia > Cron, user `megavtech`): `schedule:run` every minute, plus the deploy script.
+- SSL: Let's Encrypt from Hestia. DNS: Cloudflare (all records grey cloud).
+- `www.megatechzy.com` (repo `mt_website`) is on the same server with its own `private/deploy.sh`.
+- Mail for `megatechzy.com` (incl. `notifications@`, used by `MAIL_HOST=mail.megatechzy.com`) is still on
+  the old cPanel (`135.181.219.236`); MX points to `mail.megatechzy.com`, an A record to that IP.
+- Old cPanel copy (`/home2/megatechzy/workflow`) is kept in maintenance mode (`storage/framework/down`)
+  so its scheduler stays off. `.cpanel.yml` and the `deploy-vendor` branch are no longer used.
 
 ## Open items
 
